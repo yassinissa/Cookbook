@@ -5,6 +5,7 @@ import DishRecipeForm from './DishRecipeForm'
 import DishRecipeCard from './DishRecipeCard'
 import ProductionRecipeList from './ProductionRecipeList'
 import ProductionRecipeForm from './ProductionRecipeForm'
+import ProductionRecipeCard from './ProductionRecipeCard'
 
 const TABS = [
   { key: 'dish', label: 'Dish Recipes' },
@@ -61,8 +62,15 @@ export default function RecipesPage({ onLoggedOut, onOpenItems }) {
             onCancel={() => setMode({ name: 'list' })}
           />
         )}
-        {mode.name === 'card' && (
+        {mode.name === 'card' && tab === 'dish' && (
           <DishRecipeCard
+            recipeId={mode.recipeId}
+            onBack={() => setMode({ name: 'list' })}
+            onEdit={(id) => setMode({ name: 'form', recipeId: id })}
+          />
+        )}
+        {mode.name === 'card' && tab === 'production' && (
+          <ProductionRecipeCard
             recipeId={mode.recipeId}
             onBack={() => setMode({ name: 'list' })}
             onEdit={(id) => setMode({ name: 'form', recipeId: id })}
@@ -80,6 +88,7 @@ export default function RecipesPage({ onLoggedOut, onOpenItems }) {
           <ProductionRecipeList
             onNew={() => setMode({ name: 'form', recipeId: null })}
             onEdit={(id) => setMode({ name: 'form', recipeId: id })}
+            onView={(id) => setMode({ name: 'card', recipeId: id })}
           />
         )}
       </div>
