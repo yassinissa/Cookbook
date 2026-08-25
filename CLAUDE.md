@@ -26,10 +26,19 @@ before calling anything done — not just "the happy path returns 200."
   routing despite `react-router-dom` being installed (view switching is
   manual React state in `App.jsx`/`RecipesPage.jsx`). Two parallel CRUD
   flows (Dish/Production recipes: List/Form/Card) plus Items and Login.
-- **Design system**: none yet. Tailwind config is stock (no custom
-  tokens). The only shared UI pieces are recipe-specific
-  (`RecipeFormFields.jsx`). This is the biggest gap — see the
-  `premium-ui` skill for how to close it.
+- **Design system**: first pass applied (2026-08-25) — `tailwind.config.js`
+  now has real tokens: `accent` (warm amber, Cookbook's own identity,
+  distinct from inventory-platform's teal) plus `success`/`warning`/`danger`
+  semantic scales. `RecipeFormFields.jsx` (name is now slightly stale —
+  it holds general-purpose primitives too: `primaryButtonClass`,
+  `secondaryButtonClass`, `dangerLinkClass`, `ErrorState`, `EmptyState`,
+  `Spinner` — not just recipe-specific fields) is used across every
+  screen for buttons and states. Still no skeleton loaders, no toasts, no
+  drawers/modals, no real navigation beyond the tab row — see the
+  `premium-ui` skill for what's still open. **Gotcha**: Tailwind needs a
+  full dev-server restart (not just HMR) to pick up new `theme.colors` —
+  confirm new tokens actually render (check computed style, not just
+  that the class name looks right) before assuming a token change worked.
 - **Testing**: none exists. Do not let this stay true as features grow —
   see Testing section below.
 - **Auth**: JWT via default Django `User`, one superuser, no roles yet.
