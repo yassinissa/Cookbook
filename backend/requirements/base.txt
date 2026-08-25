@@ -1,0 +1,22 @@
+# Core Django
+Django>=4.2,<5.0
+djangorestframework>=3.15
+djangorestframework-simplejwt>=5.3
+
+# Database
+psycopg2-binary>=2.9
+
+# CORS
+django-cors-headers>=4.3
+
+# Filtering
+django-filter>=23.5
+
+# Environment variables
+python-decouple>=3.8
+
+# Excel import (source cookbook sheet)
+openpyxl>=3.1
+
+# Calling the inventory-platform API
+requests>=2.31
