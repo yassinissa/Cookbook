@@ -1,21 +1,18 @@
 """
-NOTE — Cookbook recipe content
+NOTE — Recipe authoring
 Modeled directly on the two real sources this system replaces:
   - inventory-platform's apps.recipes (ProductionRecipe/DishRecipe) — the
-    shapes ProductionRecipe/DishRecipe below mirror exactly, since a
-    finished recipe here gets pushed to those exact endpoints via
-    apps.integrations.inventory_client.
-  - the "200 Lebanese Menu Cook Book.xlsm" recipe-card format — a Recipe
-    sheet with one printable card per dish (ingredients w/ qty+prep note,
-    numbered steps, costing, taste profile, chef/QA approval, revision
-    history) plus a separate Dish Standards Database sheet (QA/QC sensory
-    targets). Field names below come directly from that card.
+    shapes below mirror that exactly, since a finished recipe here gets
+    pushed to those exact endpoints via apps.integrations.inventory_client.
+  - "200 Lebanese Menu Cook Book.xlsm"'s Recipe sheet — one printable card
+    per dish (ingredients w/ qty+prep note, numbered steps, costing, taste
+    profile, chef/QA approval, revision history).
 
 Ingredients reference inventory-platform items by SKU (item_sku), not a
 local FK — Item itself is never duplicated here, only read live via
 apps.integrations.inventory_client. item_name_snapshot is NOT the item's
 own name; it's the recipe-specific display name from the card (e.g. the
-item "Parsley" appears in a recipe as "Parsley Chopped").
+item "Spring Onion" appears in a recipe as "Spring Onion Chopped").
 
 Versioning follows inventory-platform's convention (version + is_current)
 rather than the spreadsheet's manual "copy old revision to a History
@@ -24,6 +21,7 @@ cost-history, matching apps.recipes.ProductionRecipe/DishRecipe.
 """
 from django.db import models
 from apps.core.models import BaseModel
+from .reference import Section, Approver, UnitScale, MenuCategory, Allergen, ServiceStyle
 
 
 # ── Shared abstract pieces ──────────────────────────────────────────────────
@@ -39,8 +37,7 @@ class IngredientLine(BaseModel):
     prep_note          = models.CharField(max_length=255, blank=True,
                            help_text="How it's prepped for this recipe, e.g. 'Chopped', '(Zest)', 'Small Diced'.")
     quantity           = models.DecimalField(max_digits=12, decimal_places=3)
-    unit               = models.CharField(max_length=20,
-                           help_text="Unit code as used in this recipe, e.g. 'g', 'ml', 'pcs', 'pinch'.")
+    unit               = models.ForeignKey(UnitScale, on_delete=models.PROTECT, related_name='+')
 
     class Meta:
         abstract = True
@@ -64,6 +61,9 @@ class RecipeCardFields(models.Model):
     version              = models.PositiveIntegerField(default=1)
     is_current           = models.BooleanField(default=True)
 
+    section              = models.ForeignKey(Section, on_delete=models.PROTECT, null=True, blank=True,
+                             related_name='+', help_text='Kitchen station that preps this recipe.')
+
     prep_time_minutes    = models.PositiveIntegerField(null=True, blank=True)
     expected_waste_pct   = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     include_labor_cost   = models.BooleanField(default=True)
@@ -76,8 +76,10 @@ class RecipeCardFields(models.Model):
     # apps.recipes.DishRecipe.cost on the inventory-platform side.
     cost                 = models.DecimalField(max_digits=12, decimal_places=3, default=0)
 
-    approved_by          = models.CharField(max_length=255, blank=True, help_text='Executive chef name.')
-    qa_approved_by        = models.CharField(max_length=255, blank=True)
+    approved_by          = models.ForeignKey(Approver, on_delete=models.PROTECT, null=True, blank=True,
+                             related_name='+', help_text='Executive chef who approved this recipe.')
+    qa_approved_by       = models.ForeignKey(Approver, on_delete=models.PROTECT, null=True, blank=True,
+                             related_name='+')
     approved_at          = models.DateField(null=True, blank=True)
 
     notes                = models.TextField(blank=True)
@@ -95,7 +97,7 @@ class ProductionRecipe(RecipeCardFields):
                         help_text='SKU of the prepared-product Item this recipe produces.')
     output_qty      = models.DecimalField(max_digits=12, decimal_places=3,
                         help_text='How much output one batch of this recipe yields.')
-    output_unit     = models.CharField(max_length=20)
+    output_unit     = models.ForeignKey(UnitScale, on_delete=models.PROTECT, related_name='+')
     prep_kitchen    = models.CharField(max_length=255, blank=True,
                         help_text='Which prep kitchen this recipe belongs to (e.g. "Bread & Sauces").')
 
@@ -118,10 +120,15 @@ class DishRecipe(RecipeCardFields):
     Pushed to inventory-platform's POST /api/recipes/dish/."""
     pos_item_name   = models.CharField(max_length=255, blank=True,
                         help_text='Exact name in the POS system, for matching sales imports.')
-    category        = models.CharField(max_length=100, blank=True,
-                        help_text='Menu section, e.g. "Salad", "Grill", "Cold Mizze" — not an item category.')
+    category        = models.ForeignKey(MenuCategory, on_delete=models.PROTECT, null=True, blank=True,
+                        related_name='dishes',
+                        help_text='Menu section shown to customers — not the same as `section` (kitchen station).')
+    service_style   = models.ForeignKey(ServiceStyle, on_delete=models.PROTECT, null=True, blank=True,
+                        related_name='+')
+    allergens       = models.ManyToManyField(Allergen, blank=True, related_name='dishes')
     branch          = models.CharField(max_length=100, blank=True,
-                        help_text='Branch this dish belongs to, e.g. "Dine", "Luma", "Levant".')
+                        help_text='Branch this dish belongs to (matches an inventory-platform Branch name, '
+                                   'e.g. "Dine", "Luma", "Levant") — read live, not stored as a local FK.')
     selling_price   = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
     rating          = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True,
                         help_text='0-10 customer/QA rating.')
@@ -138,58 +145,3 @@ class DishRecipeIngredient(IngredientLine):
 
 class DishRecipeStep(RecipeStepLine):
     recipe = models.ForeignKey(DishRecipe, on_delete=models.CASCADE, related_name='steps')
-
-
-# ── QA/QC sensory standards ──────────────────────────────────────────────────
-
-class DishStandard(BaseModel):
-    """
-    Sensory + physical QA/QC targets for one dish — a separate, deeper
-    layer on top of the recipe itself (from the "Dish Standards Database"
-    sheet). Not every dish has one yet.
-    """
-    dish_recipe            = models.OneToOneField(DishRecipe, on_delete=models.CASCADE, related_name='standard')
-
-    service_style          = models.CharField(max_length=100, blank=True)
-    portion_weight_g       = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
-    portion_tolerance_g    = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
-    serving_temp_c         = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
-    temp_tolerance_c       = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
-    holding_time_minutes   = models.PositiveIntegerField(null=True, blank=True)
-
-    appearance             = models.TextField(blank=True)
-    color                  = models.TextField(blank=True)
-    aroma                  = models.TextField(blank=True)
-    texture                = models.TextField(blank=True)
-    presentation           = models.TextField(blank=True)
-
-    # 0-10 intensity scale + approved +/- tolerance, per the sheet's legend
-    sweetness_target       = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
-    sweetness_tolerance    = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
-    saltiness_target       = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
-    saltiness_tolerance    = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
-    sourness_target        = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
-    sourness_tolerance     = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
-    bitterness_target      = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
-    bitterness_tolerance   = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
-    umami_target           = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
-    umami_tolerance        = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
-    spice_target           = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
-    spice_tolerance        = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
-    richness_target        = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
-    richness_tolerance     = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
-    smokiness_target       = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
-    smokiness_tolerance    = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
-
-    primary_flavor         = models.CharField(max_length=255, blank=True)
-    secondary_flavor       = models.CharField(max_length=255, blank=True)
-    aftertaste             = models.CharField(max_length=255, blank=True)
-    mouthfeel              = models.CharField(max_length=255, blank=True)
-    freshness_standard     = models.TextField(blank=True)
-    critical_defects_not_allowed = models.TextField(blank=True)
-
-    qa_approved_by         = models.CharField(max_length=255, blank=True)
-    approval_date          = models.DateField(null=True, blank=True)
-
-    def __str__(self):
-        return f'Standard for {self.dish_recipe.name_en}'
