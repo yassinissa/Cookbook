@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { dishRecipes } from './lib/cookbookApi'
+import { primaryButtonClass, secondaryButtonClass, ErrorState, Spinner } from './RecipeFormFields'
 
 function Row({ label, value }) {
   if (value === null || value === undefined || value === '') return null
   return (
     <div className="flex justify-between py-1 text-sm border-b border-stone-100 last:border-0">
       <span className="text-stone-500">{label}</span>
-      <span className="text-stone-900 text-right">{value}</span>
+      <span className="text-stone-900 text-right tabular-nums">{value}</span>
     </div>
   )
 }
@@ -15,12 +16,15 @@ export default function DishRecipeCard({ recipeId, onBack, onEdit }) {
   const [r, setR] = useState(null)
   const [error, setError] = useState('')
 
-  useEffect(() => {
+  function load() {
+    setError('')
     dishRecipes.get(recipeId).then(setR).catch(() => setError('Could not load recipe.'))
-  }, [recipeId])
+  }
 
-  if (error) return <p className="text-red-600">{error}</p>
-  if (!r) return <p className="text-stone-500">Loading…</p>
+  useEffect(load, [recipeId])
+
+  if (error) return <ErrorState message={error} onRetry={load} />
+  if (!r) return <Spinner />
 
   const s = r.standard
 
@@ -28,11 +32,11 @@ export default function DishRecipeCard({ recipeId, onBack, onEdit }) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <button onClick={onBack} className="text-sm text-stone-500 hover:text-stone-800 mb-1">← Back</button>
-          <h1 className="text-2xl font-semibold text-stone-900">{r.name_en}</h1>
+          <button onClick={onBack} className={`${secondaryButtonClass} mb-1`}>← Back</button>
+          <h1 className="text-2xl font-semibold text-stone-900 tracking-tight">{r.name_en}</h1>
           {r.name_ar && <p className="text-stone-500" dir="rtl">{r.name_ar}</p>}
         </div>
-        <button onClick={() => onEdit(r.id)} className="bg-stone-900 text-white text-sm px-4 py-2 rounded-md hover:bg-stone-800">
+        <button onClick={() => onEdit(r.id)} className={primaryButtonClass}>
           Edit Recipe
         </button>
       </div>

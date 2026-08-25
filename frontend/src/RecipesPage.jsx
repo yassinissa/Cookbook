@@ -6,6 +6,7 @@ import DishRecipeCard from './DishRecipeCard'
 import ProductionRecipeList from './ProductionRecipeList'
 import ProductionRecipeForm from './ProductionRecipeForm'
 import ProductionRecipeCard from './ProductionRecipeCard'
+import { secondaryButtonClass } from './RecipeFormFields'
 
 const TABS = [
   { key: 'dish', label: 'Dish Recipes' },
@@ -25,10 +26,10 @@ export default function RecipesPage({ onLoggedOut, onOpenItems }) {
     <div className="min-h-screen bg-stone-50 p-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-semibold text-stone-900">Cookbook</h1>
+          <h1 className="text-2xl font-semibold text-stone-900 tracking-tight">Cookbook</h1>
           <div className="flex items-center gap-4">
-            <button onClick={onOpenItems} className="text-sm text-stone-500 hover:text-stone-800">Inventory items</button>
-            <button onClick={() => { logout(); onLoggedOut() }} className="text-sm text-stone-500 hover:text-stone-800">Log out</button>
+            <button onClick={onOpenItems} className={secondaryButtonClass}>Inventory items</button>
+            <button onClick={() => { logout(); onLoggedOut() }} className={secondaryButtonClass}>Log out</button>
           </div>
         </div>
 
@@ -38,8 +39,8 @@ export default function RecipesPage({ onLoggedOut, onOpenItems }) {
               <button
                 key={t.key}
                 onClick={() => switchTab(t.key)}
-                className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-                  tab === t.key ? 'border-stone-900 text-stone-900' : 'border-transparent text-stone-400 hover:text-stone-600'
+                className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 ${
+                  tab === t.key ? 'border-accent-600 text-stone-900' : 'border-transparent text-stone-400 hover:text-stone-600'
                 }`}
               >
                 {t.label}

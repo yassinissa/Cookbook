@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchReferenceData, fetchInventoryItems, productionRecipes } from './lib/cookbookApi'
-import { Field, inputClass, IngredientRows, StepRows, HistoryPanel } from './RecipeFormFields'
+import { Field, inputClass, IngredientRows, StepRows, HistoryPanel, primaryButtonClass, secondaryButtonClass, Spinner } from './RecipeFormFields'
 
 export default function ProductionRecipeForm({ recipeId, onDone, onCancel }) {
   const [ref, setRef] = useState(null)
@@ -96,24 +96,24 @@ export default function ProductionRecipeForm({ recipeId, onDone, onCancel }) {
     }
   }
 
-  if (!ref) return <div className="p-8 text-stone-500">Loading…</div>
+  if (!ref) return <Spinner />
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-stone-900">{recipeId ? 'Edit Production Recipe' : 'New Production Recipe'}</h1>
+        <h1 className="text-2xl font-semibold text-stone-900 tracking-tight">{recipeId ? 'Edit Production Recipe' : 'New Production Recipe'}</h1>
         <div className="flex gap-3">
-          <button type="button" onClick={onCancel} className="text-sm text-stone-500 hover:text-stone-800">Cancel</button>
-          <button type="submit" disabled={saving} className="bg-stone-900 text-white text-sm px-4 py-2 rounded-md hover:bg-stone-800 disabled:opacity-50">
+          <button type="button" onClick={onCancel} className={secondaryButtonClass}>Cancel</button>
+          <button type="submit" disabled={saving} className={primaryButtonClass}>
             {saving ? 'Saving…' : 'Save Recipe'}
           </button>
         </div>
       </div>
 
-      {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-3 break-all">{error}</p>}
+      {error && <p className="text-sm text-danger-700 bg-danger-50 border border-danger-200 rounded-md p-3 break-all">{error}</p>}
 
       <section className="bg-white rounded-lg border border-stone-200 p-4 grid grid-cols-2 gap-4">
-        <Field label="Name (English)"><input className={inputClass} required value={form.name_en} onChange={(e) => setField('name_en', e.target.value)} /></Field>
+        <Field label="Name (English)" required><input className={inputClass} required value={form.name_en} onChange={(e) => setField('name_en', e.target.value)} /></Field>
         <Field label="Name (Arabic)"><input className={inputClass} dir="rtl" value={form.name_ar} onChange={(e) => setField('name_ar', e.target.value)} /></Field>
         <Field label="Prep kitchen"><input className={inputClass} placeholder="Bread & Sauces" value={form.prep_kitchen} onChange={(e) => setField('prep_kitchen', e.target.value)} /></Field>
         <Field label="Section (kitchen station)">

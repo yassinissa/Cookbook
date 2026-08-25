@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchReferenceData, fetchInventoryItems, dishRecipes } from './lib/cookbookApi'
-import { Field, inputClass, IngredientRows, StepRows, HistoryPanel } from './RecipeFormFields'
+import { Field, inputClass, IngredientRows, StepRows, HistoryPanel, primaryButtonClass, secondaryButtonClass, Spinner } from './RecipeFormFields'
 
 const emptyStandard = {
   service_style: '', portion_weight_g: '', portion_tolerance_g: '', serving_temp_c: '', temp_tolerance_c: '',
@@ -126,25 +126,25 @@ export default function DishRecipeForm({ recipeId, onDone, onCancel }) {
     }
   }
 
-  if (!ref) return <div className="p-8 text-stone-500">Loading…</div>
+  if (!ref) return <Spinner />
 
   return (
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-stone-900">{recipeId ? 'Edit Recipe' : 'New Recipe'}</h1>
+          <h1 className="text-2xl font-semibold text-stone-900 tracking-tight">{recipeId ? 'Edit Recipe' : 'New Recipe'}</h1>
           <div className="flex gap-3">
-            <button type="button" onClick={onCancel} className="text-sm text-stone-500 hover:text-stone-800">Cancel</button>
-            <button type="submit" disabled={saving} className="bg-stone-900 text-white text-sm px-4 py-2 rounded-md hover:bg-stone-800 disabled:opacity-50">
+            <button type="button" onClick={onCancel} className={secondaryButtonClass}>Cancel</button>
+            <button type="submit" disabled={saving} className={primaryButtonClass}>
               {saving ? 'Saving…' : 'Save Recipe'}
             </button>
           </div>
         </div>
 
-        {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-3 break-all">{error}</p>}
+        {error && <p className="text-sm text-danger-700 bg-danger-50 border border-danger-200 rounded-md p-3 break-all">{error}</p>}
 
         {/* Basic info */}
         <section className="bg-white rounded-lg border border-stone-200 p-4 grid grid-cols-2 gap-4">
-          <Field label="Name (English)"><input className={inputClass} required value={form.name_en} onChange={(e) => setField('name_en', e.target.value)} /></Field>
+          <Field label="Name (English)" required><input className={inputClass} required value={form.name_en} onChange={(e) => setField('name_en', e.target.value)} /></Field>
           <Field label="Name (Arabic)"><input className={inputClass} dir="rtl" value={form.name_ar} onChange={(e) => setField('name_ar', e.target.value)} /></Field>
           <Field label="Branch"><input className={inputClass} placeholder="Dine" value={form.branch} onChange={(e) => setField('branch', e.target.value)} /></Field>
           <Field label="POS item name"><input className={inputClass} value={form.pos_item_name} onChange={(e) => setField('pos_item_name', e.target.value)} /></Field>
@@ -188,8 +188,8 @@ export default function DishRecipeForm({ recipeId, onDone, onCancel }) {
             <span className="block text-xs font-medium text-stone-500 mb-2">Allergens</span>
             <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
               {ref.allergens.map((a) => (
-                <label key={a.id} className={`text-xs px-2 py-1 rounded-full border cursor-pointer ${form.allergens.includes(a.id) ? 'bg-stone-900 text-white border-stone-900' : 'border-stone-300 text-stone-600'}`}>
-                  <input type="checkbox" className="hidden" checked={form.allergens.includes(a.id)} onChange={() => toggleAllergen(a.id)} />
+                <label key={a.id} className={`text-xs px-2 py-1 rounded-full border cursor-pointer transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent-500 ${form.allergens.includes(a.id) ? 'bg-accent-600 text-white border-accent-600' : 'border-stone-300 text-stone-600 hover:bg-stone-50'}`}>
+                  <input type="checkbox" className="sr-only" checked={form.allergens.includes(a.id)} onChange={() => toggleAllergen(a.id)} />
                   {a.name}
                 </label>
               ))}

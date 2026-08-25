@@ -23,3 +23,17 @@ api.interceptors.request.use((config) => {
   }
   return config
 })
+
+// Access tokens are short-lived (60 min default). A 401 here means the
+// session expired mid-use — clear it and force back to the login screen
+// rather than let every screen's "Retry" button fail forever.
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 && getToken()) {
+      logout()
+      window.location.reload()
+    }
+    return Promise.reject(error)
+  },
+)

@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import { api } from './lib/api'
 import { logout } from './lib/auth'
+import { secondaryButtonClass, ErrorState, Spinner } from './RecipeFormFields'
 
 function DetailRow({ label, value }) {
   if (value === null || value === undefined || value === '') return null
   return (
     <div className="flex justify-between py-1 text-sm">
       <span className="text-stone-500">{label}</span>
-      <span className="text-stone-900 text-right">{value}</span>
+      <span className="text-stone-900 text-right tabular-nums">{value}</span>
     </div>
   )
 }
@@ -44,52 +45,56 @@ export default function ItemsList({ onLoggedOut, onBack }) {
   const [expandedId, setExpandedId] = useState(null)
   const [detailById, setDetailById] = useState({})
   const [detailLoadingId, setDetailLoadingId] = useState(null)
+  const [detailErrorId, setDetailErrorId] = useState(null)
 
-  useEffect(() => {
+  function load() {
+    setError('')
     api.get('/inventory/items/')
       .then(({ data }) => setItems(data))
       .catch(() => setError('Could not load items from inventory-platform.'))
-  }, [])
+  }
 
-  async function toggleExpand(item) {
+  useEffect(load, [])
+
+  async function loadDetail(item) {
+    setDetailLoadingId(item.id)
+    setDetailErrorId(null)
+    try {
+      const { data } = await api.get(`/inventory/items/${item.id}/`)
+      setDetailById((prev) => ({ ...prev, [item.id]: data }))
+    } catch {
+      // Don't fabricate a fake item record on failure — that renders
+      // misleading fields (e.g. "Active: No") that aren't real data.
+      setDetailErrorId(item.id)
+    } finally {
+      setDetailLoadingId(null)
+    }
+  }
+
+  function toggleExpand(item) {
     if (expandedId === item.id) {
       setExpandedId(null)
       return
     }
     setExpandedId(item.id)
-    if (!detailById[item.id]) {
-      setDetailLoadingId(item.id)
-      try {
-        const { data } = await api.get(`/inventory/items/${item.id}/`)
-        setDetailById((prev) => ({ ...prev, [item.id]: data }))
-      } catch {
-        setDetailById((prev) => ({ ...prev, [item.id]: { notes: 'Failed to load details.' } }))
-      } finally {
-        setDetailLoadingId(null)
-      }
-    }
+    if (!detailById[item.id]) loadDetail(item)
   }
 
   return (
     <div className="min-h-screen bg-stone-50 p-8">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-semibold text-stone-900">
-            Inventory items {items && <span className="text-stone-400 font-normal text-base">({items.length})</span>}
+          <h1 className="text-2xl font-semibold text-stone-900 tracking-tight">
+            Inventory items {items && <span className="text-stone-400 font-normal text-base tabular-nums">({items.length})</span>}
           </h1>
           <div className="flex items-center gap-4">
-            <button onClick={onBack} className="text-sm text-stone-500 hover:text-stone-800">Recipes</button>
-            <button
-              onClick={() => { logout(); onLoggedOut() }}
-              className="text-sm text-stone-500 hover:text-stone-800"
-            >
-              Log out
-            </button>
+            <button onClick={onBack} className={secondaryButtonClass}>Recipes</button>
+            <button onClick={() => { logout(); onLoggedOut() }} className={secondaryButtonClass}>Log out</button>
           </div>
         </div>
 
-        {error && <p className="text-red-600">{error}</p>}
-        {!items && !error && <p className="text-stone-500">Loading…</p>}
+        {error && <ErrorState message={error} onRetry={load} />}
+        {!items && !error && <Spinner />}
 
         {items && (
           <ul className="divide-y divide-stone-200 bg-white rounded-lg border border-stone-200">
@@ -97,15 +102,22 @@ export default function ItemsList({ onLoggedOut, onBack }) {
               <li key={item.id}>
                 <button
                   onClick={() => toggleExpand(item)}
-                  className="w-full px-4 py-3 flex justify-between text-left hover:bg-stone-50"
+                  aria-expanded={expandedId === item.id}
+                  className="w-full px-4 py-3 flex justify-between text-left hover:bg-stone-50 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
                 >
                   <span className="text-stone-900">{item.name_en}</span>
                   <span className="text-stone-400 text-sm">{item.sku} · {item.item_type_display}</span>
                 </button>
-                {expandedId === item.id && (
-                  detailLoadingId === item.id
-                    ? <p className="px-4 py-4 text-sm text-stone-400 border-t border-stone-200">Loading details…</p>
-                    : <ItemDetail item={detailById[item.id]} />
+                {expandedId === item.id && detailLoadingId === item.id && (
+                  <p className="px-4 py-4 text-sm text-stone-400 border-t border-stone-200">Loading details…</p>
+                )}
+                {expandedId === item.id && detailErrorId === item.id && (
+                  <div className="px-4 py-3 border-t border-stone-200">
+                    <ErrorState message="Could not load this item's details." onRetry={() => loadDetail(item)} />
+                  </div>
+                )}
+                {expandedId === item.id && detailById[item.id] && !detailLoadingId && detailErrorId !== item.id && (
+                  <ItemDetail item={detailById[item.id]} />
                 )}
               </li>
             ))}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { productionRecipes } from './lib/cookbookApi'
+import { primaryButtonClass, dangerLinkClass, ErrorState, EmptyState, Spinner } from './RecipeFormFields'
 
 export default function ProductionRecipeList({ onNew, onEdit, onView }) {
   const [recipes, setRecipes] = useState(null)
@@ -7,6 +8,7 @@ export default function ProductionRecipeList({ onNew, onEdit, onView }) {
   const [kitchenFilter, setKitchenFilter] = useState('all')
 
   function load() {
+    setError('')
     productionRecipes.list()
       .then((data) => setRecipes(data.results ?? data))
       .catch(() => setError('Could not load production recipes.'))
@@ -31,35 +33,37 @@ export default function ProductionRecipeList({ onNew, onEdit, onView }) {
     load()
   }
 
+  function filterButtonClass(active) {
+    return `px-3 py-1.5 text-sm rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500 ${
+      active ? 'bg-accent-600 text-white' : 'bg-white border border-stone-200 text-stone-600 hover:bg-stone-50'
+    }`
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <div className="flex gap-1">
-          <button
-            onClick={() => setKitchenFilter('all')}
-            className={`px-3 py-1.5 text-sm rounded-md ${kitchenFilter === 'all' ? 'bg-stone-900 text-white' : 'bg-white border border-stone-200 text-stone-600'}`}
-          >
+          <button onClick={() => setKitchenFilter('all')} className={filterButtonClass(kitchenFilter === 'all')}>
             All kitchens
           </button>
           {kitchens.map((k) => (
-            <button
-              key={k}
-              onClick={() => setKitchenFilter(k)}
-              className={`px-3 py-1.5 text-sm rounded-md ${kitchenFilter === k ? 'bg-stone-900 text-white' : 'bg-white border border-stone-200 text-stone-600'}`}
-            >
+            <button key={k} onClick={() => setKitchenFilter(k)} className={filterButtonClass(kitchenFilter === k)}>
               {k}
             </button>
           ))}
         </div>
-        <button onClick={onNew} className="bg-stone-900 text-white text-sm px-4 py-2 rounded-md hover:bg-stone-800">
-          + New Production Recipe
-        </button>
+        <button onClick={onNew} className={primaryButtonClass}>+ New Production Recipe</button>
       </div>
 
-      {error && <p className="text-red-600">{error}</p>}
-      {!recipes && !error && <p className="text-stone-500">Loading…</p>}
+      {error && <ErrorState message={error} onRetry={load} />}
+      {!recipes && !error && <Spinner />}
+
       {recipes && visible.length === 0 && (
-        <p className="text-stone-500">No production recipes {kitchenFilter !== 'all' ? `for ${kitchenFilter}` : 'yet'}.</p>
+        <EmptyState
+          message={`No production recipes ${kitchenFilter !== 'all' ? `for ${kitchenFilter}` : 'yet'}.`}
+          actionLabel="+ New Production Recipe"
+          onAction={onNew}
+        />
       )}
 
       {recipes && visible.length > 0 && (
@@ -77,17 +81,17 @@ export default function ProductionRecipeList({ onNew, onEdit, onView }) {
           </thead>
           <tbody className="divide-y divide-stone-200">
             {visible.map((r) => (
-              <tr key={r.id}>
+              <tr key={r.id} className="hover:bg-stone-50 transition-colors">
                 <td className="px-4 py-2 text-stone-900">{r.name_en}</td>
                 <td className="px-4 py-2 text-stone-500">{r.prep_kitchen}</td>
                 <td className="px-4 py-2 text-stone-500">{r.section_name}</td>
-                <td className="px-4 py-2 text-right text-stone-900">{r.output_qty} {r.output_unit_code}</td>
-                <td className="px-4 py-2 text-right text-stone-500">{r.cost}</td>
-                <td className="px-4 py-2 text-right text-stone-500">{r.ingredient_count}</td>
+                <td className="px-4 py-2 text-right text-stone-900 tabular-nums">{r.output_qty} {r.output_unit_code}</td>
+                <td className="px-4 py-2 text-right text-stone-500 tabular-nums">{r.cost}</td>
+                <td className="px-4 py-2 text-right text-stone-500 tabular-nums">{r.ingredient_count}</td>
                 <td className="px-4 py-2 text-right whitespace-nowrap">
-                  <button onClick={() => onView(r.id)} className="text-sm text-stone-600 hover:text-stone-900 mr-3">View</button>
-                  <button onClick={() => onEdit(r.id)} className="text-sm text-stone-600 hover:text-stone-900 mr-3">Edit</button>
-                  <button onClick={() => handleDelete(r.id)} className="text-sm text-red-500 hover:text-red-700">Delete</button>
+                  <button onClick={() => onView(r.id)} className="text-sm text-stone-600 hover:text-stone-900 mr-3 rounded focus:outline-none focus:ring-2 focus:ring-accent-500">View</button>
+                  <button onClick={() => onEdit(r.id)} className="text-sm text-stone-600 hover:text-stone-900 mr-3 rounded focus:outline-none focus:ring-2 focus:ring-accent-500">Edit</button>
+                  <button onClick={() => handleDelete(r.id)} className={dangerLinkClass}>Delete</button>
                 </td>
               </tr>
             ))}
