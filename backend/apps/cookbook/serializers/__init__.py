@@ -7,6 +7,10 @@ from .dish_recipe import (
     DishRecipeIngredientSerializer, DishRecipeStepSerializer, DishStandardSerializer,
     DishRecipeListSerializer, DishRecipeDetailSerializer, DishRecipeWriteSerializer,
 )
+from .production_recipe import (
+    ProductionRecipeIngredientSerializer, ProductionRecipeStepSerializer,
+    ProductionRecipeListSerializer, ProductionRecipeDetailSerializer, ProductionRecipeWriteSerializer,
+)
 
 __all__ = [
     'MenuCategorySerializer', 'SectionSerializer', 'ApproverSerializer',
@@ -14,4 +18,6 @@ __all__ = [
     'StandardMeasurementConversionSerializer', 'TasteDescriptorSerializer',
     'DishRecipeIngredientSerializer', 'DishRecipeStepSerializer', 'DishStandardSerializer',
     'DishRecipeListSerializer', 'DishRecipeDetailSerializer', 'DishRecipeWriteSerializer',
+    'ProductionRecipeIngredientSerializer', 'ProductionRecipeStepSerializer',
+    'ProductionRecipeListSerializer', 'ProductionRecipeDetailSerializer', 'ProductionRecipeWriteSerializer',
 ]

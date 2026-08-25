@@ -12,6 +12,7 @@ router.register(r'reference/units', views.UnitScaleViewSet, basename='unit-scale
 router.register(r'reference/measurement-conversions', views.StandardMeasurementConversionViewSet, basename='measurement-conversion')
 router.register(r'reference/taste-descriptors', views.TasteDescriptorViewSet, basename='taste-descriptor')
 router.register(r'dish-recipes', views.DishRecipeViewSet, basename='dish-recipe')
+router.register(r'production-recipes', views.ProductionRecipeViewSet, basename='production-recipe')
 
 urlpatterns = [
     path('', include(router.urls)),

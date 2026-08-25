@@ -25,3 +25,12 @@ export const dishRecipes = {
   remove: (id) => api.delete(`/cookbook/dish-recipes/${id}/`),
   recalculate: (id) => api.post(`/cookbook/dish-recipes/${id}/recalculate/`).then((r) => r.data),
 }
+
+export const productionRecipes = {
+  list: () => api.get('/cookbook/production-recipes/').then((r) => r.data),
+  get: (id) => api.get(`/cookbook/production-recipes/${id}/`).then((r) => r.data),
+  create: (payload) => api.post('/cookbook/production-recipes/', payload).then((r) => r.data),
+  update: (id, payload) => api.patch(`/cookbook/production-recipes/${id}/`, payload).then((r) => r.data),
+  remove: (id) => api.delete(`/cookbook/production-recipes/${id}/`),
+  recalculate: (id) => api.post(`/cookbook/production-recipes/${id}/recalculate/`).then((r) => r.data),
+}

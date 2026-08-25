@@ -4,13 +4,14 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import (
     MenuCategory, Section, Approver, Allergen, ServiceStyle, UnitScale,
-    StandardMeasurementConversion, TasteDescriptor, DishRecipe,
+    StandardMeasurementConversion, TasteDescriptor, DishRecipe, ProductionRecipe,
 )
 from .serializers import (
     MenuCategorySerializer, SectionSerializer, ApproverSerializer,
     AllergenSerializer, ServiceStyleSerializer, UnitScaleSerializer,
     StandardMeasurementConversionSerializer, TasteDescriptorSerializer,
     DishRecipeListSerializer, DishRecipeDetailSerializer, DishRecipeWriteSerializer,
+    ProductionRecipeListSerializer, ProductionRecipeDetailSerializer, ProductionRecipeWriteSerializer,
 )
 from .services import calculate_recipe_cost
 
@@ -61,24 +62,21 @@ class TasteDescriptorViewSet(ReadOnlyReferenceViewSet):
     serializer_class = TasteDescriptorSerializer
 
 
-class DishRecipeViewSet(
+class RecipeViewSetBase(
     mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,
     mixins.UpdateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet,
 ):
+    """
+    Shared create/update/recalculate behavior for both recipe types: the
+    write serializer stashes _unknown_skus (item_sku not found in
+    inventory-platform) on the instance, surfaced here as a response
+    warning rather than a hard failure — the recipe still saves.
+    """
     permission_classes = [IsAuthenticated]
-    queryset = DishRecipe.objects.select_related(
-        'category', 'section', 'service_style', 'approved_by', 'qa_approved_by',
-    ).prefetch_related('ingredients__unit', 'steps', 'allergens', 'standard')
-
-    def get_serializer_class(self):
-        if self.action in ('create', 'update', 'partial_update'):
-            return DishRecipeWriteSerializer
-        if self.action == 'retrieve':
-            return DishRecipeDetailSerializer
-        return DishRecipeListSerializer
+    detail_serializer_class = None  # set by subclass
 
     def _response_with_warnings(self, instance, status_code=200):
-        detail = DishRecipeDetailSerializer(instance).data
+        detail = self.detail_serializer_class(instance).data
         unknown_skus = getattr(instance, '_unknown_skus', [])
         if unknown_skus:
             detail['_warnings'] = [f'Unknown item SKU (cost not included): {sku}' for sku in unknown_skus]
@@ -109,3 +107,31 @@ class DishRecipeViewSet(
         if unknown_skus:
             data['_warnings'] = [f'Unknown item SKU: {sku}' for sku in unknown_skus]
         return Response(data)
+
+
+class DishRecipeViewSet(RecipeViewSetBase):
+    queryset = DishRecipe.objects.select_related(
+        'category', 'section', 'service_style', 'approved_by', 'qa_approved_by',
+    ).prefetch_related('ingredients__unit', 'steps', 'allergens', 'standard')
+    detail_serializer_class = DishRecipeDetailSerializer
+
+    def get_serializer_class(self):
+        if self.action in ('create', 'update', 'partial_update'):
+            return DishRecipeWriteSerializer
+        if self.action == 'retrieve':
+            return DishRecipeDetailSerializer
+        return DishRecipeListSerializer
+
+
+class ProductionRecipeViewSet(RecipeViewSetBase):
+    queryset = ProductionRecipe.objects.select_related(
+        'section', 'approved_by', 'qa_approved_by', 'output_unit',
+    ).prefetch_related('ingredients__unit', 'steps')
+    detail_serializer_class = ProductionRecipeDetailSerializer
+
+    def get_serializer_class(self):
+        if self.action in ('create', 'update', 'partial_update'):
+            return ProductionRecipeWriteSerializer
+        if self.action == 'retrieve':
+            return ProductionRecipeDetailSerializer
+        return ProductionRecipeListSerializer

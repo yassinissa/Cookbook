@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchReferenceData, fetchInventoryItems, dishRecipes } from './lib/cookbookApi'
+import { Field, inputClass, IngredientRows, StepRows } from './RecipeFormFields'
 
 const emptyStandard = {
   service_style: '', portion_weight_g: '', portion_tolerance_g: '', serving_temp_c: '', temp_tolerance_c: '',
@@ -11,17 +12,6 @@ const emptyStandard = {
   primary_flavor: '', secondary_flavor: '', aftertaste: '', mouthfeel: '',
   freshness_standard: '', critical_defects_not_allowed: '',
 }
-
-function Field({ label, children }) {
-  return (
-    <label className="block">
-      <span className="block text-xs font-medium text-stone-500 mb-1">{label}</span>
-      {children}
-    </label>
-  )
-}
-
-const inputClass = 'w-full px-2 py-1.5 border border-stone-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-stone-400'
 
 export default function DishRecipeForm({ recipeId, onDone, onCancel }) {
   const [ref, setRef] = useState(null)
@@ -135,8 +125,7 @@ export default function DishRecipeForm({ recipeId, onDone, onCancel }) {
   if (!ref) return <div className="p-8 text-stone-500">Loading…</div>
 
   return (
-    <div className="min-h-screen bg-stone-50 p-8">
-      <form onSubmit={handleSubmit} className="max-w-3xl mx-auto space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-stone-900">{recipeId ? 'Edit Recipe' : 'New Recipe'}</h1>
           <div className="flex gap-3">
@@ -204,53 +193,10 @@ export default function DishRecipeForm({ recipeId, onDone, onCancel }) {
           </div>
         </section>
 
-        {/* Ingredients */}
-        <section className="bg-white rounded-lg border border-stone-200 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-stone-700">Ingredients</h2>
-            <button type="button" onClick={addIngredient} className="text-sm text-stone-600 hover:text-stone-900">+ Add ingredient</button>
-          </div>
-          <div className="space-y-2">
-            {ingredients.map((ing, i) => (
-              <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                <input list="item-skus" className={`${inputClass} col-span-3`} placeholder="SKU" value={ing.item_sku}
-                  onChange={(e) => updateIngredient(i, 'item_sku', e.target.value)} />
-                <input className={`${inputClass} col-span-3`} placeholder="Display name" value={ing.item_name_snapshot}
-                  onChange={(e) => updateIngredient(i, 'item_name_snapshot', e.target.value)} />
-                <input className={`${inputClass} col-span-2`} placeholder="Prep note" value={ing.prep_note}
-                  onChange={(e) => updateIngredient(i, 'prep_note', e.target.value)} />
-                <input type="number" step="0.001" className={`${inputClass} col-span-2`} placeholder="Qty" value={ing.quantity}
-                  onChange={(e) => updateIngredient(i, 'quantity', e.target.value)} />
-                <select className={`${inputClass} col-span-1`} value={ing.unit} onChange={(e) => updateIngredient(i, 'unit', e.target.value)}>
-                  <option value="">—</option>
-                  {ref.units.map((u) => <option key={u.id} value={u.id}>{u.code}</option>)}
-                </select>
-                <button type="button" onClick={() => removeIngredient(i)} className="col-span-1 text-red-500 text-sm">✕</button>
-              </div>
-            ))}
-          </div>
-          <datalist id="item-skus">
-            {items.map((it) => <option key={it.id} value={it.sku}>{it.name_en}</option>)}
-          </datalist>
-        </section>
+        <IngredientRows ingredients={ingredients} units={ref.units} items={items}
+          onChange={updateIngredient} onAdd={addIngredient} onRemove={removeIngredient} />
 
-        {/* Steps */}
-        <section className="bg-white rounded-lg border border-stone-200 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-stone-700">Steps</h2>
-            <button type="button" onClick={addStep} className="text-sm text-stone-600 hover:text-stone-900">+ Add step</button>
-          </div>
-          <div className="space-y-2">
-            {steps.map((s, i) => (
-              <div key={i} className="flex gap-2 items-start">
-                <span className="text-sm text-stone-400 pt-1.5 w-6">{s.step_number})</span>
-                <textarea className={`${inputClass} flex-1`} rows={1} value={s.instruction}
-                  onChange={(e) => updateStep(i, e.target.value)} />
-                <button type="button" onClick={() => removeStep(i)} className="text-red-500 text-sm pt-1.5">✕</button>
-              </div>
-            ))}
-          </div>
-        </section>
+        <StepRows steps={steps} onChange={updateStep} onAdd={addStep} onRemove={removeStep} />
 
         {/* Approval */}
         <section className="bg-white rounded-lg border border-stone-200 p-4 grid grid-cols-3 gap-4">
@@ -312,6 +258,5 @@ export default function DishRecipeForm({ recipeId, onDone, onCancel }) {
           )}
         </section>
       </form>
-    </div>
   )
 }
