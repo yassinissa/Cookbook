@@ -8,6 +8,7 @@ from .recipes import (
     DishRecipe, DishRecipeIngredient, DishRecipeStep,
 )
 from .standards import DishStandard
+from .item_supplement import ItemConversion, ItemConversionLine, ItemNutrition
 
 __all__ = [
     'MenuCategory', 'Section', 'Approver', 'Allergen', 'ServiceStyle', 'UnitScale',
@@ -16,4 +17,5 @@ __all__ = [
     'ProductionRecipe', 'ProductionRecipeIngredient', 'ProductionRecipeStep',
     'DishRecipe', 'DishRecipeIngredient', 'DishRecipeStep',
     'DishStandard',
+    'ItemConversion', 'ItemConversionLine', 'ItemNutrition',
 ]

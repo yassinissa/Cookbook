@@ -4,6 +4,7 @@ from .models import (
     StandardMeasurementConversion, TasteDescriptor,
     ProductionRecipe, ProductionRecipeIngredient, ProductionRecipeStep,
     DishRecipe, DishRecipeIngredient, DishRecipeStep, DishStandard,
+    ItemConversion, ItemConversionLine, ItemNutrition,
 )
 
 
@@ -94,3 +95,23 @@ class DishRecipeAdmin(admin.ModelAdmin):
     list_filter   = ['branch', 'category', 'is_current']
     search_fields = ['name_en', 'name_ar', 'pos_item_name']
     inlines       = [DishIngredientInline, DishStepInline, DishStandardInline]
+
+
+# ── Item supplements ────────────────────────────────────────────────────────
+
+class ItemConversionLineInline(admin.TabularInline):
+    model = ItemConversionLine
+    extra = 1
+
+
+@admin.register(ItemConversion)
+class ItemConversionAdmin(admin.ModelAdmin):
+    list_display  = ['item_sku', 'grams_per_piece', 'pieces_per_pack', 'pieces_per_kg', 'pieces_or_pack_per_box']
+    search_fields = ['item_sku']
+    inlines       = [ItemConversionLineInline]
+
+
+@admin.register(ItemNutrition)
+class ItemNutritionAdmin(admin.ModelAdmin):
+    list_display  = ['item_sku', 'unit_scale', 'calories', 'protein_g', 'fat_g', 'verification_notes']
+    search_fields = ['item_sku']
