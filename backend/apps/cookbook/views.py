@@ -7,6 +7,7 @@ from .models import (
     StandardMeasurementConversion, TasteDescriptor, DishRecipe, ProductionRecipe,
     DishPriceHistory, DishRecipeActivityLog, ProductionCostHistory,
     ProductionRecipeActivityLog, ActivityActionType,
+    ItemConversion, ItemNutrition,
 )
 from .serializers import (
     MenuCategorySerializer, SectionSerializer, ApproverSerializer,
@@ -14,6 +15,7 @@ from .serializers import (
     StandardMeasurementConversionSerializer, TasteDescriptorSerializer,
     DishRecipeListSerializer, DishRecipeDetailSerializer, DishRecipeWriteSerializer,
     ProductionRecipeListSerializer, ProductionRecipeDetailSerializer, ProductionRecipeWriteSerializer,
+    ItemConversionSerializer, ItemNutritionSerializer,
 )
 from .services import calculate_recipe_cost
 
@@ -154,3 +156,28 @@ class ProductionRecipeViewSet(RecipeViewSetBase):
         ProductionRecipeActivityLog.objects.create(
             recipe=recipe, action_type=ActivityActionType.RECALCULATED, changed_by=request.user.username,
         )
+
+
+class ItemConversionViewSet(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,
+    mixins.UpdateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet,
+):
+    """Looked up by item_sku directly (unique on the model) rather than a
+    UUID — GET/PATCH/DELETE /api/cookbook/item-conversions/<SKU>/."""
+    permission_classes = [IsAuthenticated]
+    queryset = ItemConversion.objects.prefetch_related('lines__unit').select_related('updated_by', 'approved_by')
+    serializer_class = ItemConversionSerializer
+    lookup_field = 'item_sku'
+    lookup_value_regex = '[^/]+'
+
+
+class ItemNutritionViewSet(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,
+    mixins.UpdateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet,
+):
+    """Looked up by item_sku directly — GET/PATCH/DELETE /api/cookbook/item-nutrition/<SKU>/."""
+    permission_classes = [IsAuthenticated]
+    queryset = ItemNutrition.objects.select_related('unit_scale', 'updated_by', 'approved_by')
+    serializer_class = ItemNutritionSerializer
+    lookup_field = 'item_sku'
+    lookup_value_regex = '[^/]+'

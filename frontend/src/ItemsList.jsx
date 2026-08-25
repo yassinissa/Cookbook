@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from './lib/api'
 import { logout } from './lib/auth'
 import { secondaryButtonClass, ErrorState, Spinner } from './RecipeFormFields'
+import ItemSupplementForm from './ItemSupplementForm'
 
 function DetailRow({ label, value }) {
   if (value === null || value === undefined || value === '') return null
@@ -13,7 +14,7 @@ function DetailRow({ label, value }) {
   )
 }
 
-function ItemDetail({ item }) {
+function ItemDetail({ item, onEditSupplements }) {
   return (
     <div className="px-4 py-4 bg-stone-50 border-t border-stone-200">
       <DetailRow label="Name (Arabic)" value={item.name_ar} />
@@ -35,6 +36,11 @@ function ItemDetail({ item }) {
       />
       <DetailRow label="Notes" value={item.notes} />
       <DetailRow label="Active" value={item.is_active ? 'Yes' : 'No'} />
+      <div className="pt-2">
+        <button onClick={onEditSupplements} className={secondaryButtonClass}>
+          Cookbook supplement data (conversions, nutrition) →
+        </button>
+      </div>
     </div>
   )
 }
@@ -46,6 +52,7 @@ export default function ItemsList({ onLoggedOut, onBack }) {
   const [detailById, setDetailById] = useState({})
   const [detailLoadingId, setDetailLoadingId] = useState(null)
   const [detailErrorId, setDetailErrorId] = useState(null)
+  const [supplementItem, setSupplementItem] = useState(null)
 
   function load() {
     setError('')
@@ -78,6 +85,16 @@ export default function ItemsList({ onLoggedOut, onBack }) {
     }
     setExpandedId(item.id)
     if (!detailById[item.id]) loadDetail(item)
+  }
+
+  if (supplementItem) {
+    return (
+      <div className="min-h-screen bg-stone-50 p-8">
+        <div className="max-w-2xl mx-auto">
+          <ItemSupplementForm item={supplementItem} onBack={() => setSupplementItem(null)} />
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -117,7 +134,7 @@ export default function ItemsList({ onLoggedOut, onBack }) {
                   </div>
                 )}
                 {expandedId === item.id && detailById[item.id] && !detailLoadingId && detailErrorId !== item.id && (
-                  <ItemDetail item={detailById[item.id]} />
+                  <ItemDetail item={detailById[item.id]} onEditSupplements={() => setSupplementItem(detailById[item.id])} />
                 )}
               </li>
             ))}
