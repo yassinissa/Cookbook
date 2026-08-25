@@ -38,7 +38,7 @@ function ItemDetail({ item }) {
   )
 }
 
-export default function ItemsList({ onLoggedOut }) {
+export default function ItemsList({ onLoggedOut, onBack }) {
   const [items, setItems] = useState(null)
   const [error, setError] = useState('')
   const [expandedId, setExpandedId] = useState(null)
@@ -77,12 +77,15 @@ export default function ItemsList({ onLoggedOut }) {
           <h1 className="text-2xl font-semibold text-stone-900">
             Inventory items {items && <span className="text-stone-400 font-normal text-base">({items.length})</span>}
           </h1>
-          <button
-            onClick={() => { logout(); onLoggedOut() }}
-            className="text-sm text-stone-500 hover:text-stone-800"
-          >
-            Log out
-          </button>
+          <div className="flex items-center gap-4">
+            <button onClick={onBack} className="text-sm text-stone-500 hover:text-stone-800">Recipes</button>
+            <button
+              onClick={() => { logout(); onLoggedOut() }}
+              className="text-sm text-stone-500 hover:text-stone-800"
+            >
+              Log out
+            </button>
+          </div>
         </div>
 
         {error && <p className="text-red-600">{error}</p>}

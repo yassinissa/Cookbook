@@ -54,7 +54,7 @@ class RecipeStepLine(BaseModel):
         ordering = ['step_number']
 
 
-class RecipeCardFields(models.Model):
+class RecipeCardFields(BaseModel):
     """Fields shared by both recipe types — costing/approval/versioning."""
     name_en              = models.CharField(max_length=255)
     name_ar              = models.CharField(max_length=255, blank=True)
@@ -84,7 +84,7 @@ class RecipeCardFields(models.Model):
 
     notes                = models.TextField(blank=True)
 
-    class Meta:
+    class Meta(BaseModel.Meta):
         abstract = True
 
 
