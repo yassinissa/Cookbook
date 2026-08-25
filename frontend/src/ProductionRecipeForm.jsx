@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchReferenceData, fetchInventoryItems, productionRecipes } from './lib/cookbookApi'
-import { Field, inputClass, IngredientRows, StepRows } from './RecipeFormFields'
+import { Field, inputClass, IngredientRows, StepRows, HistoryPanel } from './RecipeFormFields'
 
 export default function ProductionRecipeForm({ recipeId, onDone, onCancel }) {
   const [ref, setRef] = useState(null)
@@ -16,6 +16,8 @@ export default function ProductionRecipeForm({ recipeId, onDone, onCancel }) {
   })
   const [ingredients, setIngredients] = useState([])
   const [steps, setSteps] = useState([])
+  const [costHistory, setCostHistory] = useState([])
+  const [activityLog, setActivityLog] = useState([])
 
   useEffect(() => {
     fetchReferenceData().then(setRef)
@@ -36,6 +38,8 @@ export default function ProductionRecipeForm({ recipeId, onDone, onCancel }) {
       })
       setIngredients(r.ingredients)
       setSteps(r.steps)
+      setCostHistory(r.cost_history)
+      setActivityLog(r.activity_log)
     })
   }, [recipeId])
 
@@ -164,6 +168,10 @@ export default function ProductionRecipeForm({ recipeId, onDone, onCancel }) {
           <Field label="Notes"><textarea className={inputClass} rows={2} value={form.notes} onChange={(e) => setField('notes', e.target.value)} /></Field>
         </div>
       </section>
+
+      {recipeId && (
+        <HistoryPanel costHistory={costHistory} priceLabel={null} activityLog={activityLog} />
+      )}
     </form>
   )
 }

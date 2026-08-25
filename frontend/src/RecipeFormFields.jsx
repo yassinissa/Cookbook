@@ -62,3 +62,41 @@ export function StepRows({ steps, onChange, onAdd, onRemove }) {
     </section>
   )
 }
+
+function fmtDate(iso) {
+  return new Date(iso).toLocaleString()
+}
+
+export function HistoryPanel({ costHistory, priceLabel, activityLog }) {
+  return (
+    <section className="bg-white rounded-lg border border-stone-200 p-4 grid grid-cols-2 gap-4">
+      <div>
+        <h2 className="text-sm font-semibold text-stone-700 mb-2">Cost history</h2>
+        <div className="max-h-48 overflow-y-auto text-sm">
+          {costHistory.length === 0 && <p className="text-stone-400">No history yet.</p>}
+          {costHistory.map((h) => (
+            <div key={h.id} className="flex justify-between py-1 border-b border-stone-100">
+              <span className="text-stone-500">{fmtDate(h.created_at)}</span>
+              <span className="text-stone-900">
+                cost {h.cost}{priceLabel && h.selling_price != null ? ` · ${priceLabel} ${h.selling_price}` : ''}
+                {h.output_qty != null ? ` · qty ${h.output_qty}` : ''}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div>
+        <h2 className="text-sm font-semibold text-stone-700 mb-2">Activity log</h2>
+        <div className="max-h-48 overflow-y-auto text-sm">
+          {activityLog.length === 0 && <p className="text-stone-400">No activity yet.</p>}
+          {activityLog.map((a) => (
+            <div key={a.id} className="flex justify-between py-1 border-b border-stone-100">
+              <span className="text-stone-500">{fmtDate(a.created_at)}</span>
+              <span className="text-stone-900">{a.action_type_display} — {a.changed_by || 'unknown'}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}

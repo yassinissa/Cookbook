@@ -5,6 +5,8 @@ from rest_framework.response import Response
 from .models import (
     MenuCategory, Section, Approver, Allergen, ServiceStyle, UnitScale,
     StandardMeasurementConversion, TasteDescriptor, DishRecipe, ProductionRecipe,
+    DishPriceHistory, DishRecipeActivityLog, ProductionCostHistory,
+    ProductionRecipeActivityLog, ActivityActionType,
 )
 from .serializers import (
     MenuCategorySerializer, SectionSerializer, ApproverSerializer,
@@ -96,6 +98,10 @@ class RecipeViewSetBase(
         instance = serializer.save()
         return self._response_with_warnings(instance)
 
+    def _snapshot_and_log_recalculate(self, recipe, request):
+        """Override per recipe type: write a history row + activity log entry."""
+        raise NotImplementedError
+
     @action(detail=True, methods=['post'])
     def recalculate(self, request, pk=None):
         """Re-fetch live item costs and persist the total (see services.calculate_recipe_cost)."""
@@ -103,6 +109,7 @@ class RecipeViewSetBase(
         cost, unknown_skus = calculate_recipe_cost(recipe.ingredients.all())
         recipe.cost = cost
         recipe.save(update_fields=['cost'])
+        self._snapshot_and_log_recalculate(recipe, request)
         data = {'cost': cost}
         if unknown_skus:
             data['_warnings'] = [f'Unknown item SKU: {sku}' for sku in unknown_skus]
@@ -112,7 +119,7 @@ class RecipeViewSetBase(
 class DishRecipeViewSet(RecipeViewSetBase):
     queryset = DishRecipe.objects.select_related(
         'category', 'section', 'service_style', 'approved_by', 'qa_approved_by',
-    ).prefetch_related('ingredients__unit', 'steps', 'allergens', 'standard')
+    ).prefetch_related('ingredients__unit', 'steps', 'allergens', 'standard', 'price_history', 'activity_log')
     detail_serializer_class = DishRecipeDetailSerializer
 
     def get_serializer_class(self):
@@ -122,11 +129,17 @@ class DishRecipeViewSet(RecipeViewSetBase):
             return DishRecipeDetailSerializer
         return DishRecipeListSerializer
 
+    def _snapshot_and_log_recalculate(self, recipe, request):
+        DishPriceHistory.objects.create(dish_recipe=recipe, cost=recipe.cost, selling_price=recipe.selling_price)
+        DishRecipeActivityLog.objects.create(
+            recipe=recipe, action_type=ActivityActionType.RECALCULATED, changed_by=request.user.username,
+        )
+
 
 class ProductionRecipeViewSet(RecipeViewSetBase):
     queryset = ProductionRecipe.objects.select_related(
         'section', 'approved_by', 'qa_approved_by', 'output_unit',
-    ).prefetch_related('ingredients__unit', 'steps')
+    ).prefetch_related('ingredients__unit', 'steps', 'cost_history', 'activity_log')
     detail_serializer_class = ProductionRecipeDetailSerializer
 
     def get_serializer_class(self):
@@ -135,3 +148,9 @@ class ProductionRecipeViewSet(RecipeViewSetBase):
         if self.action == 'retrieve':
             return ProductionRecipeDetailSerializer
         return ProductionRecipeListSerializer
+
+    def _snapshot_and_log_recalculate(self, recipe, request):
+        ProductionCostHistory.objects.create(production_recipe=recipe, cost=recipe.cost, output_qty=recipe.output_qty)
+        ProductionRecipeActivityLog.objects.create(
+            recipe=recipe, action_type=ActivityActionType.RECALCULATED, changed_by=request.user.username,
+        )

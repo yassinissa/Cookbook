@@ -9,6 +9,10 @@ from .recipes import (
 )
 from .standards import DishStandard
 from .item_supplement import ItemConversion, ItemConversionLine, ItemNutrition
+from .history import (
+    ActivityActionType, DishPriceHistory, ProductionCostHistory,
+    DishRecipeActivityLog, ProductionRecipeActivityLog,
+)
 
 __all__ = [
     'MenuCategory', 'Section', 'Approver', 'Allergen', 'ServiceStyle', 'UnitScale',
@@ -18,4 +22,6 @@ __all__ = [
     'DishRecipe', 'DishRecipeIngredient', 'DishRecipeStep',
     'DishStandard',
     'ItemConversion', 'ItemConversionLine', 'ItemNutrition',
+    'ActivityActionType', 'DishPriceHistory', 'ProductionCostHistory',
+    'DishRecipeActivityLog', 'ProductionRecipeActivityLog',
 ]

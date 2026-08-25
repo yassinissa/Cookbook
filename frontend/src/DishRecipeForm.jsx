@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchReferenceData, fetchInventoryItems, dishRecipes } from './lib/cookbookApi'
-import { Field, inputClass, IngredientRows, StepRows } from './RecipeFormFields'
+import { Field, inputClass, IngredientRows, StepRows, HistoryPanel } from './RecipeFormFields'
 
 const emptyStandard = {
   service_style: '', portion_weight_g: '', portion_tolerance_g: '', serving_temp_c: '', temp_tolerance_c: '',
@@ -31,6 +31,8 @@ export default function DishRecipeForm({ recipeId, onDone, onCancel }) {
   const [steps, setSteps] = useState([])
   const [standard, setStandard] = useState(emptyStandard)
   const [showStandard, setShowStandard] = useState(false)
+  const [priceHistory, setPriceHistory] = useState([])
+  const [activityLog, setActivityLog] = useState([])
 
   useEffect(() => {
     fetchReferenceData().then(setRef)
@@ -55,6 +57,8 @@ export default function DishRecipeForm({ recipeId, onDone, onCancel }) {
         setStandard({ ...emptyStandard, ...r.standard })
         setShowStandard(true)
       }
+      setPriceHistory(r.price_history)
+      setActivityLog(r.activity_log)
     })
   }, [recipeId])
 
@@ -257,6 +261,10 @@ export default function DishRecipeForm({ recipeId, onDone, onCancel }) {
             </div>
           )}
         </section>
+
+        {recipeId && (
+          <HistoryPanel costHistory={priceHistory} priceLabel="price" activityLog={activityLog} />
+        )}
       </form>
   )
 }

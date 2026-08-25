@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from apps.cookbook.models import (
     ProductionRecipe, ProductionRecipeIngredient, ProductionRecipeStep,
+    ProductionCostHistory, ProductionRecipeActivityLog, ActivityActionType,
 )
 from apps.cookbook.services import calculate_recipe_cost
 from .reference import SectionSerializer, ApproverSerializer, UnitScaleSerializer
@@ -18,6 +19,20 @@ class ProductionRecipeStepSerializer(serializers.ModelSerializer):
     class Meta:
         model  = ProductionRecipeStep
         fields = ['id', 'step_number', 'instruction']
+
+
+class ProductionCostHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = ProductionCostHistory
+        fields = ['id', 'cost', 'output_qty', 'created_at']
+
+
+class ProductionRecipeActivityLogSerializer(serializers.ModelSerializer):
+    action_type_display = serializers.CharField(source='get_action_type_display', read_only=True)
+
+    class Meta:
+        model  = ProductionRecipeActivityLog
+        fields = ['id', 'action_type', 'action_type_display', 'description', 'changed_by', 'created_at']
 
 
 class ProductionRecipeListSerializer(serializers.ModelSerializer):
@@ -42,6 +57,8 @@ class ProductionRecipeDetailSerializer(serializers.ModelSerializer):
     ingredients   = ProductionRecipeIngredientSerializer(many=True, read_only=True)
     steps         = ProductionRecipeStepSerializer(many=True, read_only=True)
     cost_per_unit = serializers.SerializerMethodField()
+    cost_history  = ProductionCostHistorySerializer(many=True, read_only=True)
+    activity_log  = ProductionRecipeActivityLogSerializer(many=True, read_only=True)
 
     class Meta:
         model  = ProductionRecipe
@@ -52,6 +69,7 @@ class ProductionRecipeDetailSerializer(serializers.ModelSerializer):
             'labor_cost', 'cost', 'cost_per_unit',
             'approved_by', 'qa_approved_by', 'approved_at', 'notes',
             'version', 'is_current', 'ingredients', 'steps',
+            'cost_history', 'activity_log',
             'created_at', 'updated_at',
         ]
 
@@ -95,6 +113,18 @@ class ProductionRecipeWriteSerializer(serializers.ModelSerializer):
                 instruction=s['instruction'],
             )
 
+    def _changed_by(self):
+        request = self.context.get('request')
+        return getattr(getattr(request, 'user', None), 'username', '') if request else ''
+
+    def _snapshot_cost(self, recipe):
+        ProductionCostHistory.objects.create(production_recipe=recipe, cost=recipe.cost, output_qty=recipe.output_qty)
+
+    def _log(self, recipe, action_type, description=''):
+        ProductionRecipeActivityLog.objects.create(
+            recipe=recipe, action_type=action_type, description=description, changed_by=self._changed_by(),
+        )
+
     def create(self, validated_data):
         ingredient_data = validated_data.pop('ingredients', [])
         step_data       = validated_data.pop('steps', [])
@@ -104,12 +134,15 @@ class ProductionRecipeWriteSerializer(serializers.ModelSerializer):
         self._save_ingredients(recipe, ingredient_data)
         self._save_steps(recipe, step_data)
         recipe._unknown_skus = unknown_skus
+        self._snapshot_cost(recipe)
+        self._log(recipe, ActivityActionType.CREATED)
         return recipe
 
     def update(self, instance, validated_data):
         ingredient_data = validated_data.pop('ingredients', None)
         step_data       = validated_data.pop('steps', None)
 
+        old_cost, old_qty = instance.cost, instance.output_qty
         for attr, val in validated_data.items():
             setattr(instance, attr, val)
 
@@ -125,4 +158,8 @@ class ProductionRecipeWriteSerializer(serializers.ModelSerializer):
 
         instance.save()
         instance._unknown_skus = unknown_skus
+
+        if instance.cost != old_cost or instance.output_qty != old_qty:
+            self._snapshot_cost(instance)
+        self._log(instance, ActivityActionType.UPDATED)
         return instance

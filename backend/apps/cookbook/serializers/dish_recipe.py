@@ -2,6 +2,7 @@ from rest_framework import serializers
 from apps.cookbook.models import (
     DishRecipe, DishRecipeIngredient, DishRecipeStep, DishStandard,
     MenuCategory, Section, ServiceStyle, Approver, Allergen, UnitScale,
+    DishPriceHistory, DishRecipeActivityLog, ActivityActionType,
 )
 from apps.cookbook.services import calculate_recipe_cost
 from .reference import (
@@ -30,6 +31,20 @@ class DishStandardSerializer(serializers.ModelSerializer):
         exclude = ['dish_recipe']
 
 
+class DishPriceHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = DishPriceHistory
+        fields = ['id', 'cost', 'selling_price', 'created_at']
+
+
+class DishRecipeActivityLogSerializer(serializers.ModelSerializer):
+    action_type_display = serializers.CharField(source='get_action_type_display', read_only=True)
+
+    class Meta:
+        model  = DishRecipeActivityLog
+        fields = ['id', 'action_type', 'action_type_display', 'description', 'changed_by', 'created_at']
+
+
 class DishRecipeListSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True, default=None)
     section_name  = serializers.CharField(source='section.name', read_only=True, default=None)
@@ -55,6 +70,8 @@ class DishRecipeDetailSerializer(serializers.ModelSerializer):
     steps         = DishRecipeStepSerializer(many=True, read_only=True)
     standard      = DishStandardSerializer(read_only=True)
     food_cost_pct = serializers.SerializerMethodField()
+    price_history = DishPriceHistorySerializer(many=True, read_only=True)
+    activity_log  = DishRecipeActivityLogSerializer(many=True, read_only=True)
 
     class Meta:
         model  = DishRecipe
@@ -65,6 +82,7 @@ class DishRecipeDetailSerializer(serializers.ModelSerializer):
             'include_labor_cost', 'labor_cost', 'cost', 'food_cost_pct',
             'approved_by', 'qa_approved_by', 'approved_at', 'notes',
             'version', 'is_current', 'ingredients', 'steps', 'standard',
+            'price_history', 'activity_log',
             'created_at', 'updated_at',
         ]
 
@@ -120,6 +138,18 @@ class DishRecipeWriteSerializer(serializers.ModelSerializer):
             return
         DishStandard.objects.update_or_create(dish_recipe=recipe, defaults=standard_data)
 
+    def _changed_by(self):
+        request = self.context.get('request')
+        return getattr(getattr(request, 'user', None), 'username', '') if request else ''
+
+    def _snapshot_price(self, recipe):
+        DishPriceHistory.objects.create(dish_recipe=recipe, cost=recipe.cost, selling_price=recipe.selling_price)
+
+    def _log(self, recipe, action_type, description=''):
+        DishRecipeActivityLog.objects.create(
+            recipe=recipe, action_type=action_type, description=description, changed_by=self._changed_by(),
+        )
+
     def create(self, validated_data):
         ingredient_data = validated_data.pop('ingredients', [])
         step_data       = validated_data.pop('steps', [])
@@ -133,6 +163,8 @@ class DishRecipeWriteSerializer(serializers.ModelSerializer):
         self._save_steps(recipe, step_data)
         self._save_standard(recipe, standard_data)
         recipe._unknown_skus = unknown_skus  # surfaced by the view, not stored
+        self._snapshot_price(recipe)
+        self._log(recipe, ActivityActionType.CREATED)
         return recipe
 
     def update(self, instance, validated_data):
@@ -141,6 +173,7 @@ class DishRecipeWriteSerializer(serializers.ModelSerializer):
         standard_data   = validated_data.pop('standard', None)
         allergens       = validated_data.pop('allergens', None)
 
+        old_cost, old_price = instance.cost, instance.selling_price
         for attr, val in validated_data.items():
             setattr(instance, attr, val)
 
@@ -161,4 +194,8 @@ class DishRecipeWriteSerializer(serializers.ModelSerializer):
         if standard_data is not None:
             self._save_standard(instance, standard_data)
         instance._unknown_skus = unknown_skus
+
+        if instance.cost != old_cost or instance.selling_price != old_price:
+            self._snapshot_price(instance)
+        self._log(instance, ActivityActionType.UPDATED)
         return instance
