@@ -11,6 +11,7 @@ backend/.env
 frontend/node_modules/
 frontend/dist/
 frontend/dev-dist/
+frontend/.env
 
 # Editors / OS
 .vscode/

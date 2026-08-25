@@ -10,7 +10,7 @@ This client is the only place that talks to it:
   - push_* methods create/update ProductionRecipe / DishRecipe records over
     there, replacing what used to be typed by hand into its admin.
 
-Logs in once with a service-account JWT (INVENTORY_API_USERNAME/PASSWORD)
+Logs in once with a service-account JWT (INVENTORY_API_EMAIL/PASSWORD)
 and re-authenticates automatically on a 401 — callers never see tokens.
 """
 import requests
@@ -24,7 +24,7 @@ class InventoryAPIError(Exception):
 class InventoryClient:
     def __init__(self):
         self.base_url = settings.INVENTORY_API_BASE_URL.rstrip('/')
-        self.username = settings.INVENTORY_API_USERNAME
+        self.email = settings.INVENTORY_API_EMAIL
         self.password = settings.INVENTORY_API_PASSWORD
         self._access_token = None
 
@@ -32,7 +32,7 @@ class InventoryClient:
     def _login(self):
         resp = requests.post(
             f'{self.base_url}/auth/login/',
-            json={'username': self.username, 'password': self.password},
+            json={'email': self.email, 'password': self.password},
             timeout=10,
         )
         if not resp.ok:
@@ -57,17 +57,40 @@ class InventoryClient:
         return resp.json() if resp.content else None
 
     # ── read: reference data ─────────────────────────────────────────────
+    def _get_all_pages(self, path, params=None):
+        """inventory-platform paginates every list endpoint (25/page, up to
+        500/page via ?page_size=). Cookbook always wants the full set for a
+        reference-data pull, so walk every page and flatten into one list."""
+        params = dict(params or {})
+        params.setdefault('page_size', 500)
+        results = []
+        page = 1
+        while True:
+            params['page'] = page
+            data = self._request('GET', path, params=params)
+            results.extend(data['results'])
+            if not data.get('next'):
+                break
+            page += 1
+        return results
+
     def get_items(self, params=None):
-        return self._request('GET', '/items/', params=params)
+        """List view — lightweight fields only (name/sku/category/unit/cost).
+        Use get_item(id) for the full record (notes, shelf life, expiry,
+        suppliers, default location, etc)."""
+        return self._get_all_pages('/items/', params=params)
+
+    def get_item(self, item_id):
+        return self._request('GET', f'/items/{item_id}/')
 
     def get_units(self):
         return self._request('GET', '/items/units/')
 
     def get_stores(self, params=None):
-        return self._request('GET', '/stores/', params=params)
+        return self._get_all_pages('/stores/', params=params)
 
     def get_prep_kitchens(self, params=None):
-        return self._request('GET', '/prep-kitchens/', params=params)
+        return self._get_all_pages('/prep-kitchens/', params=params)
 
     # ── write: recipe content ────────────────────────────────────────────
     def create_production_recipe(self, payload):

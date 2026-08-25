@@ -119,5 +119,5 @@ INVENTORY_API_BASE_URL = config('INVENTORY_API_BASE_URL', default='http://localh
 # Service-account credentials Cookbook logs in with (JWT, via /api/auth/login/).
 # That account needs a role inventory-platform accepts for recipe writes —
 # see apps.integrations.inventory_client for the exact endpoints it calls.
-INVENTORY_API_USERNAME = config('INVENTORY_API_USERNAME', default='')
+INVENTORY_API_EMAIL = config('INVENTORY_API_EMAIL', default='')
 INVENTORY_API_PASSWORD = config('INVENTORY_API_PASSWORD', default='')
