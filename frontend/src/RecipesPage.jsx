@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { logout } from './lib/auth'
 import DishRecipeList from './DishRecipeList'
 import DishRecipeForm from './DishRecipeForm'
+import DishRecipeCard from './DishRecipeCard'
 import ProductionRecipeList from './ProductionRecipeList'
 import ProductionRecipeForm from './ProductionRecipeForm'
 
@@ -60,11 +61,19 @@ export default function RecipesPage({ onLoggedOut, onOpenItems }) {
             onCancel={() => setMode({ name: 'list' })}
           />
         )}
+        {mode.name === 'card' && (
+          <DishRecipeCard
+            recipeId={mode.recipeId}
+            onBack={() => setMode({ name: 'list' })}
+            onEdit={(id) => setMode({ name: 'form', recipeId: id })}
+          />
+        )}
 
         {mode.name === 'list' && tab === 'dish' && (
           <DishRecipeList
             onNew={() => setMode({ name: 'form', recipeId: null })}
             onEdit={(id) => setMode({ name: 'form', recipeId: id })}
+            onView={(id) => setMode({ name: 'card', recipeId: id })}
           />
         )}
         {mode.name === 'list' && tab === 'production' && (
