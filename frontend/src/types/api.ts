@@ -425,8 +425,25 @@ export interface InventoryItem {
   name_en: string
   name_ar?: string
   unit_code?: string
+  unit_name?: string
   unit_cost?: string
   category?: string
+  item_type?: string
   item_type_display?: string
+  barcode?: string | null
   is_active?: boolean
+}
+
+export interface InventoryItemDetail extends InventoryItem {
+  category_display?: string
+  unit_detail?: { code: string; name_en: string; name_ar?: string; category_display?: string }
+  selling_price?: string | null
+  reorder_level?: string | null
+  shelf_life_value?: number | null
+  shelf_life_unit?: string | null
+  expiry_tracking?: boolean
+  expiry_alert_days?: number | null
+  default_location_name?: string | null
+  suppliers_info?: { id: ID; name_en: string; name_ar?: string; country?: string }[]
+  notes?: string | null
 }

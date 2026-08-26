@@ -2,9 +2,24 @@ import type { ReactNode } from 'react'
 
 import { cn } from '@/lib/cn'
 
-export function Page({ children, className }: { children: ReactNode; className?: string }) {
+export function Page({
+  children,
+  className,
+  stagger,
+}: {
+  children: ReactNode
+  className?: string
+  /** cascade direct children in on mount (one orchestrated entrance) */
+  stagger?: boolean
+}) {
   return (
-    <div className={cn('mx-auto w-full max-w-[1160px] px-4 py-6 sm:px-6 lg:px-8', className)}>
+    <div
+      className={cn(
+        'mx-auto w-full max-w-[1160px] px-4 py-6 sm:px-6 lg:px-8',
+        stagger && 'stagger',
+        className,
+      )}
+    >
       {children}
     </div>
   )
@@ -29,7 +44,7 @@ export function PageHeader({
             {eyebrow}
           </p>
         )}
-        <h1 className="text-2xl font-semibold tracking-tight text-ink">{title}</h1>
+        <h1 className="font-display text-[1.7rem] font-medium tracking-tight text-ink">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-ink-subtle">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-none items-center gap-2">{actions}</div>}

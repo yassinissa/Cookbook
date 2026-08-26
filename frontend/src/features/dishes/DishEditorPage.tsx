@@ -272,7 +272,7 @@ export function DishEditorPage() {
 
   return (
     <form onSubmit={onSubmit}>
-      <Page className="pb-28 lg:pb-6">
+      <Page stagger className="pb-28 lg:pb-6">
         <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <Button
@@ -284,7 +284,7 @@ export function DishEditorPage() {
             >
               {t('action.back')}
             </Button>
-            <h1 className="text-xl font-semibold tracking-tight text-ink">{title}</h1>
+            <h1 className="font-display text-[1.5rem] font-medium tracking-tight text-ink">{title}</h1>
           </div>
           <div className="hidden items-center gap-2 sm:flex">
             {savedId && (

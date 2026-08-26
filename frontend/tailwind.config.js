@@ -36,6 +36,7 @@ export default {
           subtle: token('accent-subtle'),
           'subtle-hover': token('accent-subtle-hover'),
           ink: token('accent-ink'),
+          on: token('accent-on'),
           50: '#fdf8f0', 100: '#faecd6', 200: '#f3d9ad', 300: '#e9bd74',
           400: '#dc9f45', 500: '#c98527', 600: '#a8681c', 700: '#87511a',
           800: '#6d421c', 900: '#5a381c',
@@ -54,6 +55,11 @@ export default {
           DEFAULT: token('danger'), subtle: token('danger-subtle'), ink: token('danger-ink'),
           50: '#fef2f2', 500: '#ef4444', 600: '#dc2626', 700: '#b91c1c',
         },
+
+        // spice — signature rail + data viz only, never chrome
+        spice: {
+          1: token('spice-1'), 2: token('spice-2'), 3: token('spice-3'), 4: token('spice-4'),
+        },
       },
       fontFamily: {
         sans: ['"Hanken Grotesk"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
@@ -69,9 +75,14 @@ export default {
         popover: 'var(--shadow-popover)',
         modal: 'var(--shadow-modal)',
         card: 'var(--shadow-card)',
+        e1: 'var(--shadow-e1)',
+        e2: 'var(--shadow-e2)',
+        'e2-hover': 'var(--shadow-e2-hover)',
+        e3: 'var(--shadow-e3)',
       },
       borderRadius: {
         card: 'var(--radius-card)',
+        lg2: 'var(--radius-lg)',
       },
       transitionDuration: { DEFAULT: '160ms' },
       keyframes: {
@@ -83,16 +94,26 @@ export default {
           from: { opacity: '0', transform: 'translateY(6px)' },
           to: { opacity: '1', transform: 'none' },
         },
+        rise: {
+          from: { opacity: '0', transform: 'translateY(12px)' },
+          to: { opacity: '1', transform: 'none' },
+        },
         'overlay-in': { from: { opacity: '0' }, to: { opacity: '1' } },
         'drawer-in-ltr': { from: { transform: 'translateX(100%)' }, to: { transform: 'none' } },
         'drawer-in-rtl': { from: { transform: 'translateX(-100%)' }, to: { transform: 'none' } },
         shimmer: { '100%': { transform: 'translateX(100%)' } },
+        'ambient-drift': {
+          '0%, 100%': { transform: 'translate3d(-3%, -2%, 0) scale(1)' },
+          '50%': { transform: 'translate3d(3%, 3%, 0) scale(1.12)' },
+        },
       },
       animation: {
         'toast-in': 'toast-in 180ms ease-out',
         'fade-rise': 'fade-rise 200ms ease-out both',
+        rise: 'rise 480ms cubic-bezier(0.22, 1, 0.36, 1) backwards',
         'overlay-in': 'overlay-in 140ms ease-out',
         shimmer: 'shimmer 1.6s infinite',
+        'ambient-drift': 'ambient-drift 24s ease-in-out infinite',
       },
     },
   },

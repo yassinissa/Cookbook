@@ -17,33 +17,63 @@ export interface ChartPoint {
   y: number | null
 }
 
-/* ── sparkline — tiny, no axes ─────────────────────────────────────── */
+/* ── sparkline — tiny, no axes, gradient fill ──────────────────────── */
 export function Sparkline({
   points,
   tone = 'accent',
   width = 96,
   height = 28,
+  fluid = false,
 }: {
   points: number[]
   tone?: 'accent' | 'positive'
   width?: number
   height?: number
+  /** stretch to the container width (for full-bleed strips inside a tile) */
+  fluid?: boolean
 }) {
+  const gid = useId()
   const vals = points.filter((n) => Number.isFinite(n))
-  if (vals.length < 2) return <div style={{ width, height }} aria-hidden="true" />
+  if (vals.length < 2)
+    return <div style={{ width: fluid ? '100%' : width, height }} aria-hidden="true" />
   const lo = Math.min(...vals)
   const hi = Math.max(...vals)
   const span = hi - lo || 1
   const stroke = tone === 'accent' ? C.accent : C.positive
-  const fill = tone === 'accent' ? C.accentFill : C.positiveFill
-  const x = (i: number) => (i / (points.length - 1)) * (width - 2) + 1
-  const y = (v: number) => height - 3 - ((v - lo) / span) * (height - 6)
-  const d = points.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i)} ${y(v)}`).join(' ')
+  // a wide coordinate space keeps slopes readable when a fluid strip stretches
+  const vbW = fluid ? 320 : width
+  const top = 3
+  const bot = height - 3
+  const x = (i: number) => (i / (points.length - 1)) * (vbW - 3) + 1.5
+  const y = (v: number) => bot - ((v - lo) / span) * (bot - top)
+  const line = points.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i)} ${y(v)}`).join(' ')
+  const last = points.length - 1
   return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
-      <path d={`${d} L${x(points.length - 1)} ${height} L${x(0)} ${height} Z`} fill={fill} />
-      <path d={d} fill="none" stroke={stroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx={x(points.length - 1)} cy={y(points[points.length - 1])} r="2" fill={stroke} />
+    <svg
+      width={fluid ? '100%' : width}
+      height={height}
+      viewBox={`0 0 ${vbW} ${height}`}
+      preserveAspectRatio={fluid ? 'none' : 'xMidYMid meet'}
+      className="block"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id={`sp-${gid}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor={stroke} stopOpacity="0.16" />
+          <stop offset="1" stopColor={stroke} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={`${line} L${x(last)} ${height} L${x(0)} ${height} Z`} fill={`url(#sp-${gid})`} />
+      <path
+        d={line}
+        fill="none"
+        stroke={stroke}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        vectorEffect="non-scaling-stroke"
+      />
+      <circle cx={x(last)} cy={y(points[last])} r="2.4" fill={stroke} />
     </svg>
   )
 }

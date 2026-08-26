@@ -16,7 +16,8 @@ export function Sidebar() {
   })).filter((s) => s.items.length > 0)
 
   return (
-    <aside className="hidden w-60 flex-none flex-col border-e border-hairline bg-surface lg:flex">
+    <aside className="relative hidden w-60 flex-none flex-col border-e border-hairline bg-surface lg:flex">
+      <span aria-hidden className="spice-rail absolute inset-y-0 end-0 z-10 w-[3px]" />
       <div className="flex h-14 items-center gap-2.5 border-b border-hairline px-5">
         <Wordmark />
       </div>
@@ -35,7 +36,7 @@ export function Sidebar() {
                     end={item.to === '/'}
                     className={({ isActive }) =>
                       cn(
-                        'group flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[13px] font-medium transition-colors',
+                        'group relative flex items-center gap-2.5 rounded-lg py-1.5 pe-2 ps-3 text-[13px] font-medium transition-colors',
                         'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--focus)]',
                         isActive
                           ? 'bg-accent-subtle text-accent-ink'
@@ -43,12 +44,22 @@ export function Sidebar() {
                       )
                     }
                   >
-                    <Icon name={item.icon} size={17} className="flex-none" />
-                    <span className="flex-1 truncate">{t(item.labelKey)}</span>
-                    {!item.ready && (
-                      <span className="rounded bg-surface-sunken px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-ink-subtle">
-                        soon
-                      </span>
+                    {({ isActive }) => (
+                      <>
+                        {isActive && (
+                          <span
+                            aria-hidden
+                            className="spice-rail absolute inset-y-1.5 start-0 w-[3px] rounded-full"
+                          />
+                        )}
+                        <Icon name={item.icon} size={17} className="flex-none" />
+                        <span className="flex-1 truncate">{t(item.labelKey)}</span>
+                        {!item.ready && (
+                          <span className="rounded bg-surface-sunken px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-ink-subtle">
+                            {t('nav.soon')}
+                          </span>
+                        )}
+                      </>
                     )}
                   </NavLink>
                 </li>

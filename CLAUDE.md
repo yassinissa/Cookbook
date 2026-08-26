@@ -21,31 +21,51 @@ before calling anything done — not just "the happy path returns 200."
   `services.py`/`costing.py`/`nutrition.py`/`versioning.py`.
   `apps/integrations/inventory_client.py` is the *only* place that talks
   to inventory-platform — items/units/stores/branches are read live, never
-  duplicated locally. Ingredients reference inventory items by SKU string,
-  not a local FK. Recipe versions share a `lineage_key` UUID (on
-  `RecipeCardFields`); `dish-recipes/<id>/versions/` + `/diff/` and
-  `cookbook/dashboard/` are the read-only aggregate endpoints on top.
+  duplicated locally. `get_items()` walks every page (for the ingredient
+  picker); `search_items()` / `GET /api/inventory/items/search/` is one
+  paged, server-searched page (for the Inventory screen). Ingredients
+  reference inventory items by SKU string, not a local FK. Recipe versions
+  share a `lineage_key` UUID (on `RecipeCardFields`);
+  `dish-recipes/<id>/versions/` + `/diff/` and `cookbook/dashboard/` are the
+  read-only aggregate endpoints on top. **Gotcha**: point
+  `INVENTORY_API_BASE_URL` at `127.0.0.1`, never `localhost` — on Windows the
+  `::1` attempt stalls for seconds before the IPv4 fallback, turning a 0.3s
+  proxy call into 4-13s.
 - **Frontend**: rebuilt 2026-08-26 as a routed TypeScript app (React 19 +
   Vite + Tailwind 3.4 + react-router 7 + @tanstack/react-query). Structure:
   `src/{components}` (design-system primitives), `src/shell` (AppShell /
-  Sidebar / BottomNav / TopBar), `src/features/{dashboard,dishes,menus,auth,
-  placeholder}`, `src/lib/{api,queries,http,format,seed}`, `src/i18n`
+  Sidebar / BottomNav / TopBar; `nav.ts` is the single nav source — full
+  `NAV` for the desktop Sidebar, `BOTTOM_NAV` for the mobile bar whose
+  last tab, "More", opens `src/features/more` = the whole capability-
+  filtered nav as a screen), `src/features/{dashboard,dishes,menus,auth,
+  more,placeholder}`, `src/lib/{api,queries,http,format,seed}`, `src/i18n`
   (bespoke EN/AR provider, full RTL via `dir` + logical `ms-*/pe-*` utils),
   `src/theme` (light/dark via `data-theme`). Slice 1 screens built:
   Dashboard, Dish list / editor / detail (live cost breakdown, nutrition,
   version-history drawer + diff), Menus list / branch detail (trend charts,
-  snapshots). Production / QA-standards / Inventory / Activity / Documents /
-  POS routes render `ComingSoonPage` until their slice lands. `VITE_USE_SEED=1`
+  snapshots), Inventory Items (`src/features/inventory` — server-searched,
+  paged table + read-only detail drawer; reads through the Cookbook proxy).
+  Production / QA-standards / Activity / Documents / POS routes render
+  `ComingSoonPage` until their slice lands. `VITE_USE_SEED=1`
   serves `src/lib/seed` (curated Lebanese demo data) instead of the API —
   hermetic, for the leadership demo.
-- **Design system**: tokens are CSS custom properties in
-  `src/styles/tokens.css` (`--surface`, `--ink`, `--accent`, status families,
-  shadows) with a real second palette under `:root[data-theme="dark"]` —
-  precomputed hex/rgba only, no `color-mix()`, no `dvh`, no container
-  queries (iOS 15 Safari on the kitchen iPads). `tailwind.config.js` maps
-  the tokens to `bg-surface`/`text-ink`/etc. so dark mode is one variable
-  swap, not a `dark:` fork. Fonts: Hanken Grotesk (UI), IBM Plex Mono (every
-  number/`.tnum`), Fraunces (login wordmark only). Primitives in
+- **Design system** ("Test-Kitchen Ledger", 2026-08-26 pass): tokens are CSS
+  custom properties in `src/styles/tokens.css` (`--surface`, `--ink`,
+  `--accent`, `--accent-on` [text on an accent fill], status families,
+  `--shadow-e1/e2/e3` [warm-tinted elevation], `--spice-1..4` + `--spice-rail`
+  [the signature: a sumac→saffron→za'atar gradient]) with a real second palette
+  under `:root[data-theme="dark"]` — precomputed hex/rgba only, no
+  `color-mix()`, no `/alpha` on tokens, no `dvh`, no container queries (iOS 15
+  Safari on the kitchen iPads). `tailwind.config.js` maps tokens to
+  `bg-surface`/`shadow-e2`/`bg-spice-1`/etc. `src/styles/base.css` paints the
+  atmosphere (a warm lit ground + grain on `body::before/::after`, `#root` is
+  the stacking context above it) and holds `.stagger` (one orchestrated
+  entrance per screen), `.card-lit`/`.card-lit-hi`, `.spice-rail(-h)`, `.lift`.
+  `<CountUp>` animates figures; all motion respects `prefers-reduced-motion`.
+  Fonts: Hanken Grotesk (UI), IBM Plex Mono (every number/`.tnum` — set
+  `font-mono` on headline figures too), Fraunces (`font-display` — page titles,
+  hero numbers, login). Reusable instruments: `<Stat>` (KPI gauge), `<Card
+  elevated rail>`, `<Meter>`, `<Sparkline fluid>`. Primitives in
   `src/components/*` — reuse/extend before adding new. The old
   `RecipeFormFields.jsx` and flat `*.jsx` screens are deleted.
   **Gotcha**: Vite's StatReloader misses `.tsx`/`.py` changes on Windows —

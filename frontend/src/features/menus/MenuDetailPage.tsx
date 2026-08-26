@@ -112,13 +112,13 @@ export function MenuDetailPage() {
   }))
 
   return (
-    <Page className="pb-24 lg:pb-6">
+    <Page stagger className="pb-24 lg:pb-6">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <Button variant="ghost" size="sm" icon="arrowLeft" onClick={() => navigate('/menus')}>
             {t('menus.title')}
           </Button>
-          <h1 className="mt-1 flex items-baseline gap-2 text-2xl font-semibold tracking-tight text-ink">
+          <h1 className="mt-1 flex items-baseline gap-2 font-display text-[1.7rem] font-medium tracking-tight text-ink">
             {branchName?.name_en ?? menu.branch_detail.name_en}
             {branchName?.name_ar && (
               <span dir="rtl" className="text-base font-normal text-ink-subtle">
@@ -168,7 +168,7 @@ export function MenuDetailPage() {
       ) : (
         <div className="space-y-5">
           {groups.map((g) => (
-            <Card key={g.name} className="overflow-hidden">
+            <Card elevated key={g.name} className="overflow-hidden">
               <div className="flex items-baseline gap-2 border-b border-hairline bg-surface-sunken px-4 py-2.5">
                 <h2 className="text-sm font-semibold text-ink">{g.name}</h2>
                 {g.nameAr && (
@@ -252,7 +252,7 @@ export function MenuDetailPage() {
       )}
 
       {snapshots && snapshots.length > 0 && (
-        <Card className="mt-6">
+        <Card elevated className="mt-6">
           <CardHeader title={t('menus.snapshots.title')} />
           <CardBody className="p-0">
             <ul className="divide-y divide-hairline">

@@ -2,18 +2,45 @@ import type { ReactNode } from 'react'
 
 import { cn } from '@/lib/cn'
 
-/** Flat surface, 1px hairline. No shadow — shadow is reserved for floating UI. */
+/**
+ * Surface primitive. Flat by default (1px hairline, no shadow). `elevated`
+ * lifts it onto the warm elevation scale with a lit top edge. `rail` runs the
+ * signature spice gradient down the leading edge — 'alert' turns it solid
+ * sumac to flag a card that needs eyes (e.g. a branch over food-cost target).
+ */
 export function Card({
   children,
   className,
   as: As = 'section',
+  elevated = false,
+  rail,
 }: {
   children: ReactNode
   className?: string
   as?: 'section' | 'div' | 'article'
+  elevated?: boolean
+  rail?: 'idle' | 'alert'
 }) {
   return (
-    <As className={cn('rounded-card border border-hairline bg-surface', className)}>{children}</As>
+    <As
+      className={cn(
+        'relative rounded-card border border-hairline bg-surface',
+        elevated && 'card-lit bg-surface-raised',
+        rail && 'overflow-hidden',
+        className,
+      )}
+    >
+      {rail && (
+        <span
+          aria-hidden
+          className={cn(
+            'absolute inset-y-0 start-0 w-[3px]',
+            rail === 'alert' ? 'bg-spice-1' : 'spice-rail',
+          )}
+        />
+      )}
+      {children}
+    </As>
   )
 }
 

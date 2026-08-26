@@ -2,9 +2,24 @@ import { foodCostBand, type FoodCostBand } from '@/lib/format'
 import { cn } from '@/lib/cn'
 
 const BAND: Record<FoodCostBand, { bar: string; text: string; mark: string; key: string }> = {
-  healthy: { bar: 'bg-success', text: 'text-success-ink', mark: '✓', key: 'cost.band.healthy' },
-  watch: { bar: 'bg-warning', text: 'text-warning-ink', mark: '~', key: 'cost.band.watch' },
-  high: { bar: 'bg-danger', text: 'text-danger-ink', mark: '!', key: 'cost.band.high' },
+  healthy: {
+    bar: 'bg-gradient-to-r from-success-500 to-success-700',
+    text: 'text-success-ink',
+    mark: '✓',
+    key: 'cost.band.healthy',
+  },
+  watch: {
+    bar: 'bg-gradient-to-r from-warning-500 to-warning-700',
+    text: 'text-warning-ink',
+    mark: '~',
+    key: 'cost.band.watch',
+  },
+  high: {
+    bar: 'bg-gradient-to-r from-danger-500 to-danger-700',
+    text: 'text-danger-ink',
+    mark: '!',
+    key: 'cost.band.high',
+  },
 }
 
 interface MeterProps {
@@ -45,17 +60,20 @@ export function Meter({ value, target = 30, bandLabel, showTarget = true, size =
         <div
           className={cn(
             'overflow-hidden rounded-full bg-surface-sunken',
-            size === 'sm' ? 'h-1.5' : 'h-2.5',
+            size === 'sm' ? 'h-2' : 'h-3',
           )}
         >
           <div
-            className={cn('h-full rounded-full transition-[width] duration-500', meta.bar)}
+            className={cn('h-full rounded-full transition-[width] duration-700 ease-out', meta.bar)}
             style={{ width: `${width}%` }}
           />
         </div>
         {showTarget && (
           <div
-            className="absolute top-1/2 h-3 w-px -translate-y-1/2 bg-hairline-strong"
+            className={cn(
+              'absolute top-1/2 w-0.5 -translate-y-1/2 rounded-full bg-ink-subtle',
+              size === 'sm' ? 'h-3' : 'h-4',
+            )}
             style={{ insetInlineStart: `${target}%` }}
             aria-hidden="true"
           />

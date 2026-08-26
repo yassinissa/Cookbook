@@ -28,7 +28,7 @@ export function CostPanel({
 
   if (!bd) {
     return (
-      <Card>
+      <Card elevated>
         <CardHeader title={t('cost.title')} />
         <CardBody>
           <p className="text-sm text-ink-subtle">{t('cost.empty')}</p>
@@ -53,7 +53,7 @@ export function CostPanel({
         )
 
   return (
-    <Card>
+    <Card elevated>
       <CardHeader
         title={t('cost.title')}
         action={

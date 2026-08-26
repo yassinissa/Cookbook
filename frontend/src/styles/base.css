@@ -20,6 +20,35 @@
     min-height: 100vh;
   }
 
+  /* Atmosphere — a warm lit ground + a fine grain, both fixed behind the app.
+     Two cheap layers, no images beyond one tiny inline SVG, no blur. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(58rem 40rem at 50% -12%, var(--glow-1), transparent 62%),
+      radial-gradient(46rem 42rem at 106% 108%, var(--glow-2), transparent 58%);
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: var(--grain-opacity);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 140px 140px;
+  }
+  /* app content sits above the atmosphere */
+  #root {
+    position: relative;
+    z-index: 1;
+    isolation: isolate;
+  }
+
   /* every stacked figure aligns */
   .tnum {
     font-variant-numeric: tabular-nums;
@@ -61,6 +90,67 @@
   .scroll-x {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+  }
+
+  /* One orchestrated entrance per screen: children rise + fade in sequence.
+     `both` fill + the global reduced-motion rule means it snaps to the
+     resting state when motion is off — no flash of hidden content. */
+  .stagger > * {
+    /* `backwards` (not `both`): hide during the delay, then release the
+       element to its natural state — no retained transform, no lingering
+       compositor layer once the cascade has played. */
+    animation: cb-rise 480ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+  .stagger > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger > *:nth-child(2) { animation-delay: 45ms; }
+  .stagger > *:nth-child(3) { animation-delay: 90ms; }
+  .stagger > *:nth-child(4) { animation-delay: 135ms; }
+  .stagger > *:nth-child(5) { animation-delay: 180ms; }
+  .stagger > *:nth-child(6) { animation-delay: 225ms; }
+  .stagger > *:nth-child(7) { animation-delay: 270ms; }
+  .stagger > *:nth-child(8) { animation-delay: 315ms; }
+  .stagger > *:nth-child(n + 9) { animation-delay: 360ms; }
+
+  /* the spice rail — the signature motif, one gradient token (vertical / horizontal) */
+  .spice-rail {
+    background-image: var(--spice-rail);
+  }
+  .spice-rail-h {
+    background-image: var(--spice-rail-h);
+  }
+
+  /* a surface lit from above — hairline top highlight + soft warm elevation */
+  .card-lit {
+    box-shadow:
+      inset 0 1px 0 var(--card-top-highlight),
+      var(--shadow-e2);
+  }
+  .card-lit-hi {
+    box-shadow:
+      inset 0 1px 0 var(--card-top-highlight),
+      var(--shadow-e3);
+  }
+
+  /* card that lifts toward the reader on hover */
+  .lift {
+    transition:
+      box-shadow 220ms ease,
+      transform 220ms ease;
+  }
+  .lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-e2-hover);
+  }
+}
+
+@keyframes cb-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 

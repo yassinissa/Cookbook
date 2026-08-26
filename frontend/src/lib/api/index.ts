@@ -17,6 +17,7 @@ import type {
   DishRecipeDetail,
   DishRecipeListItem,
   InventoryItem,
+  InventoryItemDetail,
   MenuDetail,
   MenuLine,
   MenuListItem,
@@ -78,6 +79,48 @@ export async function fetchInventoryItems(): Promise<InventoryItem[]> {
   }
   const { data } = await http.get('/inventory/items/')
   return listData<InventoryItem>(data)
+}
+
+export interface InventoryPage {
+  count: number
+  results: InventoryItem[]
+}
+
+export async function fetchInventoryItemsPage(opts: {
+  search?: string
+  page?: number
+  pageSize?: number
+}): Promise<InventoryPage> {
+  const { search = '', page = 1, pageSize = 40 } = opts
+  if (USE_SEED) {
+    await delay(160)
+    const all = seed.SEED_INVENTORY_SKUS as InventoryItem[]
+    const q = search.trim().toLowerCase()
+    const matched = q
+      ? all.filter(
+          (i) => i.name_en.toLowerCase().includes(q) || i.sku.toLowerCase().includes(q),
+        )
+      : all
+    const from = (page - 1) * pageSize
+    return { count: matched.length, results: matched.slice(from, from + pageSize) }
+  }
+  const { data } = await http.get<Paginated<InventoryItem>>('/inventory/items/search/', {
+    params: { search: search || undefined, page, page_size: pageSize },
+  })
+  return { count: data.count ?? data.results.length, results: data.results }
+}
+
+export async function fetchInventoryItem(id: string): Promise<InventoryItemDetail> {
+  if (USE_SEED) {
+    await delay(180)
+    const base = (seed.SEED_INVENTORY_SKUS as InventoryItem[]).find(
+      (i) => i.id === id || i.sku === id,
+    )
+    if (!base) throw new Error('not found')
+    return base as InventoryItemDetail
+  }
+  const { data } = await http.get(`/inventory/items/${id}/`)
+  return data
 }
 
 /* ── dashboard ─────────────────────────────────────────────────────── */

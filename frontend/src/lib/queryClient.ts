@@ -13,6 +13,8 @@ export const queryClient = new QueryClient({
 export const qk = {
   reference: ['reference'] as const,
   inventory: ['inventory'] as const,
+  inventoryPage: (search: string, page: number) => ['inventory', 'page', search, page] as const,
+  inventoryItem: (id: string) => ['inventory', id] as const,
   dashboard: ['dashboard'] as const,
   dishes: ['dishes'] as const,
   dish: (id: string) => ['dishes', id] as const,

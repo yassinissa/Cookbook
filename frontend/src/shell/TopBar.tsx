@@ -33,7 +33,7 @@ export function TopBar() {
     : []
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-hairline bg-surface/95 px-4 backdrop-blur sm:px-6">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-hairline bg-surface/95 px-4 shadow-e1 backdrop-blur sm:px-6">
       <div className="lg:hidden">
         <Wordmark />
       </div>

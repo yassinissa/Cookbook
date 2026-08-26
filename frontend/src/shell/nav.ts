@@ -31,7 +31,7 @@ export const NAV: NavSection[] = [
     labelKey: 'nav.section.operations',
     items: [
       { to: '/menus', labelKey: 'nav.menus', icon: 'menu', ready: true, capability: 'menu.view' },
-      { to: '/inventory', labelKey: 'nav.inventory', icon: 'inventory', ready: false, capability: 'inventory.view' },
+      { to: '/inventory', labelKey: 'nav.inventory', icon: 'inventory', ready: true, capability: 'inventory.view' },
       { to: '/activity', labelKey: 'nav.activity', icon: 'activity', ready: false, capability: 'activity.view' },
       { to: '/documents', labelKey: 'nav.documents', icon: 'documents', ready: false, capability: 'document.export' },
       { to: '/pos', labelKey: 'nav.pos', icon: 'pos', ready: false, capability: 'pos.manage' },
@@ -46,11 +46,16 @@ export const NAV: NavSection[] = [
   },
 ]
 
-/** Flat list for the mobile bottom bar — the five highest-value destinations. */
+/**
+ * Flat list for the mobile bottom bar — four primary destinations plus a
+ * "More" tab that opens the full nav (`/more`). The bar is the only nav on
+ * screens below `lg`, where the Sidebar is hidden, so everything in NAV that
+ * isn't here has to stay reachable through More.
+ */
 export const BOTTOM_NAV: NavItem[] = [
   { to: '/', labelKey: 'nav.dashboard', icon: 'dashboard', ready: true, capability: 'dashboard.view' },
   { to: '/recipes/dishes', labelKey: 'nav.dishes', icon: 'dish', ready: true, capability: 'dish.view' },
   { to: '/menus', labelKey: 'nav.menus', icon: 'menu', ready: true, capability: 'menu.view' },
   { to: '/recipes/production', labelKey: 'nav.production', icon: 'production', ready: false, capability: 'production.view' },
-  { to: '/standards', labelKey: 'nav.standards', icon: 'standards', ready: false, capability: 'standard.view' },
+  { to: '/more', labelKey: 'nav.more', icon: 'more', ready: true },
 ]

@@ -39,7 +39,7 @@ export function NutritionPanel({
   const cov = n?._coverage
 
   return (
-    <Card>
+    <Card elevated>
       <CardHeader
         title={
           <span>
@@ -90,7 +90,7 @@ export function AllergenPanel({ rollup }: { rollup: AllergenRollup | null | unde
   if (!rollup) return null
   const all = rollup.all ?? []
   return (
-    <Card>
+    <Card elevated>
       <CardHeader title={t('allergens.title')} />
       <CardBody>
         {all.length === 0 ? (

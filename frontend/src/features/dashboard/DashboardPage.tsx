@@ -6,9 +6,10 @@ import { FoodCostValue, Meter } from '@/components/Meter'
 import { Icon, type IconName } from '@/components/Icon'
 import { Page, PageHeader, BiName } from '@/components/Page'
 import { Pill } from '@/components/Pill'
+import { Stat } from '@/components/Stat'
 import { EmptyState, ErrorState, Skeleton } from '@/components/States'
 import { useDashboard } from '@/lib/queries'
-import { percent, relativeTime, shortDate } from '@/lib/format'
+import { relativeTime, shortDate } from '@/lib/format'
 import { useI18n, type Locale } from '@/i18n'
 import type { MessageKey } from '@/i18n/messages'
 import type { Dashboard } from '@/types/api'
@@ -29,14 +30,14 @@ export function DashboardPage() {
       {isLoading && <DashboardSkeleton />}
 
       {data && (
-        <div className="space-y-6">
+        <div className="stagger space-y-5">
           <KpiRow data={data} t={t} />
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid items-start gap-5 lg:grid-cols-2">
             <AttentionCard data={data} t={t} />
             <OverTargetCard data={data} t={t} />
           </div>
           <BranchHealthCard data={data} t={t} locale={locale} />
-          <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+          <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
             <TrendCard data={data} t={t} />
             <ActivityCard data={data} t={t} locale={locale} />
           </div>
@@ -52,51 +53,37 @@ function KpiRow({ data, t }: { data: Dashboard; t: T }) {
   const trend = data.cost_trend
     .map((p) => Number(p.avg_food_cost_pct))
     .filter((n) => !Number.isNaN(n))
+  const avg = Number(data.food_cost.avg_pct)
+  const over = data.food_cost.over_target
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <Kpi label={t('dash.kpi.dishes')} value={String(data.totals.dishes)} />
-      <Kpi label={t('dash.kpi.avgFoodCost')} value={percent(data.food_cost.avg_pct)} spark={trend} />
-      <Kpi
-        label={t('dash.kpi.overTarget')}
-        value={String(data.food_cost.over_target)}
-        tone={data.food_cost.over_target > 0 ? 'warning' : 'default'}
+    <div className="space-y-3">
+      <Stat
+        featured
+        label={t('dash.kpi.avgFoodCost')}
+        value={Number.isFinite(avg) ? avg : 0}
+        decimals={1}
+        suffix="%"
+        tone={avg > 30 ? 'warn' : 'good'}
+        note={t('cost.target')}
+        spark={trend}
       />
-      <Kpi label={t('dash.kpi.menus')} value={String(data.totals.menus)} />
-    </div>
-  )
-}
-
-function Kpi({
-  label,
-  value,
-  spark,
-  tone = 'default',
-}: {
-  label: string
-  value: string
-  spark?: number[]
-  tone?: 'default' | 'warning'
-}) {
-  return (
-    <Card className="p-4">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-subtle">{label}</p>
-      <div className="mt-1.5 flex items-end justify-between gap-2">
-        <span
-          className={
-            'tnum text-2xl font-semibold ' + (tone === 'warning' ? 'text-warning-ink' : 'text-ink')
-          }
-        >
-          {value}
-        </span>
-        {spark && spark.length > 1 && <Sparkline points={spark} />}
+      <div className="grid grid-cols-3 gap-3">
+        <Stat label={t('dash.kpi.dishes')} value={data.totals.dishes} />
+        <Stat
+          label={t('dash.kpi.overTarget')}
+          value={over}
+          tone={over > 0 ? 'warn' : 'good'}
+          note={over > 0 ? t('dash.kpi.overTargetNote') : t('dash.kpi.allUnder')}
+        />
+        <Stat label={t('dash.kpi.menus')} value={data.totals.menus} />
       </div>
-    </Card>
+    </div>
   )
 }
 
 function AttentionCard({ data, t }: { data: Dashboard; t: T }) {
   return (
-    <Card>
+    <Card elevated rail={data.attention.count > 0 ? 'alert' : 'idle'}>
       <CardHeader
         title={t('dash.attention.title')}
         action={
@@ -130,7 +117,9 @@ function AttentionCard({ data, t }: { data: Dashboard; t: T }) {
                       ))}
                     </p>
                   </div>
-                  <span className="tnum flex-none text-xs text-ink-subtle">#{item.recipe_code}</span>
+                  <span className="tnum flex-none font-mono text-xs text-ink-subtle">
+                    #{item.recipe_code}
+                  </span>
                   <Icon
                     name="chevronRight"
                     size={15}
@@ -148,7 +137,7 @@ function AttentionCard({ data, t }: { data: Dashboard; t: T }) {
 
 function OverTargetCard({ data, t }: { data: Dashboard; t: T }) {
   return (
-    <Card>
+    <Card elevated rail={data.over_target.length > 0 ? 'alert' : 'idle'}>
       <CardHeader title={t('dash.overTarget.title')} />
       <CardBody className="p-0">
         {data.over_target.length === 0 ? (
@@ -158,7 +147,7 @@ function OverTargetCard({ data, t }: { data: Dashboard; t: T }) {
         ) : (
           <ul className="divide-y divide-hairline">
             {data.over_target.slice(0, 6).map((d) => (
-              <li key={d.id} className="flex items-center gap-3 px-4 py-2.5 sm:px-5">
+              <li key={d.id} className="flex items-center gap-4 px-4 py-3 sm:px-5">
                 <div className="min-w-0 flex-1">
                   <Link
                     to={`/recipes/dishes/${d.id}`}
@@ -168,8 +157,8 @@ function OverTargetCard({ data, t }: { data: Dashboard; t: T }) {
                   </Link>
                   <p className="text-xs text-ink-subtle">{d.branch}</p>
                 </div>
-                <div className="w-24 flex-none">
-                  <Meter value={Number(d.food_cost_pct)} size="sm" showTarget={false} />
+                <div className="w-28 flex-none">
+                  <Meter value={Number(d.food_cost_pct)} size="sm" showTarget />
                 </div>
               </li>
             ))}
@@ -182,7 +171,7 @@ function OverTargetCard({ data, t }: { data: Dashboard; t: T }) {
 
 function BranchHealthCard({ data, t, locale }: { data: Dashboard; t: T; locale: Locale }) {
   return (
-    <Card>
+    <Card elevated>
       <CardHeader title={t('dash.branchHealth.title')} />
       <CardBody>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -190,13 +179,22 @@ function BranchHealthCard({ data, t, locale }: { data: Dashboard; t: T; locale: 
             const spark = b.trend
               .map((p) => Number(p.avg_food_cost_pct))
               .filter((n) => !Number.isNaN(n))
+            const alert = Number(b.avg_food_cost_pct) > 30
             return (
               <Link
                 key={b.branch_id}
                 to={`/menus/${b.branch_id}`}
-                className="group flex flex-col rounded-lg border border-hairline p-3 transition-colors hover:border-hairline-strong hover:bg-surface-sunken"
+                className="group relative flex flex-col overflow-hidden rounded-lg border border-hairline bg-surface p-3 transition-colors hover:border-hairline-strong hover:bg-surface-sunken"
               >
-                <div className="flex items-start justify-between">
+                <span
+                  aria-hidden
+                  className={
+                    alert
+                      ? 'absolute inset-y-0 start-0 w-[3px] bg-spice-1'
+                      : 'absolute inset-y-0 start-0 w-[3px] spice-rail opacity-40'
+                  }
+                />
+                <div className="flex items-start justify-between ps-1.5">
                   <BiName en={b.name_en} ar={b.name_ar} className="text-[13px] font-medium" />
                   <Icon
                     name="chevronRight"
@@ -204,16 +202,17 @@ function BranchHealthCard({ data, t, locale }: { data: Dashboard; t: T; locale: 
                     className="mt-0.5 text-ink-subtle transition-transform group-hover:translate-x-0.5 rtl:rotate-180"
                   />
                 </div>
-                <div className="mt-2 flex items-end justify-between">
+                <div className="mt-2 flex items-end justify-between ps-1.5">
                   <div>
                     <FoodCostValue value={b.avg_food_cost_pct} />
                     <p className="mt-0.5 text-xs text-ink-subtle">
-                      {b.dishes} dishes{b.over_target > 0 && ` · ${b.over_target} over`}
+                      {t('dash.branch.dishes', { n: b.dishes })}
+                      {b.over_target > 0 && ` · ${t('dash.branch.over', { n: b.over_target })}`}
                     </p>
                   </div>
-                  {spark.length > 1 && <Sparkline points={spark} width={72} height={24} />}
+                  {spark.length > 1 && <Sparkline points={spark} width={72} height={26} />}
                 </div>
-                <p className="mt-2 border-t border-hairline pt-2 text-2xs text-ink-subtle">
+                <p className="mt-2 border-t border-hairline pt-2 text-2xs text-ink-subtle ps-1.5">
                   {b.last_snapshot_at
                     ? `${t('menus.col.lastSnapshot')}: ${shortDate(b.last_snapshot_at, locale)}`
                     : t('menus.never')}
@@ -233,7 +232,7 @@ function TrendCard({ data, t }: { data: Dashboard; t: T }) {
     y: p.avg_food_cost_pct === null ? null : Number(p.avg_food_cost_pct),
   }))
   return (
-    <Card>
+    <Card elevated>
       <CardHeader title={t('dash.trend.title')} />
       <CardBody>
         {points.filter((p) => p.y !== null).length < 2 ? (
@@ -250,7 +249,7 @@ function ActivityCard({ data, t, locale }: { data: Dashboard; t: T; locale: Loca
   const actionIcon = (action: string): IconName =>
     action === 'created' ? 'plus' : action === 'recalculated' ? 'refresh' : 'edit'
   return (
-    <Card>
+    <Card elevated>
       <CardHeader title={t('dash.activity.title')} />
       <CardBody className="p-0">
         {data.recent_activity.length === 0 ? (
@@ -284,13 +283,14 @@ function ActivityCard({ data, t, locale }: { data: Dashboard; t: T; locale: Loca
 
 function DashboardSkeleton() {
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-[86px]" />
-        ))}
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Skeleton className="col-span-2 h-[132px]" />
+        <Skeleton className="h-[132px]" />
+        <Skeleton className="h-[132px]" />
+        <Skeleton className="col-span-2 h-[132px] lg:col-span-1" />
       </div>
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-5 lg:grid-cols-2">
         <Skeleton className="h-64" />
         <Skeleton className="h-64" />
       </div>

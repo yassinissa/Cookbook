@@ -84,7 +84,7 @@ export function DishDetailPage() {
   }
 
   return (
-    <Page>
+    <Page stagger>
       <div className="mb-4 flex items-center justify-between no-print">
         <Button variant="ghost" size="sm" icon="arrowLeft" onClick={() => navigate('/recipes/dishes')}>
           {t('dishes.title')}
@@ -109,20 +109,23 @@ export function DishDetailPage() {
       </div>
 
       {/* hero */}
-      <div className="relative mb-6 overflow-hidden rounded-card border border-hairline">
+      <div className="card-lit relative mb-6 overflow-hidden rounded-card border border-hairline">
         <div className="aspect-[21/9] w-full bg-surface-sunken">
           <DishImage src={dish.image_url} name={dish.name_en} rounded="rounded-none" />
         </div>
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-4 sm:p-6">
+        <span aria-hidden className="spice-rail-h absolute inset-x-0 top-0 h-1" />
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent p-4 sm:p-6">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight text-white">{dish.name_en}</h1>
+              <h1 className="font-display text-[1.75rem] font-medium tracking-tight text-white">
+                {dish.name_en}
+              </h1>
               {dish.name_ar && (
                 <p dir="rtl" className="mt-0.5 text-sm text-white/85">
                   {dish.name_ar}
                 </p>
               )}
-              <p className="mt-1 text-xs text-white/70">
+              <p className="mt-1 font-mono text-xs text-white/70">
                 {[dish.recipe_code && `#${dish.recipe_code}`, dish.revision, dish.branch, dish.category?.name]
                   .filter(Boolean)
                   .join('  ·  ')}
@@ -135,7 +138,7 @@ export function DishDetailPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="space-y-6">
-          <Card>
+          <Card elevated>
             <CardHeader title={t('editor.section.ingredients')} />
             <CardBody className="p-0">
               <table className="w-full text-sm">
@@ -146,7 +149,7 @@ export function DishDetailPage() {
                         {i.item_name_snapshot}
                         {i.prep_note && <span className="text-ink-subtle"> · {i.prep_note}</span>}
                       </td>
-                      <td className="tnum whitespace-nowrap px-4 py-2 text-end text-ink-muted">
+                      <td className="tnum whitespace-nowrap px-4 py-2 text-end font-mono text-ink-muted">
                         {i.quantity} {i.unit_detail?.code ?? ''}
                       </td>
                     </tr>
@@ -156,13 +159,13 @@ export function DishDetailPage() {
             </CardBody>
           </Card>
 
-          <Card>
+          <Card elevated>
             <CardHeader title={t('editor.section.method')} />
             <CardBody>
               <ol className="space-y-3">
                 {dish.steps.map((s) => (
                   <li key={s.id ?? s.step_number} className="flex gap-3 text-sm">
-                    <span className="tnum flex h-6 w-6 flex-none items-center justify-center rounded-full bg-surface-sunken text-xs font-semibold text-ink-subtle">
+                    <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-surface-sunken font-mono text-xs font-semibold text-ink-subtle">
                       {s.step_number}
                     </span>
                     <p className="pt-0.5 leading-relaxed text-ink">{s.instruction}</p>
@@ -176,11 +179,13 @@ export function DishDetailPage() {
         </div>
 
         <div className="space-y-6">
-          <Card>
+          <Card elevated rail="idle">
             <CardHeader title={t('cost.tile.perServing')} />
             <CardBody className="space-y-3">
               <div className="flex items-baseline justify-between">
-                <span className="tnum text-2xl font-semibold text-ink">{kwd(dish.cost)}</span>
+                <span className="tnum font-mono text-[1.9rem] font-medium leading-none text-ink">
+                  {kwd(dish.cost)}
+                </span>
                 <span className="text-xs text-ink-subtle">
                   KWD · {t('editor.field.price')} {kwd(dish.selling_price)}
                 </span>
@@ -196,7 +201,7 @@ export function DishDetailPage() {
           <AllergenPanel rollup={dish.allergen_rollup} />
 
           {(dish.approved_by || dish.qa_approved_by) && (
-            <Card>
+            <Card elevated>
               <CardHeader title={t('editor.section.approvals')} />
               <CardBody className="space-y-1.5 text-sm">
                 {dish.approved_by && (
@@ -249,7 +254,7 @@ export function DishDetailPage() {
 
 function StandardCard({ std, t }: { std: DishStandard; t: TFunc }) {
   return (
-    <Card>
+    <Card elevated>
       <CardHeader title={t('editor.section.standard')} />
       <CardBody className="space-y-4">
         <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">

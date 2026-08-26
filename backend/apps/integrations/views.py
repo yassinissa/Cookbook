@@ -26,6 +26,19 @@ def items(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def items_search(request):
+    """One page of items with server-side search — for the browsable Items
+    screen. `get_items` (the full walk) stays for the ingredient picker."""
+    client = InventoryClient()
+    try:
+        data = client.search_items(params=request.query_params)
+    except InventoryAPIError as exc:
+        return Response({'detail': str(exc)}, status=502)
+    return Response(data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def item_detail(request, item_id):
     client = InventoryClient()
     try:

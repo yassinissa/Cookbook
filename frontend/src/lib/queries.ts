@@ -12,7 +12,23 @@ export function useInventoryItems() {
   return useQuery({
     queryKey: qk.inventory,
     queryFn: api.fetchInventoryItems,
+    staleTime: 10 * 60_000,
+  })
+}
+export function useInventoryItemsPage(search: string, page: number, pageSize = 25) {
+  return useQuery({
+    queryKey: [...qk.inventoryPage(search, page), pageSize],
+    queryFn: () => api.fetchInventoryItemsPage({ search, page, pageSize }),
+    placeholderData: (prev) => prev,
     staleTime: 5 * 60_000,
+  })
+}
+export function useInventoryItem(id: string | undefined) {
+  return useQuery({
+    queryKey: qk.inventoryItem(id ?? ''),
+    queryFn: () => api.fetchInventoryItem(id as string),
+    enabled: !!id,
+    staleTime: 10 * 60_000,
   })
 }
 

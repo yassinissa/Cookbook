@@ -106,9 +106,18 @@ class InventoryClient:
 
     def get_items(self, params=None):
         """List view — lightweight fields only (name/sku/category/unit/cost).
-        Use get_item(id) for the full record (notes, shelf life, expiry,
-        suppliers, default location, etc)."""
+        Walks every page: the recipe editor's ingredient picker wants the whole
+        SKU set in memory. Use search_items() for a browsable, paged view."""
         return self._get_all_pages('/items/', params=params)
+
+    def search_items(self, params=None):
+        """One page of items, straight through — `search`, `category`, `page`,
+        `page_size` pass to inventory-platform's DRF list endpoint. Returns its
+        `{count, next, previous, results}` envelope unchanged."""
+        allowed = ('search', 'category', 'item_type', 'is_active', 'page', 'page_size', 'ordering')
+        clean = {k: params[k] for k in allowed if params and params.get(k) not in (None, '')}
+        clean.setdefault('page_size', 40)
+        return self._request('GET', '/items/', params=clean)
 
     def get_item(self, item_id):
         return self._request('GET', f'/items/{item_id}/')

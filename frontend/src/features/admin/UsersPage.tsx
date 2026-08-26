@@ -24,7 +24,7 @@ export function UsersPage() {
   const [editing, setEditing] = useState<AccountUser | 'new' | null>(null)
 
   return (
-    <Page>
+    <Page stagger>
       <PageHeader
         eyebrow={t('nav.section.admin')}
         title={t('nav.users')}
@@ -41,7 +41,7 @@ export function UsersPage() {
       {users && users.length === 0 && <EmptyState icon="users" title={t('users.empty')} />}
 
       {users && users.length > 0 && (
-        <Card className="overflow-hidden">
+        <Card elevated rail="idle" className="overflow-hidden">
           <div className="scroll-x">
             <table className="w-full min-w-[720px] text-sm">
               <thead>

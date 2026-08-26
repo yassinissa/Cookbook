@@ -13,6 +13,8 @@ import { MenuListPage } from '@/features/menus/MenuListPage'
 import { MenuDetailPage } from '@/features/menus/MenuDetailPage'
 import { UsersPage } from '@/features/admin/UsersPage'
 import { RolesPage } from '@/features/admin/RolesPage'
+import { MorePage } from '@/features/more/MorePage'
+import { InventoryListPage } from '@/features/inventory/InventoryListPage'
 import { ComingSoonPage } from '@/features/placeholder/ComingSoonPage'
 import { RouteError } from '@/app/RouteError'
 
@@ -42,9 +44,11 @@ export const router = createBrowserRouter([
           { path: '/admin/users', ...cap('admin.users', <UsersPage />) },
           { path: '/admin/roles', ...cap('admin.roles', <RolesPage />) },
 
+          { path: '/more', element: <MorePage /> },
+
           { path: '/recipes/production', element: <ComingSoonPage titleKey="nav.production" icon="production" /> },
           { path: '/standards', element: <ComingSoonPage titleKey="nav.standards" icon="standards" /> },
-          { path: '/inventory', element: <ComingSoonPage titleKey="nav.inventory" icon="inventory" /> },
+          { path: '/inventory', ...cap('inventory.view', <InventoryListPage />) },
           { path: '/activity', element: <ComingSoonPage titleKey="nav.activity" icon="activity" /> },
           { path: '/documents', element: <ComingSoonPage titleKey="nav.documents" icon="documents" /> },
           { path: '/pos', element: <ComingSoonPage titleKey="nav.pos" icon="pos" /> },

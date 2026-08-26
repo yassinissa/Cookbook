@@ -18,7 +18,7 @@ export function MenuListPage() {
   )
 
   return (
-    <Page>
+    <Page stagger>
       <PageHeader eyebrow={t('app.group')} title={t('menus.title')} subtitle={t('menus.subtitle')} />
 
       {isError && <ErrorState onRetry={() => refetch()} body={t('state.retryHint')} />}
@@ -38,13 +38,22 @@ export function MenuListPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {menus.map((m) => {
             const health = healthByBranch.get(m.branch)
+            const alert = Number(health?.avg_food_cost_pct) > 30
             return (
               <Link
                 key={m.id}
                 to={`/menus/${m.branch}`}
-                className="group flex flex-col justify-between rounded-card border border-hairline bg-surface p-4 transition-colors hover:border-hairline-strong hover:bg-surface-sunken"
+                className="card-lit group relative flex flex-col justify-between overflow-hidden rounded-card border border-hairline bg-surface-raised p-4 transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-e2-hover"
               >
-                <div className="flex items-start justify-between">
+                <span
+                  aria-hidden
+                  className={
+                    alert
+                      ? 'absolute inset-y-0 start-0 w-[3px] bg-spice-1'
+                      : 'absolute inset-y-0 start-0 w-[3px] spice-rail opacity-40'
+                  }
+                />
+                <div className="flex items-start justify-between ps-1.5">
                   <BiName
                     en={m.branch_detail.name_en}
                     ar={m.branch_detail.name_ar}
@@ -56,10 +65,11 @@ export function MenuListPage() {
                     className="mt-1 text-ink-subtle transition-transform group-hover:translate-x-0.5 rtl:rotate-180"
                   />
                 </div>
-                <div className="mt-3 flex items-end justify-between">
+                <div className="mt-3 flex items-end justify-between ps-1.5">
                   <div>
-                    <p className="tnum text-sm text-ink">
-                      {m.line_count} <span className="text-ink-subtle">{t('menus.col.dishes')}</span>
+                    <p className="text-sm text-ink">
+                      <span className="tnum font-mono">{m.line_count}</span>{' '}
+                      <span className="text-ink-subtle">{t('menus.col.dishes')}</span>
                     </p>
                     {health?.avg_food_cost_pct && (
                       <div className="mt-1">

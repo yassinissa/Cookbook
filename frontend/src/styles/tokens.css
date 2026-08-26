@@ -37,6 +37,7 @@
   --accent-subtle: #f9efe0;
   --accent-subtle-hover: #f3e2c9;
   --accent-ink: #6d421c;
+  --accent-on: #ffffff; /* text/icons on an --accent fill — WCAG-checked */
   --focus: #c98527;
 
   /* status — green / orange / red, always paired with an icon or label */
@@ -50,11 +51,30 @@
   --danger-subtle: #fbeceb;
   --danger-ink: #b91c1c;
 
-  /* elevation — reserved for genuinely floating things */
-  --shadow-card: 0 1px 2px rgba(28, 25, 23, 0.04);
+  /* elevation — warm-tinted, a real 4-step scale (ground → panel → card → float) */
+  --shadow-card: 0 1px 2px rgba(87, 55, 20, 0.05);
+  --shadow-e1: 0 1px 2px rgba(87, 55, 20, 0.05);
+  --shadow-e2: 0 2px 4px rgba(87, 55, 20, 0.05), 0 10px 24px rgba(87, 55, 20, 0.08);
+  --shadow-e2-hover: 0 4px 8px rgba(87, 55, 20, 0.08), 0 18px 36px rgba(87, 55, 20, 0.13);
+  --shadow-e3: 0 8px 20px rgba(87, 55, 20, 0.1), 0 28px 60px rgba(87, 55, 20, 0.16);
   --shadow-popover: 0 4px 12px rgba(28, 25, 23, 0.1), 0 2px 4px rgba(28, 25, 23, 0.06);
   --shadow-modal: 0 16px 48px rgba(28, 25, 23, 0.2);
+  --card-top-highlight: rgba(255, 255, 255, 0.55);
   --radius-card: 10px;
+  --radius-lg: 16px;
+
+  /* atmosphere — layered onto the canvas by base.css; soft, cheap, iOS-15 safe */
+  --glow-1: rgba(201, 133, 39, 0.1);
+  --glow-2: rgba(168, 104, 28, 0.05);
+  --grain-opacity: 0.035;
+
+  /* spice — the signature rail and data viz only, never chrome */
+  --spice-1: #9e3b2f; /* sumac */
+  --spice-2: #d98b2b; /* saffron */
+  --spice-3: #7c8a3f; /* za'atar */
+  --spice-4: #566234; /* dried herb */
+  --spice-rail: linear-gradient(180deg, #9e3b2f 0%, #c56a2c 34%, #d98b2b 60%, #7c8a3f 100%);
+  --spice-rail-h: linear-gradient(90deg, #9e3b2f 0%, #c56a2c 34%, #d98b2b 60%, #7c8a3f 100%);
 
   /* charts (consumed by inline SVG, which can't reach Tailwind classes) */
   --chart-grid: #efeae2;
@@ -89,6 +109,7 @@
   --accent-subtle: #3a2c17;
   --accent-subtle-hover: #4a3820;
   --accent-ink: #e9bd74;
+  --accent-on: #2a1a05; /* dark ink on the bright saffron fill — WCAG-checked */
   --focus: #dc9f45;
 
   --success: #5cc98a;
@@ -102,8 +123,25 @@
   --danger-ink: #f2938d;
 
   --shadow-card: none;
+  --shadow-e1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-e2: 0 2px 6px rgba(0, 0, 0, 0.44), 0 14px 30px rgba(0, 0, 0, 0.5);
+  --shadow-e2-hover: 0 4px 10px rgba(0, 0, 0, 0.5), 0 22px 44px rgba(0, 0, 0, 0.6);
+  --shadow-e3: 0 12px 32px rgba(0, 0, 0, 0.55), 0 36px 72px rgba(0, 0, 0, 0.62);
   --shadow-popover: 0 6px 20px rgba(0, 0, 0, 0.5);
   --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.62);
+  --card-top-highlight: rgba(255, 236, 209, 0.07);
+  --radius-lg: 16px;
+
+  --glow-1: rgba(220, 159, 69, 0.11);
+  --glow-2: rgba(158, 59, 47, 0.07);
+  --grain-opacity: 0.05;
+
+  --spice-1: #c04b3b;
+  --spice-2: #dc9f45;
+  --spice-3: #9aa85e;
+  --spice-4: #71804a;
+  --spice-rail: linear-gradient(180deg, #c04b3b 0%, #d47a3a 34%, #dc9f45 60%, #9aa85e 100%);
+  --spice-rail-h: linear-gradient(90deg, #c04b3b 0%, #d47a3a 34%, #dc9f45 60%, #9aa85e 100%);
 
   --chart-grid: #322b25;
   --chart-axis: #6f665c;

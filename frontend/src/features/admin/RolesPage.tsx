@@ -23,7 +23,7 @@ export function RolesPage() {
   const [editing, setEditing] = useState<Role | 'new' | null>(null)
 
   return (
-    <Page>
+    <Page stagger>
       <PageHeader
         eyebrow={t('nav.section.admin')}
         title={t('nav.roles')}
@@ -41,7 +41,7 @@ export function RolesPage() {
       {roles && roles.length === 0 && <EmptyState icon="shield" title={t('roles.empty')} />}
 
       {roles && roles.length > 0 && (
-        <Card className="overflow-hidden">
+        <Card elevated rail="idle" className="overflow-hidden">
           <ul className="divide-y divide-hairline">
             {roles.map((r) => (
               <li key={r.id}>

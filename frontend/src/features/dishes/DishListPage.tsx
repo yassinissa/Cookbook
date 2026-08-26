@@ -62,7 +62,7 @@ export function DishListPage() {
   }, [recipes, q, branch, category, rating])
 
   return (
-    <Page>
+    <Page stagger>
       <PageHeader
         eyebrow={t('app.group')}
         title={t('dishes.title')}
@@ -143,7 +143,7 @@ export function DishListPage() {
       {recipes && visible.length > 0 && (
         <>
           {/* desktop table */}
-          <Card className="hidden overflow-hidden md:block">
+          <Card elevated rail="idle" className="hidden overflow-hidden md:block">
             <div className="scroll-x">
               <table className="w-full min-w-[840px] text-sm">
                 <thead>
@@ -170,13 +170,17 @@ export function DishListPage() {
                           <span className="ms-2 text-2xs text-ink-subtle">v{r.version}</span>
                         )}
                       </td>
-                      <td className="tnum px-3 py-2.5 text-ink-subtle">{r.recipe_code || '—'}</td>
+                      <td className="tnum px-3 py-2.5 font-mono text-xs text-ink-subtle">
+                        {r.recipe_code || '—'}
+                      </td>
                       <td className="px-3 py-2.5 text-ink-muted">{r.branch || '—'}</td>
                       <td className="px-3 py-2.5 text-ink-muted">{r.section_name || '—'}</td>
                       <td className="px-3 py-2.5 text-end">
                         <FoodCostValue value={foodCostPct(r)} />
                       </td>
-                      <td className="tnum px-3 py-2.5 text-end text-ink">{kwd(r.selling_price)}</td>
+                      <td className="tnum px-3 py-2.5 text-end font-mono text-ink">
+                        {kwd(r.selling_price)}
+                      </td>
                       <td className="px-4 py-2.5 text-end">
                         <div className="flex justify-end">
                           <RatingPill status={r.rating_status} rating={r.rating} />
