@@ -1,0 +1,25 @@
+import { QueryClient } from '@tanstack/react-query'
+
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+})
+
+export const qk = {
+  reference: ['reference'] as const,
+  inventory: ['inventory'] as const,
+  dashboard: ['dashboard'] as const,
+  dishes: ['dishes'] as const,
+  dish: (id: string) => ['dishes', id] as const,
+  dishVersions: (id: string) => ['dishes', id, 'versions'] as const,
+  dishDiff: (id: string, a?: string, b?: string) => ['dishes', id, 'diff', a ?? '', b ?? ''] as const,
+  menus: ['menus'] as const,
+  menuByBranch: (branchId: string) => ['menus', 'branch', branchId] as const,
+  menuSnapshots: (menuId: string) => ['menus', menuId, 'snapshots'] as const,
+  menuTrends: (menuId: string) => ['menus', menuId, 'trends'] as const,
+}

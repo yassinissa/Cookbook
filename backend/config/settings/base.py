@@ -31,6 +31,7 @@ LOCAL_APPS = [
     'apps.core',
     'apps.integrations',
     'apps.cookbook',
+    'apps.accounts',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

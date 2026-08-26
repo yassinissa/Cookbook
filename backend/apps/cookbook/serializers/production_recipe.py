@@ -1,11 +1,14 @@
 from rest_framework import serializers
+
+from apps.accounts.access import ALL, access_for
 from apps.cookbook.models import (
-    ProductionRecipe, ProductionRecipeIngredient, ProductionRecipeStep,
+    PrepKitchen, ProductionRecipe, ProductionRecipeIngredient, ProductionRecipeStep,
     ProductionCostHistory, ProductionRecipeActivityLog, ActivityActionType,
 )
 from apps.cookbook.services import apply_cost
 from apps.cookbook.versioning import archive_current_version, edit_is_a_new_version
 from .reference import SectionSerializer, ApproverSerializer, UnitScaleSerializer
+from .mixins import HidesCostingFields
 
 
 class ProductionRecipeIngredientSerializer(serializers.ModelSerializer):
@@ -36,21 +39,23 @@ class ProductionRecipeActivityLogSerializer(serializers.ModelSerializer):
         fields = ['id', 'action_type', 'action_type_display', 'description', 'changed_by', 'created_at']
 
 
-class ProductionRecipeListSerializer(serializers.ModelSerializer):
+class ProductionRecipeListSerializer(HidesCostingFields, serializers.ModelSerializer):
     section_name = serializers.CharField(source='section.name', read_only=True, default=None)
+    prep_kitchen_name = serializers.CharField(source='prep_kitchen_ref.name_en', read_only=True, default=None)
     output_unit_code = serializers.CharField(source='output_unit.code', read_only=True, default=None)
     ingredient_count = serializers.IntegerField(source='ingredients.count', read_only=True)
 
     class Meta:
         model  = ProductionRecipe
         fields = [
-            'id', 'name_en', 'name_ar', 'recipe_code', 'prep_kitchen', 'section', 'section_name',
+            'id', 'name_en', 'name_ar', 'recipe_code', 'prep_kitchen', 'prep_kitchen_ref',
+            'prep_kitchen_name', 'section', 'section_name',
             'output_item_sku', 'output_qty', 'output_unit', 'output_unit_code',
             'cost', 'version', 'is_current', 'ingredient_count', 'created_at',
         ]
 
 
-class ProductionRecipeDetailSerializer(serializers.ModelSerializer):
+class ProductionRecipeDetailSerializer(HidesCostingFields, serializers.ModelSerializer):
     section       = SectionSerializer(read_only=True)
     approved_by   = ApproverSerializer(read_only=True)
     qa_approved_by = ApproverSerializer(read_only=True)
@@ -65,7 +70,7 @@ class ProductionRecipeDetailSerializer(serializers.ModelSerializer):
         model  = ProductionRecipe
         fields = [
             'id', 'name_en', 'name_ar', 'recipe_code', 'revision', 'revision_date',
-            'prep_kitchen', 'section',
+            'prep_kitchen', 'prep_kitchen_ref', 'section',
             'output_item_sku', 'output_qty', 'output_unit',
             'prep_time_minutes', 'expected_waste_pct', 'include_labor_cost',
             'labor_cost', 'cost', 'cost_breakdown', 'nutrition', 'cost_per_unit',
@@ -89,13 +94,32 @@ class ProductionRecipeWriteSerializer(serializers.ModelSerializer):
         model  = ProductionRecipe
         fields = [
             'name_en', 'name_ar', 'recipe_code', 'revision', 'revision_date',
-            'prep_kitchen', 'section',
+            'prep_kitchen', 'prep_kitchen_ref', 'section',
             'output_item_sku', 'output_qty', 'output_unit',
             'prep_time_minutes', 'expected_waste_pct', 'include_labor_cost',
             'approved_by', 'qa_approved_by', 'approved_at', 'notes',
             'ingredients', 'steps',
         ]
         # labor_cost is recomputed on save, not accepted from the client
+
+    def validate(self, attrs):
+        request = self.context.get('request')
+        if not request:
+            return attrs
+        access = access_for(request)
+        scope = access.scope.prep_kitchen_ids
+        if access.is_superuser or scope is ALL:
+            return attrs
+
+        chosen = attrs.get('prep_kitchen_ref')
+        if chosen is None and self.instance is None and len(scope) == 1:
+            chosen = PrepKitchen.objects.filter(id=next(iter(scope))).first()
+            attrs['prep_kitchen_ref'] = chosen
+        effective = chosen or getattr(self.instance, 'prep_kitchen_ref', None)
+        if effective is None or str(effective.id) not in scope:
+            raise serializers.ValidationError(
+                {'prep_kitchen_ref': 'This recipe must belong to a prep kitchen you are assigned to.'})
+        return attrs
 
     def _save_ingredients(self, recipe, ingredient_data):
         for i, ing in enumerate(ingredient_data):

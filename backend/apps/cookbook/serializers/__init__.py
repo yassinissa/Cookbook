@@ -1,6 +1,6 @@
 from .reference import (
-    MenuCategorySerializer, BranchSerializer, SectionSerializer, ApproverSerializer,
-    AllergenSerializer, ServiceStyleSerializer, UnitScaleSerializer,
+    MenuCategorySerializer, BranchSerializer, PrepKitchenSerializer, SectionSerializer,
+    ApproverSerializer, AllergenSerializer, ServiceStyleSerializer, UnitScaleSerializer,
     StandardMeasurementConversionSerializer, TasteDescriptorSerializer,
 )
 from .dish_recipe import (
@@ -16,8 +16,8 @@ from .item_supplement import (
 )
 
 __all__ = [
-    'MenuCategorySerializer', 'BranchSerializer', 'SectionSerializer', 'ApproverSerializer',
-    'AllergenSerializer', 'ServiceStyleSerializer', 'UnitScaleSerializer',
+    'MenuCategorySerializer', 'BranchSerializer', 'PrepKitchenSerializer', 'SectionSerializer',
+    'ApproverSerializer', 'AllergenSerializer', 'ServiceStyleSerializer', 'UnitScaleSerializer',
     'StandardMeasurementConversionSerializer', 'TasteDescriptorSerializer',
     'DishRecipeIngredientSerializer', 'DishRecipeStepSerializer', 'DishStandardSerializer',
     'DishRecipeListSerializer', 'DishRecipeDetailSerializer', 'DishRecipeWriteSerializer',

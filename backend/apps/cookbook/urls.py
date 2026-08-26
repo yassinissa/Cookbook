@@ -2,10 +2,12 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
 from . import views_menu
+from .views_dashboard import DashboardView
 
 router = DefaultRouter()
 router.register(r'reference/categories', views.MenuCategoryViewSet, basename='menu-category')
 router.register(r'reference/branches', views.BranchViewSet, basename='branch')
+router.register(r'reference/prep-kitchens', views.PrepKitchenViewSet, basename='prep-kitchen')
 router.register(r'reference/sections', views.SectionViewSet, basename='section')
 router.register(r'reference/approvers', views.ApproverViewSet, basename='approver')
 router.register(r'reference/allergens', views.AllergenViewSet, basename='allergen')
@@ -21,5 +23,6 @@ router.register(r'menus', views_menu.MenuViewSet, basename='menu')
 router.register(r'menu-lines', views_menu.MenuLineViewSet, basename='menu-line')
 
 urlpatterns = [
+    path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('', include(router.urls)),
 ]

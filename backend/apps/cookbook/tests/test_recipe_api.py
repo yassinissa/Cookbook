@@ -17,7 +17,7 @@ class DishRecipeApiTests(APITestCase):
         make_tabbouleh_items(self.units)
         self.section = Section.objects.create(name='Salad', avg_monthly_salary=Decimal('285.78'))
         self.category = MenuCategory.objects.create(name='Salad')
-        user = get_user_model().objects.create_user('chef', password='x')
+        user = get_user_model().objects.create_superuser('chef', password='x')
         # JSON only — the browsable-API renderer trips a Py3.14 bug in the test
         # client's template-capture instrumentation.
         self.client = APIClient(HTTP_ACCEPT='application/json')

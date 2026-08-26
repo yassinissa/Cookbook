@@ -21,3 +21,7 @@ Thumbs.db
 
 # Claude Code local settings (not shared)
 .claude/settings.local.json
+
+# Scratch: full skill-repo clones used while installing skills — the skills
+# themselves live in .claude/skills/. Safe to delete.
+_to_delete/

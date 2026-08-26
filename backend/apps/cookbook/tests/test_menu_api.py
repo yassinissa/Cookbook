@@ -20,7 +20,7 @@ class MenuApiTests(APITestCase):
         self.branch = Branch.objects.create(name_en='Dine', name_ar='داين', code='DINE', sort_order=1)
         self.menu = Menu.objects.create(branch=self.branch, name='Dine Menu', is_active=True)
 
-        user = get_user_model().objects.create_user('chef', password='x')
+        user = get_user_model().objects.create_superuser('chef', password='x')
         self.client = APIClient(HTTP_ACCEPT='application/json')
         self.client.force_authenticate(user)
 

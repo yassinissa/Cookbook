@@ -1,5 +1,5 @@
 from .reference import (
-    MenuCategory, Branch, Section, Approver, Allergen, ServiceStyle, UnitScale,
+    MenuCategory, Branch, PrepKitchen, Section, Approver, Allergen, ServiceStyle, UnitScale,
     UnitDimension, StandardMeasurementConversion, TasteDescriptorCategory,
     TasteDescriptor,
 )
@@ -17,7 +17,7 @@ from .history import (
 )
 
 __all__ = [
-    'MenuCategory', 'Branch', 'Section', 'Approver', 'Allergen', 'ServiceStyle', 'UnitScale',
+    'MenuCategory', 'Branch', 'PrepKitchen', 'Section', 'Approver', 'Allergen', 'ServiceStyle', 'UnitScale',
     'UnitDimension', 'StandardMeasurementConversion', 'TasteDescriptorCategory', 'TasteDescriptor',
     'IngredientLine', 'RecipeStepLine', 'RecipeCardFields',
     'ProductionRecipe', 'ProductionRecipeIngredient', 'ProductionRecipeStep',

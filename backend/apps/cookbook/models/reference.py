@@ -59,6 +59,32 @@ class Branch(BaseModel):
         return self.name_en
 
 
+class PrepKitchen(BaseModel):
+    """
+    A prep kitchen — the unit that produces prepared items (Bread, Sauce, Meat,
+    Poultry…). ProductionRecipe.prep_kitchen_ref points here; prep cooks are
+    scoped to one or more of these (see apps.accounts).
+
+    Mirrors the Branch pattern: a thin local list, initially seeded, later
+    linked to inventory-platform's production stores via inventory_store_id —
+    which is also the join key for the planned batch / material-request flow
+    (a prep kitchen receives a request, creates a batch, checks stock).
+    """
+    name_en           = models.CharField(max_length=100, unique=True)
+    name_ar           = models.CharField(max_length=100, blank=True)
+    code              = models.CharField(max_length=20, blank=True)
+    sort_order        = models.PositiveIntegerField(default=0)
+    inventory_store_id = models.CharField(
+        max_length=64, blank=True,
+        help_text="inventory-platform production-store id this prep kitchen maps to.")
+
+    class Meta:
+        ordering = ['sort_order', 'name_en']
+
+    def __str__(self):
+        return self.name_en
+
+
 class Section(BaseModel):
     """
     A work section/department (kitchen station or general department).

@@ -15,5 +15,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/inventory/', include('apps.integrations.urls')),
     path('api/auth/', include('apps.core.urls')),
+    path('api/accounts/', include('apps.accounts.urls')),
     path('api/cookbook/', include('apps.cookbook.urls')),
 ]

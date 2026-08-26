@@ -16,32 +16,65 @@ before calling anything done — not just "the happy path returns 200."
 ## Current state (keep this section updated as the project evolves)
 
 - **Backend**: `backend/apps/cookbook/` — models split into
-  `models/{reference,recipes,standards,item_supplement,history}.py`,
-  mirrored `serializers/`, one `views.py`, `services.py` for live costing.
+  `models/{reference,recipes,standards,item_supplement,history,menu}.py`,
+  mirrored `serializers/`, `views.py` + `views_menu.py` + `views_dashboard.py`,
+  `services.py`/`costing.py`/`nutrition.py`/`versioning.py`.
   `apps/integrations/inventory_client.py` is the *only* place that talks
   to inventory-platform — items/units/stores/branches are read live, never
   duplicated locally. Ingredients reference inventory items by SKU string,
-  not a local FK.
-- **Frontend**: flat `frontend/src/*.jsx`, no folder structure yet, no
-  routing despite `react-router-dom` being installed (view switching is
-  manual React state in `App.jsx`/`RecipesPage.jsx`). Two parallel CRUD
-  flows (Dish/Production recipes: List/Form/Card) plus Items and Login.
-- **Design system**: first pass applied (2026-08-25) — `tailwind.config.js`
-  now has real tokens: `accent` (warm amber, Cookbook's own identity,
-  distinct from inventory-platform's teal) plus `success`/`warning`/`danger`
-  semantic scales. `RecipeFormFields.jsx` (name is now slightly stale —
-  it holds general-purpose primitives too: `primaryButtonClass`,
-  `secondaryButtonClass`, `dangerLinkClass`, `ErrorState`, `EmptyState`,
-  `Spinner` — not just recipe-specific fields) is used across every
-  screen for buttons and states. Still no skeleton loaders, no toasts, no
-  drawers/modals, no real navigation beyond the tab row — see the
-  `premium-ui` skill for what's still open. **Gotcha**: Tailwind needs a
-  full dev-server restart (not just HMR) to pick up new `theme.colors` —
-  confirm new tokens actually render (check computed style, not just
-  that the class name looks right) before assuming a token change worked.
-- **Testing**: none exists. Do not let this stay true as features grow —
-  see Testing section below.
-- **Auth**: JWT via default Django `User`, one superuser, no roles yet.
+  not a local FK. Recipe versions share a `lineage_key` UUID (on
+  `RecipeCardFields`); `dish-recipes/<id>/versions/` + `/diff/` and
+  `cookbook/dashboard/` are the read-only aggregate endpoints on top.
+- **Frontend**: rebuilt 2026-08-26 as a routed TypeScript app (React 19 +
+  Vite + Tailwind 3.4 + react-router 7 + @tanstack/react-query). Structure:
+  `src/{components}` (design-system primitives), `src/shell` (AppShell /
+  Sidebar / BottomNav / TopBar), `src/features/{dashboard,dishes,menus,auth,
+  placeholder}`, `src/lib/{api,queries,http,format,seed}`, `src/i18n`
+  (bespoke EN/AR provider, full RTL via `dir` + logical `ms-*/pe-*` utils),
+  `src/theme` (light/dark via `data-theme`). Slice 1 screens built:
+  Dashboard, Dish list / editor / detail (live cost breakdown, nutrition,
+  version-history drawer + diff), Menus list / branch detail (trend charts,
+  snapshots). Production / QA-standards / Inventory / Activity / Documents /
+  POS routes render `ComingSoonPage` until their slice lands. `VITE_USE_SEED=1`
+  serves `src/lib/seed` (curated Lebanese demo data) instead of the API —
+  hermetic, for the leadership demo.
+- **Design system**: tokens are CSS custom properties in
+  `src/styles/tokens.css` (`--surface`, `--ink`, `--accent`, status families,
+  shadows) with a real second palette under `:root[data-theme="dark"]` —
+  precomputed hex/rgba only, no `color-mix()`, no `dvh`, no container
+  queries (iOS 15 Safari on the kitchen iPads). `tailwind.config.js` maps
+  the tokens to `bg-surface`/`text-ink`/etc. so dark mode is one variable
+  swap, not a `dark:` fork. Fonts: Hanken Grotesk (UI), IBM Plex Mono (every
+  number/`.tnum`), Fraunces (login wordmark only). Primitives in
+  `src/components/*` — reuse/extend before adding new. The old
+  `RecipeFormFields.jsx` and flat `*.jsx` screens are deleted.
+  **Gotcha**: Vite's StatReloader misses `.tsx`/`.py` changes on Windows —
+  restart the dev server (and run Django with `--noreload`) rather than
+  trusting HMR when a route or endpoint 404s after an edit.
+- **Access control**: `backend/apps/accounts/` — capability catalogue
+  (`capabilities.py`, code-owned; `manage.py sync_capabilities` mirrors it to
+  `Capability` rows), `Role` (bundles capabilities + a default data scope),
+  `UserProfile` (role + per-user scope override + `extra_`/`denied_capabilities`).
+  `access.py::access_for(request)` is the one resolver (memoised on the
+  request); `permissions.py` gives `capability_required(by_action=…)` and
+  `ScopedQuerySetMixin`. Every cookbook viewset is capability-gated and
+  scope-filtered (dishes/menus by branch → `branch_ref`, production by prep
+  kitchen → `ProductionRecipe.prep_kitchen_ref` → new `cookbook.PrepKitchen`).
+  Serializers strip cost/price fields when the caller lacks `costing.view`
+  (`serializers/mixins.py::HidesCostingFields`). `/api/auth/me/` returns the
+  resolved capabilities + scope; `/api/accounts/{roles,users,capabilities}/`
+  is the admin API (gated on `admin.roles` / `admin.users`). Superuser
+  bypasses everything. Frontend: `src/auth/AuthProvider` + `guards.tsx`
+  (`RequireCapability`), nav + action buttons gated by `can(cap)`,
+  `src/features/admin/` screens. Seed builds carry a TopBar **identity
+  switcher** (`src/shell/IdentitySwitcher.tsx`) to demo scoped users.
+- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 59 tests
+  (`APITestCase`; cookbook test clients are superusers so they bypass RBAC —
+  `apps/accounts/tests/` covers enforcement). Frontend has none yet. Grow
+  both alongside new work.
+- **Auth**: JWT via default Django `User` (+ `accounts.UserProfile`), one
+  superuser (`cookadmin`). Roles: Administrator / Executive Chef / QA Manager
+  / Cost Controller / Restaurant Cook / Prep Cook, seeded and admin-editable.
 
 ## Non-negotiables
 

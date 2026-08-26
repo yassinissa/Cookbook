@@ -1,0 +1,116 @@
+/*
+ * Design tokens — the single source of colour, elevation and radius.
+ *
+ * Everything is a precomputed value: hex or rgba() literals only. No
+ * color-mix(), no `/alpha` opacity modifiers on these tokens, no dvh, no
+ * container queries — the kitchen-floor iPads run iOS 15 Safari. Where a
+ * translucent value is needed there is a named token for it (overlay,
+ * *-subtle, hairline).
+ *
+ * Light is the base palette on :root. Dark is a real second palette on
+ * [data-theme="dark"], not an inverted flip — both are contrast-checked.
+ */
+
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  /* surfaces & lines — warm neutrals (stone family) */
+  --canvas: #f7f5f2;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-sunken: #f2efea;
+  --hairline: #e7e2da;
+  --hairline-strong: #d6cfc4;
+  --overlay: rgba(28, 25, 23, 0.44);
+
+  /* text */
+  --ink: #1c1917;
+  --ink-muted: #57534e;
+  --ink-subtle: #857e75;
+  --ink-inverse: #fafaf9;
+
+  /* accent — warm ochre, the spice-and-kitchen identity */
+  --accent: #a8681c;
+  --accent-hover: #87511a;
+  --accent-pressed: #6d421c;
+  --accent-subtle: #f9efe0;
+  --accent-subtle-hover: #f3e2c9;
+  --accent-ink: #6d421c;
+  --focus: #c98527;
+
+  /* status — green / orange / red, always paired with an icon or label */
+  --success: #15803d;
+  --success-subtle: #eef7f0;
+  --success-ink: #15803d;
+  --warning: #c2410c;
+  --warning-subtle: #fbeee2;
+  --warning-ink: #b8460c;
+  --danger: #b91c1c;
+  --danger-subtle: #fbeceb;
+  --danger-ink: #b91c1c;
+
+  /* elevation — reserved for genuinely floating things */
+  --shadow-card: 0 1px 2px rgba(28, 25, 23, 0.04);
+  --shadow-popover: 0 4px 12px rgba(28, 25, 23, 0.1), 0 2px 4px rgba(28, 25, 23, 0.06);
+  --shadow-modal: 0 16px 48px rgba(28, 25, 23, 0.2);
+  --radius-card: 10px;
+
+  /* charts (consumed by inline SVG, which can't reach Tailwind classes) */
+  --chart-grid: #efeae2;
+  --chart-axis: #a8a29e;
+  --chart-accent: #a8681c;
+  --chart-accent-fill: rgba(168, 104, 28, 0.1);
+  --chart-positive: #15803d;
+  --chart-positive-fill: rgba(21, 128, 61, 0.1);
+  --chart-target: #b91c1c;
+  --chart-point: #ffffff;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --canvas: #1a1613;
+  --surface: #221d19;
+  --surface-raised: #2a2420;
+  --surface-sunken: #16110e;
+  --hairline: #38312b;
+  --hairline-strong: #4a4139;
+  --overlay: rgba(0, 0, 0, 0.6);
+
+  --ink: #f5f1ea;
+  --ink-muted: #b3a99d;
+  --ink-subtle: #8a7f72;
+  --ink-inverse: #1c1917;
+
+  --accent: #dc9f45;
+  --accent-hover: #e9bd74;
+  --accent-pressed: #f3d9ad;
+  --accent-subtle: #3a2c17;
+  --accent-subtle-hover: #4a3820;
+  --accent-ink: #e9bd74;
+  --focus: #dc9f45;
+
+  --success: #5cc98a;
+  --success-subtle: #182720;
+  --success-ink: #7ddaa5;
+  --warning: #f0913f;
+  --warning-subtle: #2e2013;
+  --warning-ink: #f0a868;
+  --danger: #f2726b;
+  --danger-subtle: #2e1715;
+  --danger-ink: #f2938d;
+
+  --shadow-card: none;
+  --shadow-popover: 0 6px 20px rgba(0, 0, 0, 0.5);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.62);
+
+  --chart-grid: #322b25;
+  --chart-axis: #6f665c;
+  --chart-accent: #dc9f45;
+  --chart-accent-fill: rgba(220, 159, 69, 0.14);
+  --chart-positive: #5cc98a;
+  --chart-positive-fill: rgba(92, 201, 138, 0.14);
+  --chart-target: #f2726b;
+  --chart-point: #221d19;
+}

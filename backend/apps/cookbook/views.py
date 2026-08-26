@@ -1,9 +1,13 @@
 from rest_framework import viewsets, mixins
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.response import Response
+
+from apps.accounts.permissions import ScopedQuerySetMixin, capability_required
+
 from .models import (
-    MenuCategory, Branch, Section, Approver, Allergen, ServiceStyle, UnitScale,
+    MenuCategory, Branch, PrepKitchen, Section, Approver, Allergen, ServiceStyle, UnitScale,
     StandardMeasurementConversion, TasteDescriptor, DishRecipe, ProductionRecipe,
     DishPriceHistory, DishRecipeActivityLog, ProductionCostHistory,
     ProductionRecipeActivityLog, ActivityActionType,
@@ -17,7 +21,9 @@ from .serializers import (
     ProductionRecipeListSerializer, ProductionRecipeDetailSerializer, ProductionRecipeWriteSerializer,
     ItemConversionSerializer, ItemNutritionSerializer,
 )
+from .serializers.reference import PrepKitchenSerializer
 from .services import apply_cost
+from .versioning import diff_recipes, diff_summary
 
 
 class ReadOnlyReferenceViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
@@ -34,6 +40,11 @@ class MenuCategoryViewSet(ReadOnlyReferenceViewSet):
 class BranchViewSet(ReadOnlyReferenceViewSet):
     queryset = Branch.objects.all()
     serializer_class = BranchSerializer
+
+
+class PrepKitchenViewSet(ReadOnlyReferenceViewSet):
+    queryset = PrepKitchen.objects.all()
+    serializer_class = PrepKitchenSerializer
 
 
 class SectionViewSet(ReadOnlyReferenceViewSet):
@@ -129,10 +140,78 @@ class RecipeViewSetBase(
         self._snapshot_and_log_recalculate(recipe, request)
         return self._response_with_warnings(recipe)
 
+    # ── version history ──────────────────────────────────────────────────
+    def _lineage(self, recipe):
+        """Every version row for this recipe, oldest first. Archived rows are
+        reachable here because get_queryset() only hides them for `list`."""
+        model = type(recipe)
+        return list(
+            model.objects
+            .filter(lineage_key=recipe.lineage_key)
+            .prefetch_related('ingredients__unit', 'steps')
+            .order_by('version', 'created_at')
+        )
 
-class DishRecipeViewSet(RecipeViewSetBase):
+    @action(detail=True, methods=['get'])
+    def versions(self, request, pk=None):
+        recipe = self.get_object()
+        rows = self._lineage(recipe)
+        out = []
+        for i, row in enumerate(rows):
+            entry = {
+                'id': str(row.id),
+                'version': row.version,
+                'is_current': row.is_current,
+                'is_viewed': str(row.id) == str(recipe.id),
+                'revision': row.revision,
+                'revision_date': row.revision_date,
+                'cost': str(row.cost),
+                'selling_price': str(row.selling_price) if getattr(row, 'selling_price', None) is not None else None,
+                'output_qty': str(row.output_qty) if getattr(row, 'output_qty', None) is not None else None,
+                'created_at': row.created_at,
+                'updated_at': row.updated_at,
+                'changes_from_previous': diff_summary(rows[i - 1], row) if i else None,
+            }
+            out.append(entry)
+        return Response({'lineage_key': str(recipe.lineage_key), 'versions': out})
+
+    @action(detail=True, methods=['get'])
+    def diff(self, request, pk=None):
+        recipe = self.get_object()
+        rows = {str(r.id): r for r in self._lineage(recipe)}
+        if len(rows) < 2:
+            raise ValidationError('This recipe has only one version.')
+
+        ordered = sorted(rows.values(), key=lambda r: (r.version, r.created_at))
+        b_id = request.query_params.get('b') or str(ordered[-1].id)
+        a_id = request.query_params.get('a') or (
+            str(ordered[ordered.index(rows[b_id]) - 1].id) if b_id in rows and ordered.index(rows[b_id]) > 0
+            else str(ordered[0].id)
+        )
+        if a_id not in rows or b_id not in rows:
+            raise NotFound('Both versions must belong to this recipe.')
+
+        a, b = rows[a_id], rows[b_id]
+        older, newer = sorted((a, b), key=lambda r: (r.version, r.created_at))
+        return Response({
+            'from': {'id': str(older.id), 'version': older.version},
+            'to': {'id': str(newer.id), 'version': newer.version},
+            **diff_recipes(older, newer),
+        })
+
+
+class DishRecipeViewSet(ScopedQuerySetMixin, RecipeViewSetBase):
+    scope_kind = 'branch'
+    scope_field = 'branch_ref_id'
+    permission_classes = [capability_required(default='dish.view', by_action={
+        'list': 'dish.view', 'retrieve': 'dish.view',
+        'create': 'dish.edit', 'update': 'dish.edit', 'partial_update': 'dish.edit',
+        'destroy': 'dish.delete',
+        'recalculate': 'costing.recalculate',
+        'versions': 'recipe.history', 'diff': 'recipe.history',
+    })]
     queryset = DishRecipe.objects.select_related(
-        'category', 'section', 'service_style', 'approved_by', 'qa_approved_by',
+        'category', 'section', 'service_style', 'approved_by', 'qa_approved_by', 'branch_ref',
     ).prefetch_related('ingredients__unit', 'steps', 'allergens', 'standard', 'price_history', 'activity_log')
     detail_serializer_class = DishRecipeDetailSerializer
 
@@ -150,9 +229,18 @@ class DishRecipeViewSet(RecipeViewSetBase):
         )
 
 
-class ProductionRecipeViewSet(RecipeViewSetBase):
+class ProductionRecipeViewSet(ScopedQuerySetMixin, RecipeViewSetBase):
+    scope_kind = 'prep_kitchen'
+    scope_field = 'prep_kitchen_ref_id'
+    permission_classes = [capability_required(default='production.view', by_action={
+        'list': 'production.view', 'retrieve': 'production.view',
+        'create': 'production.edit', 'update': 'production.edit', 'partial_update': 'production.edit',
+        'destroy': 'production.delete',
+        'recalculate': 'costing.recalculate',
+        'versions': 'recipe.history', 'diff': 'recipe.history',
+    })]
     queryset = ProductionRecipe.objects.select_related(
-        'section', 'approved_by', 'qa_approved_by', 'output_unit',
+        'section', 'approved_by', 'qa_approved_by', 'output_unit', 'prep_kitchen_ref',
     ).prefetch_related('ingredients__unit', 'steps', 'cost_history', 'activity_log')
     detail_serializer_class = ProductionRecipeDetailSerializer
 

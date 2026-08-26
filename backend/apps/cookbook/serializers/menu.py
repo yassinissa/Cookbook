@@ -6,6 +6,7 @@ from apps.cookbook.models import (
     Branch, DishRecipe, Menu, MenuLine, MenuSnapshot, MenuSnapshotLine,
 )
 from .reference import BranchSerializer
+from .mixins import HidesCostingFields
 
 
 def _food_cost_pct(cost, price):
@@ -14,7 +15,7 @@ def _food_cost_pct(cost, price):
     return (Decimal(cost) / Decimal(price) * 100).quantize(Decimal('0.01'))
 
 
-class MenuLineSerializer(serializers.ModelSerializer):
+class MenuLineSerializer(HidesCostingFields, serializers.ModelSerializer):
     dish_name      = serializers.CharField(source='dish.name_en', read_only=True)
     dish_name_ar   = serializers.CharField(source='dish.name_ar', read_only=True)
     recipe_code    = serializers.CharField(source='dish.recipe_code', read_only=True)

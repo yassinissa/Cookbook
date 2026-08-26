@@ -5,8 +5,10 @@ from django.db.models import Q
 from django.utils import timezone
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
+from apps.accounts.access import ALL, access_for
+from apps.accounts.permissions import capability_required
 
 from .models import DishRecipe, Menu, MenuLine, MenuSnapshot, MenuSnapshotLine
 from .serializers.menu import (
@@ -21,12 +23,29 @@ def _fcp(cost, price):
     return (Decimal(cost) / Decimal(price) * 100).quantize(Decimal('0.01'))
 
 
+def _scoped_menu_qs(qs, request):
+    access = access_for(request)
+    if access.is_superuser or access.scope.branch_ids is ALL:
+        return qs
+    if not access.scope.branch_ids:
+        return qs.none()
+    return qs.filter(branch_id__in=list(access.scope.branch_ids))
+
+
 class MenuViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [capability_required(default='menu.view', by_action={
+        'list': 'menu.view', 'retrieve': 'menu.view', 'snapshots': 'menu.view', 'trends': 'menu.view',
+        'create': 'menu.edit', 'update': 'menu.edit', 'partial_update': 'menu.edit',
+        'destroy': 'menu.edit', 'build': 'menu.edit', 'lines': 'menu.edit',
+        'snapshot': 'menu.snapshot',
+    })]
     pagination_class = None          # ~one menu per branch — never enough to page
     queryset = (Menu.objects
                 .select_related('branch')
                 .prefetch_related('lines__dish__category'))
+
+    def get_queryset(self):
+        return _scoped_menu_qs(super().get_queryset(), self.request)
 
     def get_serializer_class(self):
         if self.action in ('create', 'update', 'partial_update'):
@@ -122,6 +141,15 @@ class MenuViewSet(viewsets.ModelViewSet):
 
 
 class MenuLineViewSet(mixins.UpdateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
-    permission_classes = [IsAuthenticated]
-    queryset = MenuLine.objects.select_related('dish', 'dish__category')
+    permission_classes = [capability_required(default='menu.edit')]
+    queryset = MenuLine.objects.select_related('dish', 'dish__category', 'menu')
     serializer_class = MenuLineSerializer
+
+    def get_queryset(self):
+        access = access_for(self.request)
+        qs = super().get_queryset()
+        if access.is_superuser or access.scope.branch_ids is ALL:
+            return qs
+        if not access.scope.branch_ids:
+            return qs.none()
+        return qs.filter(menu__branch_id__in=list(access.scope.branch_ids))

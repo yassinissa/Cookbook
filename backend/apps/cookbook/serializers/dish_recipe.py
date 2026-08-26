@@ -1,6 +1,8 @@
 from rest_framework import serializers
+
+from apps.accounts.access import ALL, access_for
 from apps.cookbook.models import (
-    DishRecipe, DishRecipeIngredient, DishRecipeStep, DishStandard,
+    Branch, DishRecipe, DishRecipeIngredient, DishRecipeStep, DishStandard,
     MenuCategory, Section, ServiceStyle, Approver, Allergen, UnitScale,
     DishPriceHistory, DishRecipeActivityLog, ActivityActionType,
 )
@@ -11,6 +13,7 @@ from .reference import (
     MenuCategorySerializer, SectionSerializer, ServiceStyleSerializer,
     ApproverSerializer, AllergenSerializer, UnitScaleSerializer,
 )
+from .mixins import HidesCostingFields
 
 
 class DishRecipeIngredientSerializer(serializers.ModelSerializer):
@@ -47,7 +50,7 @@ class DishRecipeActivityLogSerializer(serializers.ModelSerializer):
         fields = ['id', 'action_type', 'action_type_display', 'description', 'changed_by', 'created_at']
 
 
-class DishRecipeListSerializer(serializers.ModelSerializer):
+class DishRecipeListSerializer(HidesCostingFields, serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True, default=None)
     section_name  = serializers.CharField(source='section.name', read_only=True, default=None)
     ingredient_count = serializers.IntegerField(source='ingredients.count', read_only=True)
@@ -65,7 +68,7 @@ class DishRecipeListSerializer(serializers.ModelSerializer):
         return hasattr(obj, 'standard') and obj.standard is not None
 
 
-class DishRecipeDetailSerializer(serializers.ModelSerializer):
+class DishRecipeDetailSerializer(HidesCostingFields, serializers.ModelSerializer):
     category      = MenuCategorySerializer(read_only=True)
     section       = SectionSerializer(read_only=True)
     service_style = ServiceStyleSerializer(read_only=True)
@@ -130,6 +133,27 @@ class DishRecipeWriteSerializer(serializers.ModelSerializer):
             'ingredients', 'steps', 'standard',
         ]
         # labor_cost is recomputed on save, not accepted from the client
+
+    def validate(self, attrs):
+        """A scoped user can only write dishes within their branch scope; a
+        singly-scoped user's new dishes default to that branch."""
+        request = self.context.get('request')
+        if not request:
+            return attrs
+        access = access_for(request)
+        scope = access.scope.branch_ids
+        if access.is_superuser or scope is ALL:
+            return attrs
+
+        chosen = attrs.get('branch_ref')
+        if chosen is None and self.instance is None and len(scope) == 1:
+            chosen = Branch.objects.filter(id=next(iter(scope))).first()
+            attrs['branch_ref'] = chosen
+        effective = chosen or getattr(self.instance, 'branch_ref', None)
+        if effective is None or str(effective.id) not in scope:
+            raise serializers.ValidationError(
+                {'branch_ref': 'This dish must belong to a branch you are assigned to.'})
+        return attrs
 
     def _save_ingredients(self, recipe, ingredient_data):
         for i, ing in enumerate(ingredient_data):

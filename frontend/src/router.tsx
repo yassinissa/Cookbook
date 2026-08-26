@@ -1,0 +1,57 @@
+import type { ReactElement } from 'react'
+import { Navigate, createBrowserRouter } from 'react-router-dom'
+
+import { RequireAuth, RequireCapability } from '@/auth/guards'
+import type { CapabilityCode } from '@/types/access'
+import { AppShell } from '@/shell/AppShell'
+import { LoginPage } from '@/features/auth/LoginPage'
+import { DashboardPage } from '@/features/dashboard/DashboardPage'
+import { DishListPage } from '@/features/dishes/DishListPage'
+import { DishEditorPage } from '@/features/dishes/DishEditorPage'
+import { DishDetailPage } from '@/features/dishes/DishDetailPage'
+import { MenuListPage } from '@/features/menus/MenuListPage'
+import { MenuDetailPage } from '@/features/menus/MenuDetailPage'
+import { UsersPage } from '@/features/admin/UsersPage'
+import { RolesPage } from '@/features/admin/RolesPage'
+import { ComingSoonPage } from '@/features/placeholder/ComingSoonPage'
+import { RouteError } from '@/app/RouteError'
+
+const cap = (c: CapabilityCode, element: ReactElement) => ({
+  element: <RequireCapability cap={c}>{element}</RequireCapability>,
+})
+
+export const router = createBrowserRouter([
+  { path: '/login', element: <LoginPage /> },
+  {
+    element: <RequireAuth />,
+    errorElement: <RouteError />,
+    children: [
+      {
+        element: <AppShell />,
+        children: [
+          { path: '/', ...cap('dashboard.view', <DashboardPage />) },
+
+          { path: '/recipes/dishes', ...cap('dish.view', <DishListPage />) },
+          { path: '/recipes/dishes/new', ...cap('dish.edit', <DishEditorPage />) },
+          { path: '/recipes/dishes/:id', ...cap('dish.view', <DishDetailPage />) },
+          { path: '/recipes/dishes/:id/edit', ...cap('dish.edit', <DishEditorPage />) },
+
+          { path: '/menus', ...cap('menu.view', <MenuListPage />) },
+          { path: '/menus/:branchId', ...cap('menu.view', <MenuDetailPage />) },
+
+          { path: '/admin/users', ...cap('admin.users', <UsersPage />) },
+          { path: '/admin/roles', ...cap('admin.roles', <RolesPage />) },
+
+          { path: '/recipes/production', element: <ComingSoonPage titleKey="nav.production" icon="production" /> },
+          { path: '/standards', element: <ComingSoonPage titleKey="nav.standards" icon="standards" /> },
+          { path: '/inventory', element: <ComingSoonPage titleKey="nav.inventory" icon="inventory" /> },
+          { path: '/activity', element: <ComingSoonPage titleKey="nav.activity" icon="activity" /> },
+          { path: '/documents', element: <ComingSoonPage titleKey="nav.documents" icon="documents" /> },
+          { path: '/pos', element: <ComingSoonPage titleKey="nav.pos" icon="pos" /> },
+
+          { path: '*', element: <Navigate to="/" replace /> },
+        ],
+      },
+    ],
+  },
+])

@@ -1,0 +1,307 @@
+import { useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+
+import { Button } from '@/components/Button'
+import { Card, CardBody, CardHeader } from '@/components/Card'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { DishImage } from '@/components/DishImage'
+import { Meter } from '@/components/Meter'
+import { Page } from '@/components/Page'
+import { RatingPill } from '@/components/Pill'
+import { ErrorState, Skeleton } from '@/components/States'
+import { TASTE_AXES, TasteAxisBar } from '@/components/TasteAxis'
+import { CostPanel } from './CostPanel'
+import { AllergenPanel, NutritionPanel } from './NutritionPanel'
+import { VersionDrawer } from './VersionDrawer'
+import * as api from '@/lib/api'
+import { qk } from '@/lib/queryClient'
+import { useDishRecipe } from '@/lib/queries'
+import { useQueryClient } from '@tanstack/react-query'
+import { useToast } from '@/components/Toast'
+import { parseApiError } from '@/lib/parseApiError'
+import { kwd, shortDate } from '@/lib/format'
+import { useAuth } from '@/auth/AuthProvider'
+import { useI18n, type TFunc } from '@/i18n'
+import type { CostBreakdown, DishStandard, NutritionRollup } from '@/types/api'
+
+export function DishDetailPage() {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const toast = useToast()
+  const qc = useQueryClient()
+  const { t, locale } = useI18n()
+  const { can } = useAuth()
+  const { data: dish, isLoading, isError, refetch } = useDishRecipe(id)
+
+  const [versionsOpen, setVersionsOpen] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [recalculating, setRecalculating] = useState(false)
+
+  if (isLoading) return <DetailSkeleton />
+  if (isError || !dish) {
+    return (
+      <Page>
+        <ErrorState title="Could not load this recipe" onRetry={() => refetch()} />
+      </Page>
+    )
+  }
+
+  const breakdown = (
+    dish.cost_breakdown && 'per_serving' in dish.cost_breakdown ? dish.cost_breakdown : null
+  ) as CostBreakdown | null
+  const nutrition = (
+    dish.nutrition && Object.keys(dish.nutrition).length ? dish.nutrition : null
+  ) as NutritionRollup | null
+  const std = dish.standard
+
+  async function onRecalculate() {
+    if (!id) return
+    setRecalculating(true)
+    try {
+      const r = await api.recalcDishRecipe(id)
+      qc.setQueryData(qk.dish(id), r)
+      toast.success(t('toast.costRecalculated'))
+    } catch (e) {
+      toast.error(parseApiError(e).message || t('state.errorGeneric'))
+    } finally {
+      setRecalculating(false)
+    }
+  }
+
+  async function onDelete() {
+    if (!id) return
+    setDeleting(true)
+    try {
+      await api.deleteDishRecipe(id)
+      qc.invalidateQueries({ queryKey: qk.dishes })
+      toast.success(t('toast.recipeDeleted', { name: dish!.name_en }))
+      navigate('/recipes/dishes')
+    } catch (e) {
+      toast.error(parseApiError(e).message || t('state.errorGeneric'))
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <Page>
+      <div className="mb-4 flex items-center justify-between no-print">
+        <Button variant="ghost" size="sm" icon="arrowLeft" onClick={() => navigate('/recipes/dishes')}>
+          {t('dishes.title')}
+        </Button>
+        <div className="flex items-center gap-2">
+          {can('recipe.history') && (
+            <Button variant="secondary" size="sm" icon="history" onClick={() => setVersionsOpen(true)}>
+              {t('action.versionHistory')}
+            </Button>
+          )}
+          {can('costing.recalculate') && (
+            <Button variant="secondary" size="sm" icon="refresh" loading={recalculating} onClick={onRecalculate}>
+              {t('action.recalculate')}
+            </Button>
+          )}
+          {can('dish.edit') && (
+            <Button variant="primary" size="sm" icon="edit" onClick={() => navigate(`/recipes/dishes/${id}/edit`)}>
+              {t('action.edit')}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* hero */}
+      <div className="relative mb-6 overflow-hidden rounded-card border border-hairline">
+        <div className="aspect-[21/9] w-full bg-surface-sunken">
+          <DishImage src={dish.image_url} name={dish.name_en} rounded="rounded-none" />
+        </div>
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-4 sm:p-6">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight text-white">{dish.name_en}</h1>
+              {dish.name_ar && (
+                <p dir="rtl" className="mt-0.5 text-sm text-white/85">
+                  {dish.name_ar}
+                </p>
+              )}
+              <p className="mt-1 text-xs text-white/70">
+                {[dish.recipe_code && `#${dish.recipe_code}`, dish.revision, dish.branch, dish.category?.name]
+                  .filter(Boolean)
+                  .join('  ·  ')}
+              </p>
+            </div>
+            <RatingPill status={dish.rating_status} rating={dish.rating} />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <div className="space-y-6">
+          <Card>
+            <CardHeader title={t('editor.section.ingredients')} />
+            <CardBody className="p-0">
+              <table className="w-full text-sm">
+                <tbody className="divide-y divide-hairline">
+                  {dish.ingredients.map((i) => (
+                    <tr key={i.id ?? i.item_sku}>
+                      <td className="px-4 py-2 text-ink">
+                        {i.item_name_snapshot}
+                        {i.prep_note && <span className="text-ink-subtle"> · {i.prep_note}</span>}
+                      </td>
+                      <td className="tnum whitespace-nowrap px-4 py-2 text-end text-ink-muted">
+                        {i.quantity} {i.unit_detail?.code ?? ''}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader title={t('editor.section.method')} />
+            <CardBody>
+              <ol className="space-y-3">
+                {dish.steps.map((s) => (
+                  <li key={s.id ?? s.step_number} className="flex gap-3 text-sm">
+                    <span className="tnum flex h-6 w-6 flex-none items-center justify-center rounded-full bg-surface-sunken text-xs font-semibold text-ink-subtle">
+                      {s.step_number}
+                    </span>
+                    <p className="pt-0.5 leading-relaxed text-ink">{s.instruction}</p>
+                  </li>
+                ))}
+              </ol>
+            </CardBody>
+          </Card>
+
+          {std && <StandardCard std={std} t={t} />}
+        </div>
+
+        <div className="space-y-6">
+          <Card>
+            <CardHeader title={t('cost.tile.perServing')} />
+            <CardBody className="space-y-3">
+              <div className="flex items-baseline justify-between">
+                <span className="tnum text-2xl font-semibold text-ink">{kwd(dish.cost)}</span>
+                <span className="text-xs text-ink-subtle">
+                  KWD · {t('editor.field.price')} {kwd(dish.selling_price)}
+                </span>
+              </div>
+              <Meter
+                value={dish.food_cost_pct === null ? null : Number(dish.food_cost_pct)}
+                bandLabel={(b) => t(`cost.band.${b}`)}
+              />
+            </CardBody>
+          </Card>
+          <CostPanel breakdown={breakdown} sellingPrice={dish.selling_price} />
+          <NutritionPanel nutrition={nutrition} />
+          <AllergenPanel rollup={dish.allergen_rollup} />
+
+          {(dish.approved_by || dish.qa_approved_by) && (
+            <Card>
+              <CardHeader title={t('editor.section.approvals')} />
+              <CardBody className="space-y-1.5 text-sm">
+                {dish.approved_by && (
+                  <p className="flex justify-between">
+                    <span className="text-ink-subtle">{t('editor.field.approvedBy')}</span>
+                    <span className="text-ink">{dish.approved_by.name}</span>
+                  </p>
+                )}
+                {dish.qa_approved_by && (
+                  <p className="flex justify-between">
+                    <span className="text-ink-subtle">{t('editor.field.qaApprovedBy')}</span>
+                    <span className="text-ink">{dish.qa_approved_by.name}</span>
+                  </p>
+                )}
+                {dish.approved_at && (
+                  <p className="flex justify-between">
+                    <span className="text-ink-subtle">{t('editor.field.approvedAt')}</span>
+                    <span className="tnum text-ink">{shortDate(dish.approved_at, locale)}</span>
+                  </p>
+                )}
+              </CardBody>
+            </Card>
+          )}
+
+          {can('dish.delete') && (
+            <div className="no-print">
+              <Button variant="ghost" size="sm" icon="trash" onClick={() => setConfirmDelete(true)}>
+                {t('action.delete')}
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {id && <VersionDrawer dishId={id} open={versionsOpen} onClose={() => setVersionsOpen(false)} />}
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title={`${t('action.delete')} “${dish.name_en}”?`}
+        body="This removes the current version. Archived versions are kept for cost history."
+        confirmLabel={t('action.delete')}
+        danger
+        busy={deleting}
+        onConfirm={onDelete}
+        onCancel={() => setConfirmDelete(false)}
+      />
+    </Page>
+  )
+}
+
+function StandardCard({ std, t }: { std: DishStandard; t: TFunc }) {
+  return (
+    <Card>
+      <CardHeader title={t('editor.section.standard')} />
+      <CardBody className="space-y-4">
+        <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+          <Spec label="Portion" value={std.portion_weight_g && `${std.portion_weight_g} ± ${std.portion_tolerance_g ?? 0} g`} />
+          <Spec label="Serving temp" value={std.serving_temp_c && `${std.serving_temp_c} ± ${std.temp_tolerance_c ?? 0} °C`} />
+          <Spec label="Holding" value={std.holding_time_minutes != null ? `${std.holding_time_minutes} min` : ''} />
+          <Spec label="Primary flavour" value={std.primary_flavor} />
+          <Spec label="Aftertaste" value={std.aftertaste} />
+          <Spec label="Mouthfeel" value={std.mouthfeel} />
+        </div>
+        <div className="space-y-1.5 border-t border-hairline pt-4">
+          {TASTE_AXES.map(([key, label]) => (
+            <TasteAxisBar
+              key={key}
+              label={label}
+              target={std[`${key}_target`]}
+              tolerance={std[`${key}_tolerance`]}
+            />
+          ))}
+        </div>
+        {std.freshness_standard && (
+          <p className="border-t border-hairline pt-3 text-sm text-ink-muted">
+            <span className="font-medium text-ink">Freshness — </span>
+            {std.freshness_standard}
+          </p>
+        )}
+      </CardBody>
+    </Card>
+  )
+}
+
+function Spec({ label, value }: { label: string; value?: string | number | null }) {
+  if (!value) return null
+  return (
+    <div>
+      <dt className="text-2xs uppercase tracking-wide text-ink-subtle">{label}</dt>
+      <dd className="tnum text-ink">{value}</dd>
+    </div>
+  )
+}
+
+function DetailSkeleton() {
+  return (
+    <Page>
+      <Skeleton className="mb-6 aspect-[21/9] w-full rounded-card" />
+      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <div className="space-y-6">
+          <Skeleton className="h-64" />
+          <Skeleton className="h-48" />
+        </div>
+        <Skeleton className="h-80" />
+      </div>
+    </Page>
+  )
+}

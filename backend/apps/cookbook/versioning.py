@@ -65,6 +65,92 @@ def edit_is_a_new_version(instance, validated_data, ingredient_data, step_data):
     return False
 
 
+# ── version history + diff (read-only, for the API) ────────────────────────
+
+# scalar/display fields worth showing in a version diff, in display order.
+# FK fields are compared by their str(); missing ones are simply skipped.
+_DIFF_FIELDS = [
+    'name_en', 'name_ar', 'recipe_code', 'revision', 'revision_date',
+    'section', 'prep_time_minutes', 'expected_waste_pct', 'include_labor_cost',
+    'selling_price', 'cost', 'labor_cost', 'rating', 'rating_status',
+    'taste_profile', 'pos_item_name', 'notes',
+    'output_item_sku', 'output_qty', 'output_unit',
+]
+
+
+def _display(value):
+    if value is None or value == '':
+        return None
+    return str(value)
+
+
+def _ingredient_label(obj):
+    sku = obj.item_sku
+    note = (obj.prep_note or '').strip()
+    return f'{sku} ({note})' if note else sku
+
+
+def _ingredient_summary(obj):
+    return {
+        'item_sku': obj.item_sku,
+        'item_name_snapshot': obj.item_name_snapshot,
+        'prep_note': obj.prep_note,
+        'quantity': str(obj.quantity),
+        'unit': obj.unit.code if obj.unit_id else None,
+    }
+
+
+def diff_recipes(older, newer):
+    """Structured field/ingredient/step diff between two recipe rows
+    (either order works; `older`→`newer` is just the labelling)."""
+    fields = []
+    for name in _DIFF_FIELDS:
+        if not hasattr(older, name) or not hasattr(newer, name):
+            continue
+        a, b = _display(getattr(older, name)), _display(getattr(newer, name))
+        if a != b:
+            fields.append({'field': name, 'from': a, 'to': b})
+
+    old_ings = {_ingredient_label(i): i for i in older.ingredients.all()}
+    new_ings = {_ingredient_label(i): i for i in newer.ingredients.all()}
+    ing_changed = []
+    for label in old_ings.keys() & new_ings.keys():
+        a, b = _ingredient_summary(old_ings[label]), _ingredient_summary(new_ings[label])
+        if a != b:
+            ing_changed.append({'label': label, 'from': a, 'to': b})
+
+    old_steps = [s.instruction for s in older.steps.all()]
+    new_steps = [s.instruction for s in newer.steps.all()]
+
+    return {
+        'fields': fields,
+        'ingredients': {
+            'added': [_ingredient_summary(new_ings[l]) for l in new_ings.keys() - old_ings.keys()],
+            'removed': [_ingredient_summary(old_ings[l]) for l in old_ings.keys() - new_ings.keys()],
+            'changed': ing_changed,
+        },
+        'steps': {
+            'added': [s for s in new_steps if s not in old_steps],
+            'removed': [s for s in old_steps if s not in new_steps],
+            'count_from': len(old_steps),
+            'count_to': len(new_steps),
+        },
+    }
+
+
+def diff_summary(older, newer):
+    """One-line-ish counts, for the version timeline."""
+    d = diff_recipes(older, newer)
+    return {
+        'fields_changed': [f['field'] for f in d['fields']],
+        'ingredients_added': len(d['ingredients']['added']),
+        'ingredients_removed': len(d['ingredients']['removed']),
+        'ingredients_changed': len(d['ingredients']['changed']),
+        'steps_added': len(d['steps']['added']),
+        'steps_removed': len(d['steps']['removed']),
+    }
+
+
 def archive_current_version(instance):
     """
     Copy `instance` (as it is *now*, before the pending edit is applied) into a

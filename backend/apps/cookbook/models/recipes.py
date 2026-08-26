@@ -19,9 +19,13 @@ rather than the spreadsheet's manual "copy old revision to a History
 sheet" process — editing creates a new version, old ones are kept for
 cost-history, matching apps.recipes.ProductionRecipe/DishRecipe.
 """
+import uuid
+
 from django.db import models
 from apps.core.models import BaseModel
-from .reference import Section, Approver, UnitScale, MenuCategory, Allergen, ServiceStyle, Branch
+from .reference import (
+    Section, Approver, UnitScale, MenuCategory, Allergen, ServiceStyle, Branch, PrepKitchen,
+)
 
 
 # ── Shared abstract pieces ──────────────────────────────────────────────────
@@ -63,6 +67,12 @@ class RecipeCardFields(BaseModel):
                                        'Stable across versions; the import matches on it.')
     version              = models.PositiveIntegerField(default=1)
     is_current           = models.BooleanField(default=True)
+    # Groups every version of one recipe together. Set once on the first
+    # create and copied verbatim into each archived snapshot by
+    # apps.cookbook.versioning.archive_current_version (which copies every
+    # concrete field). recipe_code is *not* reliable for this — it can be
+    # blank — so version history/diff keys on this instead.
+    lineage_key          = models.UUIDField(default=uuid.uuid4, db_index=True, editable=False)
     revision             = models.CharField(max_length=20, blank=True,
                              help_text='Revision label from the sheet, e.g. "Rev.01" or "Fix".')
     revision_date        = models.DateField(null=True, blank=True)
@@ -114,7 +124,11 @@ class ProductionRecipe(RecipeCardFields):
                         help_text='How much output one batch of this recipe yields.')
     output_unit     = models.ForeignKey(UnitScale, on_delete=models.PROTECT, related_name='+')
     prep_kitchen    = models.CharField(max_length=255, blank=True,
-                        help_text='Which prep kitchen this recipe belongs to (e.g. "Bread & Sauces").')
+                        help_text='Which prep kitchen this recipe belongs to (e.g. "Bread & Sauces"). '
+                                  'Free text label; prep_kitchen_ref is the structured version.')
+    prep_kitchen_ref = models.ForeignKey(PrepKitchen, on_delete=models.PROTECT, null=True, blank=True,
+                        related_name='production_recipes',
+                        help_text='Structured prep kitchen. Prep-cook access is scoped to this.')
 
     def __str__(self):
         return f'{self.name_en} v{self.version}'
