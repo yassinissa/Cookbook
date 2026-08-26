@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { productionRecipes } from './lib/cookbookApi'
-import { primaryButtonClass, dangerLinkClass, ErrorState, EmptyState, Spinner } from './RecipeFormFields'
+import { primaryButtonClass, dangerLinkClass, ErrorState, EmptyState, Spinner, money } from './RecipeFormFields'
+import { useToast } from './Toast'
+import { parseApiError } from './lib/parseApiError'
 
 export default function ProductionRecipeList({ onNew, onEdit, onView }) {
+  const toast = useToast()
   const [recipes, setRecipes] = useState(null)
   const [error, setError] = useState('')
   const [kitchenFilter, setKitchenFilter] = useState('all')
@@ -27,10 +30,15 @@ export default function ProductionRecipeList({ onNew, onEdit, onView }) {
     return recipes.filter((r) => r.prep_kitchen === kitchenFilter)
   }, [recipes, kitchenFilter])
 
-  async function handleDelete(id) {
-    if (!confirm('Delete this recipe?')) return
-    await productionRecipes.remove(id)
-    load()
+  async function handleDelete(recipe) {
+    if (!confirm(`Delete “${recipe.name_en}”? This cannot be undone.`)) return
+    try {
+      await productionRecipes.remove(recipe.id)
+      toast.success(`“${recipe.name_en}” deleted.`)
+      load()
+    } catch (err) {
+      toast.error(parseApiError(err).message || 'Could not delete the recipe.')
+    }
   }
 
   function filterButtonClass(active) {
@@ -86,12 +94,12 @@ export default function ProductionRecipeList({ onNew, onEdit, onView }) {
                 <td className="px-4 py-2 text-stone-500">{r.prep_kitchen}</td>
                 <td className="px-4 py-2 text-stone-500">{r.section_name}</td>
                 <td className="px-4 py-2 text-right text-stone-900 tabular-nums">{r.output_qty} {r.output_unit_code}</td>
-                <td className="px-4 py-2 text-right text-stone-500 tabular-nums">{r.cost}</td>
+                <td className="px-4 py-2 text-right text-stone-500 tabular-nums">{money(r.cost)}</td>
                 <td className="px-4 py-2 text-right text-stone-500 tabular-nums">{r.ingredient_count}</td>
                 <td className="px-4 py-2 text-right whitespace-nowrap">
                   <button onClick={() => onView(r.id)} className="text-sm text-stone-600 hover:text-stone-900 mr-3 rounded focus:outline-none focus:ring-2 focus:ring-accent-500">View</button>
                   <button onClick={() => onEdit(r.id)} className="text-sm text-stone-600 hover:text-stone-900 mr-3 rounded focus:outline-none focus:ring-2 focus:ring-accent-500">Edit</button>
-                  <button onClick={() => handleDelete(r.id)} className={dangerLinkClass}>Delete</button>
+                  <button onClick={() => handleDelete(r)} className={dangerLinkClass}>Delete</button>
                 </td>
               </tr>
             ))}

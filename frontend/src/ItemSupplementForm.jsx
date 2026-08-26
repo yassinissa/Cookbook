@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchReferenceData, itemConversions, itemNutrition } from './lib/cookbookApi'
+import { parseApiError } from './lib/parseApiError'
+import { useToast } from './Toast'
 import { Field, inputClass, primaryButtonClass, secondaryButtonClass, Spinner } from './RecipeFormFields'
 
 const emptyConversion = {
@@ -12,6 +14,7 @@ const emptyNutrition = {
 }
 
 export default function ItemSupplementForm({ item, onBack }) {
+  const toast = useToast()
   const [ref, setRef] = useState(null)
   const [conversion, setConversion] = useState(emptyConversion)
   const [lines, setLines] = useState([])
@@ -20,7 +23,6 @@ export default function ItemSupplementForm({ item, onBack }) {
   const [hasNutrition, setHasNutrition] = useState(false)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
-  const [savedMessage, setSavedMessage] = useState('')
 
   useEffect(() => {
     fetchReferenceData().then(setRef)
@@ -58,7 +60,6 @@ export default function ItemSupplementForm({ item, onBack }) {
   async function handleSave(e) {
     e.preventDefault()
     setError('')
-    setSavedMessage('')
     setSaving(true)
     try {
       const conversionPayload = {
@@ -85,9 +86,11 @@ export default function ItemSupplementForm({ item, onBack }) {
         setHasNutrition(true)
       }
 
-      setSavedMessage('Saved.')
+      toast.success('Supplement data saved.')
     } catch (err) {
-      setError(err.response?.data ? JSON.stringify(err.response.data) : 'Save failed.')
+      const { message } = parseApiError(err)
+      setError(message || 'Could not save the supplement data.')
+      toast.error(message || 'Could not save the supplement data.')
     } finally {
       setSaving(false)
     }
@@ -103,12 +106,9 @@ export default function ItemSupplementForm({ item, onBack }) {
           <h1 className="text-2xl font-semibold text-stone-900 tracking-tight">{item.name_en}</h1>
           <p className="text-stone-500 text-sm">{item.sku} · Cookbook-only supplement data, not pushed to inventory-platform</p>
         </div>
-        <div className="flex items-center gap-3">
-          {savedMessage && <span className="text-sm text-success-700">{savedMessage}</span>}
-          <button type="submit" disabled={saving} className={primaryButtonClass}>
-            {saving ? 'Saving…' : 'Save'}
-          </button>
-        </div>
+        <button type="submit" disabled={saving} className={primaryButtonClass}>
+          {saving ? 'Saving…' : 'Save'}
+        </button>
       </div>
 
       {error && <p className="text-sm text-danger-700 bg-danger-50 border border-danger-200 rounded-md p-3 break-all">{error}</p>}

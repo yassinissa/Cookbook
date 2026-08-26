@@ -142,10 +142,23 @@ class DishRecipeWriteSerializer(serializers.ModelSerializer):
                 instruction=s['instruction'],
             )
 
+    # DishStandard fields that must be an object/number/date or nothing —
+    # an empty string from the client is coerced to NULL.
+    _STANDARD_NULLABLE = {
+        f.name for f in DishStandard._meta.get_fields()
+        if getattr(f, 'is_relation', False) or f.get_internal_type() in (
+            'DecimalField', 'IntegerField', 'PositiveIntegerField', 'DateField', 'DateTimeField',
+        )
+    }
+
     def _save_standard(self, recipe, standard_data):
         if standard_data is None:
             return
-        DishStandard.objects.update_or_create(dish_recipe=recipe, defaults=standard_data)
+        cleaned = {
+            k: (None if (k in self._STANDARD_NULLABLE and v in ('', None)) else v)
+            for k, v in standard_data.items()
+        }
+        DishStandard.objects.update_or_create(dish_recipe=recipe, defaults=cleaned)
 
     def _changed_by(self):
         request = self.context.get('request')

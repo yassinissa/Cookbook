@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { productionRecipes } from './lib/cookbookApi'
 import { primaryButtonClass, secondaryButtonClass, ErrorState, Spinner } from './RecipeFormFields'
+import CostBreakdown from './CostBreakdown'
+import { useToast } from './Toast'
+import { parseApiError } from './lib/parseApiError'
 
 function Row({ label, value }) {
   if (value === null || value === undefined || value === '') return null
@@ -13,8 +16,10 @@ function Row({ label, value }) {
 }
 
 export default function ProductionRecipeCard({ recipeId, onBack, onEdit }) {
+  const toast = useToast()
   const [r, setR] = useState(null)
   const [error, setError] = useState('')
+  const [recalculating, setRecalculating] = useState(false)
 
   function load() {
     setError('')
@@ -22,6 +27,19 @@ export default function ProductionRecipeCard({ recipeId, onBack, onEdit }) {
   }
 
   useEffect(load, [recipeId])
+
+  async function handleRecalculate() {
+    setRecalculating(true)
+    try {
+      const updated = await productionRecipes.recalculate(recipeId)
+      setR((cur) => ({ ...cur, ...updated }))
+      toast.success('Cost recalculated.')
+    } catch (err) {
+      toast.error(parseApiError(err).message || 'Recalculate failed.')
+    } finally {
+      setRecalculating(false)
+    }
+  }
 
   if (error) return <ErrorState message={error} onRetry={load} />
   if (!r) return <Spinner />
@@ -49,23 +67,21 @@ export default function ProductionRecipeCard({ recipeId, onBack, onEdit }) {
           <Row label="Version" value={`v${r.version}${r.is_current ? ' (current)' : ''}`} />
         </section>
 
-        <section className="bg-white rounded-lg border border-stone-200 p-4">
-          <h2 className="text-sm font-semibold text-stone-700 mb-2">Cost</h2>
-          <Row label="Cost (KWD)" value={r.cost} />
-          <Row label="Cost per unit" value={r.cost_per_unit} />
-          <Row label="Labor cost (KWD)" value={r.include_labor_cost ? r.labor_cost : 'excluded'} />
-          <Row label="Expected waste %" value={r.expected_waste_pct} />
-          <Row label="Prep time (min)" value={r.prep_time_minutes} />
-        </section>
-
-        <section className="bg-white rounded-lg border border-stone-200 p-4">
+        <section className="bg-white rounded-lg border border-stone-200 p-4 col-span-2">
           <h2 className="text-sm font-semibold text-stone-700 mb-2">Approval</h2>
           <Row label="Approved by" value={r.approved_by?.name} />
           <Row label="QA approved by" value={r.qa_approved_by?.name} />
           <Row label="Approved at" value={r.approved_at} />
+          <Row label="Revision" value={r.revision} />
           <Row label="Notes" value={r.notes} />
         </section>
       </div>
+
+      <CostBreakdown
+        breakdown={r.cost_breakdown}
+        onRecalculate={handleRecalculate}
+        recalculating={recalculating}
+      />
 
       <div className="grid grid-cols-2 gap-4">
         <section className="bg-white rounded-lg border border-stone-200 p-4">
