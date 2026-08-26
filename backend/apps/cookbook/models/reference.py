@@ -24,14 +24,39 @@ from apps.core.models import BaseModel
 
 class MenuCategory(BaseModel):
     """Customer-facing menu section, e.g. 'Salad', 'Grill', 'Dish Of The Day'."""
-    name = models.CharField(max_length=100, unique=True)
+    name          = models.CharField(max_length=100, unique=True)
+    name_ar       = models.CharField(max_length=100, blank=True)
+    menu_title_ar = models.CharField(max_length=150, blank=True,
+                      help_text="Arabic heading printed on the menu — the sheet keeps this "
+                                "separate from name_ar (it can differ).")
+    sort_order    = models.PositiveIntegerField(default=0)
 
     class Meta:
-        ordering = ['name']
+        ordering = ['sort_order', 'name']
         verbose_name_plural = 'menu categories'
 
     def __str__(self):
         return self.name
+
+
+class Branch(BaseModel):
+    """
+    A Green Hills restaurant / outlet — Dine, Luma, WnR, etc. The sheet keys
+    menus, costing snapshots and dish applicability by branch. DishRecipe.branch
+    is still a free-text string for now; branch_ref points here and takes over
+    in a later phase.
+    """
+    name_en    = models.CharField(max_length=100, unique=True)
+    name_ar    = models.CharField(max_length=100, blank=True)
+    code       = models.CharField(max_length=20, blank=True)
+    sort_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['sort_order', 'name_en']
+        verbose_name_plural = 'branches'
+
+    def __str__(self):
+        return self.name_en
 
 
 class Section(BaseModel):
@@ -85,10 +110,31 @@ class ServiceStyle(BaseModel):
         return self.name
 
 
+class UnitDimension(models.TextChoices):
+    MASS   = 'mass',   'Mass'
+    VOLUME = 'volume', 'Volume'
+    COUNT  = 'count',  'Count / piece'
+    LENGTH = 'length', 'Length'
+    OTHER  = 'other',  'Other'
+
+
 class UnitScale(BaseModel):
-    """A single unit of measure used in recipe lines, e.g. code='g', description='Gram'."""
+    """
+    A single unit of measure used in recipe lines, e.g. code='g', description='Gram'.
+
+    dimension + factor_to_canonical make units comparable for costing. The
+    canonical unit per dimension is: mass → g, volume → ml, count → each,
+    length → cm. So factor_to_canonical for 'Kg' is 1000, for 'Tbs' is 15.
+    Cross-dimension conversions (Tbs of flour → g) are density-dependent and
+    live per-SKU on ItemConversionLine, not here.
+    """
     code        = models.CharField(max_length=20, unique=True)
     description = models.CharField(max_length=100)
+    dimension   = models.CharField(max_length=10, choices=UnitDimension.choices,
+                                   default=UnitDimension.OTHER)
+    factor_to_canonical = models.DecimalField(max_digits=16, decimal_places=6, default=1,
+                            help_text='Multiply a quantity in this unit by this to get the '
+                                      "dimension's canonical unit (g / ml / each / cm).")
 
     class Meta:
         ordering = ['description']
@@ -118,18 +164,25 @@ class StandardMeasurementConversion(BaseModel):
 
 
 class TasteDescriptorCategory(models.TextChoices):
-    APPEARANCE = 'appearance', 'Appearance'
-    COLOR      = 'color',      'Color'
-    AROMA      = 'aroma',      'Aroma'
-    TEXTURE    = 'texture',    'Texture'
+    APPEARANCE       = 'appearance',       'Appearance'
+    COLOR            = 'color',            'Color'
+    AROMA            = 'aroma',            'Aroma'
+    TEXTURE          = 'texture',          'Texture'
+    PRESENTATION     = 'presentation',     'Presentation'
+    PRIMARY_FLAVOR   = 'primary_flavor',   'Primary flavor'
+    SECONDARY_FLAVOR = 'secondary_flavor', 'Secondary flavor'
+    AFTERTASTE       = 'aftertaste',       'Aftertaste'
+    MOUTHFEEL        = 'mouthfeel',        'Mouthfeel'
+    FRESHNESS        = 'freshness',        'Freshness standard'
+    CRITICAL_DEFECT  = 'critical_defect',  'Critical defect (not allowed)'
 
 
 class TasteDescriptor(BaseModel):
     """
-    Suggested words for DishStandard's free-text appearance/color/aroma/
-    texture fields (e.g. appearance: 'Glossy', 'Golden Brown'...). Autocomplete
-    source only — DishStandard's fields stay free text since real
-    descriptions often combine several of these.
+    Suggested words for DishStandard's free-text sensory fields (appearance:
+    'Glossy', 'Golden Brown'...; aftertaste: 'Lingering'...). Autocomplete
+    source only — DishStandard's fields stay free text since real descriptions
+    often combine several of these.
     """
     category = models.CharField(max_length=20, choices=TasteDescriptorCategory.choices)
     value    = models.CharField(max_length=100)

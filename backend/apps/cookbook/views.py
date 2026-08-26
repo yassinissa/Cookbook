@@ -3,14 +3,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import (
-    MenuCategory, Section, Approver, Allergen, ServiceStyle, UnitScale,
+    MenuCategory, Branch, Section, Approver, Allergen, ServiceStyle, UnitScale,
     StandardMeasurementConversion, TasteDescriptor, DishRecipe, ProductionRecipe,
     DishPriceHistory, DishRecipeActivityLog, ProductionCostHistory,
     ProductionRecipeActivityLog, ActivityActionType,
     ItemConversion, ItemNutrition,
 )
 from .serializers import (
-    MenuCategorySerializer, SectionSerializer, ApproverSerializer,
+    MenuCategorySerializer, BranchSerializer, SectionSerializer, ApproverSerializer,
     AllergenSerializer, ServiceStyleSerializer, UnitScaleSerializer,
     StandardMeasurementConversionSerializer, TasteDescriptorSerializer,
     DishRecipeListSerializer, DishRecipeDetailSerializer, DishRecipeWriteSerializer,
@@ -29,6 +29,11 @@ class ReadOnlyReferenceViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
 class MenuCategoryViewSet(ReadOnlyReferenceViewSet):
     queryset = MenuCategory.objects.all()
     serializer_class = MenuCategorySerializer
+
+
+class BranchViewSet(ReadOnlyReferenceViewSet):
+    queryset = Branch.objects.all()
+    serializer_class = BranchSerializer
 
 
 class SectionViewSet(ReadOnlyReferenceViewSet):

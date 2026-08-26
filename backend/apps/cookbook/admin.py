@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import (
-    MenuCategory, Section, Approver, Allergen, ServiceStyle, UnitScale,
+    MenuCategory, Branch, Section, Approver, Allergen, ServiceStyle, UnitScale,
     StandardMeasurementConversion, TasteDescriptor,
     ProductionRecipe, ProductionRecipeIngredient, ProductionRecipeStep,
     DishRecipe, DishRecipeIngredient, DishRecipeStep, DishStandard,
@@ -12,7 +12,14 @@ from .models import (
 
 @admin.register(MenuCategory)
 class MenuCategoryAdmin(admin.ModelAdmin):
+    list_display  = ['name', 'name_ar', 'sort_order']
     search_fields = ['name']
+
+
+@admin.register(Branch)
+class BranchAdmin(admin.ModelAdmin):
+    list_display  = ['name_en', 'name_ar', 'code', 'sort_order']
+    search_fields = ['name_en']
 
 
 @admin.register(Section)
@@ -106,7 +113,9 @@ class ItemConversionLineInline(admin.TabularInline):
 
 @admin.register(ItemConversion)
 class ItemConversionAdmin(admin.ModelAdmin):
-    list_display  = ['item_sku', 'grams_per_piece', 'pieces_per_pack', 'pieces_per_kg', 'pieces_or_pack_per_box']
+    list_display  = ['item_sku', 'base_unit', 'cost_per_base_unit', 'cost_source',
+                     'grams_per_piece', 'pieces_per_kg']
+    list_filter   = ['cost_source', 'base_unit']
     search_fields = ['item_sku']
     inlines       = [ItemConversionLineInline]
 

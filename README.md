@@ -45,9 +45,17 @@ cp .env.example .env   # then fill in INVENTORY_API_USERNAME/PASSWORD
 python manage.py migrate
 python manage.py runserver 8001
 
-# frontend
+# seed the reference data (categories, sections, units, allergens, …)
+python manage.py seed_cookbook_reference_data
+python manage.py createsuperuser
+
+# frontend  (pinned to :5180 — :5173 is taken by the sibling Host Stand app)
 cd frontend
 npm install
 cp .env.example .env
 npm run dev
 ```
+
+`.env` needs `INVENTORY_API_BASE_URL` pointing at a running inventory-platform
+API (local `:8000`, or the deployed `https://greenhill-api-sljm.onrender.com/api`)
+plus `INVENTORY_API_EMAIL` / `INVENTORY_API_PASSWORD` for a service account there.

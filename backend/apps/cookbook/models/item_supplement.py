@@ -27,11 +27,43 @@ from apps.core.models import BaseModel
 from .reference import UnitScale, Approver
 
 
+class CostSource(models.TextChoices):
+    EXCEL_IMPORT   = 'excel_import',   'Excel import'
+    MANUAL         = 'manual',         'Manual entry'
+    INVENTORY_SYNC = 'inventory_sync', 'Synced from inventory'
+
+
 class ItemConversion(BaseModel):
-    """Per-SKU cooking-measure + packaging conversions."""
+    """
+    Per-SKU Cookbook-local supplement for one inventory item — everything the
+    "Store Items" sheet holds that inventory-platform doesn't: the recipe cost
+    per base unit, cooking-measure conversions, packaging counts.
+
+    Cost lives here (not read from inventory) by decision: the deployed
+    inventory has a price for only a handful of items and derives cost from
+    purchase orders, while the sheet has a real cost for ~2,111 SKUs. Costing
+    prefers this; inventory unit_cost is a fallback. A later phase can push
+    these upstream.
+    """
     item_sku      = models.CharField(max_length=100, unique=True,
                       help_text='SKU of the inventory-platform Item this supplements.')
     note_to_add   = models.TextField(blank=True)
+
+    # ── Recipe cost ──────────────────────────────────────────────────────────
+    base_unit          = models.ForeignKey(UnitScale, on_delete=models.PROTECT, null=True, blank=True,
+                           related_name='+',
+                           help_text='Unit the cost is per — g, ml or EA (the sheet\'s "Unit Scale").')
+    cost_per_base_unit = models.DecimalField(max_digits=16, decimal_places=6, null=True, blank=True,
+                           help_text='KWD per one base_unit, e.g. 0.001400 KD/g.')
+    order_unit         = models.CharField(max_length=20, blank=True,
+                           help_text='Purchasing unit, for provenance — "PCS", "KG", "LTR".')
+    order_cost         = models.DecimalField(max_digits=14, decimal_places=4, null=True, blank=True,
+                           help_text='KWD per order_unit.')
+    pack_qty           = models.DecimalField(max_digits=14, decimal_places=3, null=True, blank=True,
+                           help_text='base_units in one order_unit (the sheet\'s "Total Unit").')
+    cost_source        = models.CharField(max_length=20, choices=CostSource.choices,
+                                          default=CostSource.MANUAL)
+    cost_updated_at    = models.DateTimeField(null=True, blank=True)
 
     # Packaging/piece conversions — distinct from the cooking-measure
     # lines below (see module docstring).
@@ -44,7 +76,7 @@ class ItemConversion(BaseModel):
     approved_by   = models.ForeignKey(Approver, on_delete=models.PROTECT, null=True, blank=True, related_name='+')
 
     def __str__(self):
-        return f'Conversions for {self.item_sku}'
+        return f'Supplement for {self.item_sku}'
 
 
 class ItemConversionLine(BaseModel):

@@ -8,14 +8,34 @@ Usage: python manage.py seed_cookbook_reference_data
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from apps.cookbook.models import (
-    MenuCategory, Section, Approver, Allergen, ServiceStyle, UnitScale,
+    MenuCategory, Branch, Section, Approver, Allergen, ServiceStyle, UnitScale,
     StandardMeasurementConversion, TasteDescriptor, TasteDescriptorCategory,
 )
 
-MENU_CATEGORIES = [
-    'Salad', 'Cold Mizze', 'Hot Mizze', 'Sides', 'Grill',
-    'Dish OF The Day', 'Sweet', 'Forced Modifier', 'Optional Modifier',
-]
+# name_en -> (name_ar, menu_title_ar) — Restaurant Information sheet cols B / D / F
+MENU_CATEGORIES = {
+    'Salad':            ('سلطة', 'سلطة'),
+    'Cold Mizze':       ('المقبلات الباردة', 'المقبلات الباردة'),
+    'Hot Mizze':        ('المقبلات الساخنة', 'المقبلات الساخنة'),
+    'Sides':            ('اطباق جانبيه', 'اطباق جانبيه'),
+    'Grill':            ('المشاوي', 'المشاوي'),
+    'Dish OF The Day':  ('طبق اليوم', 'طبق اليوم'),
+    'Sweet':            ('الحلويات', 'الحلويات'),
+    'Forced Modifier':  ('التعديل الإجباري', 'التعديل الإجباري'),
+    'Optional Modifier':('التعديل الإختياري', 'التعديل الإختياري'),
+}
+
+# name_en -> name_ar — Restaurant Information sheet cols N / O
+BRANCHES = {
+    'WnR':           'ووك ان روول',
+    'BL':            'بيت لادان',
+    'Dine':          'داين',
+    'Estepona':      'استبونا',
+    'Sando':         'ساندو',
+    'Levant':        'ليفانت',
+    'Dainty Pastry': 'دينتي بيستري',
+    'Luma':          'لوما',
+}
 
 # name -> avg monthly salary (KWD), None where the sheet had #DIV/0!
 SECTIONS = {
@@ -74,12 +94,23 @@ ALLERGENS = [
 
 SERVICE_STYLES = ['Dine-in', 'Delivery', 'Takeaway', 'Buffet', 'Catering']
 
-# code -> description
+# code -> (description, dimension, factor_to_canonical)
+# canonical unit per dimension: mass=g, volume=ml, count=each, length=cm
 UNIT_SCALES = {
-    'Tbs': 'Table spoon', 'Ts': 'Tea Spoon', 'g': 'Gram', 'Pc': 'Piece',
-    'Pcs': 'Pieces', 'EA': 'Each', 'Ltr': 'Liter', 'Kg': 'Kilogram',
-    'ml': 'Milliliter', 'Cup': 'Cup', 'Pinch': 'Pinch = <1/8 Ts = Dash',
-    'cm': 'Centimeter', 'm': 'Meter', 'Portion': 'Portion',
+    'Tbs':     ('Table spoon', 'volume', 15),
+    'Ts':      ('Tea Spoon', 'volume', 5),
+    'g':       ('Gram', 'mass', 1),
+    'Pc':      ('Piece', 'count', 1),
+    'Pcs':     ('Pieces', 'count', 1),
+    'EA':      ('Each', 'count', 1),
+    'Ltr':     ('Liter', 'volume', 1000),
+    'Kg':      ('Kilogram', 'mass', 1000),
+    'ml':      ('Milliliter', 'volume', 1),
+    'Cup':     ('Cup', 'volume', 240),
+    'Pinch':   ('Pinch = <1/8 Ts = Dash', 'volume', '0.31'),
+    'cm':      ('Centimeter', 'length', 1),
+    'm':       ('Meter', 'length', 100),
+    'Portion': ('Portion', 'count', 1),
 }
 
 # label, [equiv_1..5] (padded/truncated to 5)
@@ -103,6 +134,7 @@ MEASUREMENT_CONVERSIONS = [
     ('1 Liter',  ['4 Cups', '1000 ml / 950 ml', '32 fl oz (Fluid Ounce)', '2 Pints', '1 Quart']),
 ]
 
+# Action Log sheet dropdown-source columns V–AF
 TASTE_DESCRIPTORS = {
     TasteDescriptorCategory.APPEARANCE: [
         'Glossy', 'Matte', 'Golden Brown', 'Light Golden', 'Deep Brown',
@@ -120,6 +152,34 @@ TASTE_DESCRIPTORS = {
         'Crispy', 'Crunchy', 'Tender', 'Juicy', 'Moist', 'Soft', 'Firm',
         'Chewy', 'Creamy', 'Velvety', 'Smooth', 'Fluffy', 'Dense',
     ],
+    TasteDescriptorCategory.PRESENTATION: [
+        'Centered', 'Clean Rim', 'Garnish on Top', 'Sauce Under', 'Sauce on Side',
+        'Layered', 'Bowl Presentation', 'Plate Presentation', 'Takeaway Standard',
+    ],
+    TasteDescriptorCategory.PRIMARY_FLAVOR: [
+        'Savory / Umami', 'Sweet', 'Salty', 'Sour / Tangy', 'Spicy', 'Smoky',
+        'Garlic', 'Herbal', 'Citrusy', 'Creamy', 'Buttery', 'Meaty', 'Seafood',
+    ],
+    TasteDescriptorCategory.SECONDARY_FLAVOR: [
+        'None', 'Garlic', 'Chili', 'Ginger', 'Soy', 'Sesame', 'Lemon', 'Lime',
+        'Herbal', 'Sweet', 'Smoky', 'Buttery', 'Peppery',
+    ],
+    TasteDescriptorCategory.AFTERTASTE: [
+        'Clean', 'Refreshing', 'Mildly Spicy', 'Lingering', 'Sweet', 'Savory',
+        'Citrusy', 'Smoky', 'Cooling', 'Warming',
+    ],
+    TasteDescriptorCategory.MOUTHFEEL: [
+        'Light', 'Rich', 'Creamy', 'Smooth', 'Velvety', 'Juicy', 'Crispy',
+        'Not Greasy', 'Thick', 'Silky',
+    ],
+    TasteDescriptorCategory.FRESHNESS: [
+        'Fresh Aroma', 'Freshly Cooked', 'No Stale Notes', 'No Oxidation',
+        'No Rancidity', 'No Off-Odor',
+    ],
+    TasteDescriptorCategory.CRITICAL_DEFECT: [
+        'Burnt', 'Rancid', 'Metallic', 'Stale', 'Raw', 'Overcooked', 'Undercooked',
+        'Over-salted', 'Too Sweet', 'Too Sour', 'Soggy', 'Rubbery', 'Greasy',
+    ],
 }
 
 
@@ -130,9 +190,22 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         created = {}
 
-        created['categories'] = sum(
-            MenuCategory.objects.get_or_create(name=n)[1] for n in MENU_CATEGORIES
-        )
+        cats_created = 0
+        for i, (name, (name_ar, title_ar)) in enumerate(MENU_CATEGORIES.items()):
+            _, was_created = MenuCategory.objects.update_or_create(
+                name=name,
+                defaults={'name_ar': name_ar, 'menu_title_ar': title_ar, 'sort_order': i},
+            )
+            cats_created += was_created
+        created['categories'] = cats_created
+
+        branches_created = 0
+        for i, (name_en, name_ar) in enumerate(BRANCHES.items()):
+            _, was_created = Branch.objects.update_or_create(
+                name_en=name_en, defaults={'name_ar': name_ar, 'sort_order': i},
+            )
+            branches_created += was_created
+        created['branches'] = branches_created
 
         created['sections'] = sum(
             Section.objects.get_or_create(name=n, defaults={'avg_monthly_salary': s})[1]
@@ -151,10 +224,14 @@ class Command(BaseCommand):
             ServiceStyle.objects.get_or_create(name=n)[1] for n in SERVICE_STYLES
         )
 
-        created['units'] = sum(
-            UnitScale.objects.get_or_create(code=c, defaults={'description': d})[1]
-            for c, d in UNIT_SCALES.items()
-        )
+        units_created = 0
+        for code, (desc, dim, factor) in UNIT_SCALES.items():
+            _, was_created = UnitScale.objects.update_or_create(
+                code=code,
+                defaults={'description': desc, 'dimension': dim, 'factor_to_canonical': factor},
+            )
+            units_created += was_created
+        created['units'] = units_created
 
         n = 0
         for label, equivs in MEASUREMENT_CONVERSIONS:

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from apps.cookbook.models import (
-    MenuCategory, Section, Approver, Allergen, ServiceStyle, UnitScale,
+    MenuCategory, Branch, Section, Approver, Allergen, ServiceStyle, UnitScale,
     StandardMeasurementConversion, TasteDescriptor,
 )
 
@@ -8,7 +8,13 @@ from apps.cookbook.models import (
 class MenuCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = MenuCategory
-        fields = ['id', 'name']
+        fields = ['id', 'name', 'name_ar', 'menu_title_ar', 'sort_order']
+
+
+class BranchSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Branch
+        fields = ['id', 'name_en', 'name_ar', 'code', 'sort_order']
 
 
 class SectionSerializer(serializers.ModelSerializer):
@@ -38,7 +44,7 @@ class ServiceStyleSerializer(serializers.ModelSerializer):
 class UnitScaleSerializer(serializers.ModelSerializer):
     class Meta:
         model = UnitScale
-        fields = ['id', 'code', 'description']
+        fields = ['id', 'code', 'description', 'dimension', 'factor_to_canonical']
 
 
 class StandardMeasurementConversionSerializer(serializers.ModelSerializer):
