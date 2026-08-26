@@ -58,23 +58,35 @@ class RecipeCardFields(BaseModel):
     """Fields shared by both recipe types — costing/approval/versioning."""
     name_en              = models.CharField(max_length=255)
     name_ar              = models.CharField(max_length=255, blank=True)
+    recipe_code          = models.CharField(max_length=30, blank=True, db_index=True,
+                             help_text='The source cook book\'s dish code, e.g. "1076.9". '
+                                       'Stable across versions; the import matches on it.')
     version              = models.PositiveIntegerField(default=1)
     is_current           = models.BooleanField(default=True)
+    revision             = models.CharField(max_length=20, blank=True,
+                             help_text='Revision label from the sheet, e.g. "Rev.01" or "Fix".')
+    revision_date        = models.DateField(null=True, blank=True)
 
     section              = models.ForeignKey(Section, on_delete=models.PROTECT, null=True, blank=True,
                              related_name='+', help_text='Kitchen station that preps this recipe.')
 
     prep_time_minutes    = models.PositiveIntegerField(null=True, blank=True)
+    # a percentage number: 1.00 == 1 %  (waste cost = items cost * this / 100)
     expected_waste_pct   = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     include_labor_cost   = models.BooleanField(default=True)
     labor_cost           = models.DecimalField(max_digits=12, decimal_places=3, default=0,
-                             help_text='Labor cost per serving/batch (KWD).')
-    # Ingredient cost is computed live from inventory-platform unit costs
-    # (apps.integrations.inventory_client), not stored — it would go stale
-    # the moment a supplier price changes. cost is the last computed total,
-    # refreshed via a recalculate action, same convention as
-    # apps.recipes.DishRecipe.cost on the inventory-platform side.
+                             help_text='Labour cost per serving/batch (KWD). Recomputed on save '
+                                       'from section salary x prep time.')
+    # Ingredient cost is computed from Cookbook's ItemConversion data (imported
+    # from the store-items sheet), with inventory unit_cost as a fallback. Not
+    # stored per-item — a supplier price change would make it stale. `cost` is
+    # the last computed cost per serving (items + waste + labour), refreshed on
+    # save and via the recalculate action.
     cost                 = models.DecimalField(max_digits=12, decimal_places=3, default=0)
+    # Full breakdown from the last compute — items/waste/labour split, per
+    # ingredient line cost + status, price scenarios. Read by the recipe card
+    # without a recompute; refreshed on save and recalculate.
+    cost_breakdown       = models.JSONField(default=dict, blank=True)
 
     approved_by          = models.ForeignKey(Approver, on_delete=models.PROTECT, null=True, blank=True,
                              related_name='+', help_text='Executive chef who approved this recipe.')
@@ -135,6 +147,10 @@ class DishRecipe(RecipeCardFields):
     selling_price   = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
     rating          = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True,
                         help_text='0-10 customer/QA rating.')
+    rating_status   = models.CharField(max_length=10, blank=True,
+                        choices=[('ok', 'OK'), ('attention', 'Attention'), ('fix', 'Fix')],
+                        help_text='QA alarm shown next to the rating on the menu view.')
+    rating_date     = models.DateField(null=True, blank=True)
     taste_profile   = models.CharField(max_length=255, blank=True,
                         help_text='Short free-text summary, e.g. "Fresh, Tangy, Sour, Light."')
 

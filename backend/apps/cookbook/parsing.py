@@ -32,15 +32,22 @@ def parse_fraction(text):
         return None
 
 
-def label_multiplier(label):
+def label_parts(label):
     """
-    The leading quantity of a conversion label as a Decimal.
-    "1 Tbs" -> 1,  "1/4 Cup" -> 0.25,  "3/4 Cup" -> 0.75.  None if unparseable.
+    "1 Tbs"   -> (Decimal('1'),    'Tbs')
+    "1/4 Cup" -> (Decimal('0.25'), 'Cup')
+    "1 Piece" -> (Decimal('1'),    'Piece')
+    Returns (None, None) if unparseable.
     """
     m = _LABEL_QTY.match(label or '')
     if not m:
-        return None
-    return parse_fraction(m.group(1))
+        return None, None
+    return parse_fraction(m.group(1)), m.group(2).strip()
+
+
+def label_multiplier(label):
+    """The leading quantity of a conversion label as a Decimal, or None."""
+    return label_parts(label)[0]
 
 
 def parse_conversion_cell(text):

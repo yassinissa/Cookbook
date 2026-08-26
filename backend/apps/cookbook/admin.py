@@ -90,17 +90,17 @@ class DishStandardInline(admin.StackedInline):
 
 @admin.register(ProductionRecipe)
 class ProductionRecipeAdmin(admin.ModelAdmin):
-    list_display  = ['name_en', 'output_item_sku', 'output_qty', 'section', 'version', 'is_current']
+    list_display  = ['name_en', 'recipe_code', 'output_item_sku', 'output_qty', 'section', 'cost', 'version', 'is_current']
     list_filter   = ['is_current', 'section']
-    search_fields = ['name_en', 'name_ar', 'output_item_sku']
+    search_fields = ['name_en', 'name_ar', 'recipe_code', 'output_item_sku']
     inlines       = [ProductionIngredientInline, ProductionStepInline]
 
 
 @admin.register(DishRecipe)
 class DishRecipeAdmin(admin.ModelAdmin):
-    list_display  = ['name_en', 'branch', 'category', 'pos_item_name', 'selling_price', 'cost', 'version', 'is_current']
-    list_filter   = ['branch', 'category', 'is_current']
-    search_fields = ['name_en', 'name_ar', 'pos_item_name']
+    list_display  = ['name_en', 'recipe_code', 'branch', 'category', 'selling_price', 'cost', 'rating_status', 'version', 'is_current']
+    list_filter   = ['branch', 'category', 'is_current', 'rating_status']
+    search_fields = ['name_en', 'name_ar', 'recipe_code', 'pos_item_name']
     inlines       = [DishIngredientInline, DishStepInline, DishStandardInline]
 
 

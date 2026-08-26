@@ -53,11 +53,12 @@ class ItemConversion(BaseModel):
     base_unit          = models.ForeignKey(UnitScale, on_delete=models.PROTECT, null=True, blank=True,
                            related_name='+',
                            help_text='Unit the cost is per — g, ml or EA (the sheet\'s "Unit Scale").')
-    cost_per_base_unit = models.DecimalField(max_digits=16, decimal_places=6, null=True, blank=True,
-                           help_text='KWD per one base_unit, e.g. 0.001400 KD/g.')
+    cost_per_base_unit = models.DecimalField(max_digits=20, decimal_places=10, null=True, blank=True,
+                           help_text='KWD per one base_unit, e.g. 0.0014000000 KD/g. High precision '
+                                     'because it is often order_cost / pack_qty (a repeating decimal).')
     order_unit         = models.CharField(max_length=20, blank=True,
                            help_text='Purchasing unit, for provenance — "PCS", "KG", "LTR".')
-    order_cost         = models.DecimalField(max_digits=14, decimal_places=4, null=True, blank=True,
+    order_cost         = models.DecimalField(max_digits=16, decimal_places=6, null=True, blank=True,
                            help_text='KWD per order_unit.')
     pack_qty           = models.DecimalField(max_digits=14, decimal_places=3, null=True, blank=True,
                            help_text='base_units in one order_unit (the sheet\'s "Total Unit").')

@@ -2,8 +2,8 @@ from decimal import Decimal
 
 from django.test import TestCase
 
-from apps.cookbook.models import DishRecipe, Section, UnitScale
-from apps.cookbook.services import calculate_recipe_cost
+from apps.cookbook.models import Section, UnitScale
+from apps.cookbook.services import calculate_recipe_cost, get_inventory_items_by_sku
 from .support import fake_inventory_items, item
 
 
@@ -18,29 +18,18 @@ class ReferenceDataTests(TestCase):
 
 
 class RecipeCostSmokeTests(TestCase):
-    def test_calculate_recipe_cost_sums_known_lines(self):
-        lines = [
-            {'item_sku': 'B1', 'quantity': Decimal('100')},
-            {'item_sku': 'B2', 'quantity': Decimal('50')},
-        ]
-        items = {
-            'B1': item('B1', unit_cost='0.0014'),
-            'B2': item('B2', unit_cost='0.002'),
-        }
-        total, unknown = calculate_recipe_cost(lines, items_by_sku=items)
-        self.assertEqual(unknown, [])
-        # current engine: qty * unit_cost, no conversion yet
-        self.assertEqual(total, Decimal('0.240'))
+    """Deep costing coverage is in test_costing.py — this just checks the
+    back-compat shim still returns a (total, unknown_skus) tuple."""
 
-    def test_unknown_sku_is_reported_not_fatal(self):
-        lines = [{'item_sku': 'NOPE', 'quantity': Decimal('10')}]
-        total, unknown = calculate_recipe_cost(lines, items_by_sku={})
-        self.assertEqual(total, Decimal('0'))
+    def test_shim_reports_unknown_sku(self):
+        total, unknown = calculate_recipe_cost(
+            [{'item_sku': 'NOPE', 'quantity': Decimal('10'), 'unit': 'g'}],
+            items_by_sku={},
+        )
+        self.assertEqual(total, Decimal('0.000'))
         self.assertEqual(unknown, ['NOPE'])
 
     def test_fake_inventory_context(self):
         with fake_inventory_items([item('B1', unit_cost='1.5')]):
-            from apps.cookbook.services import get_inventory_items_by_sku
             got = get_inventory_items_by_sku()
-        self.assertIn('B1', got)
         self.assertEqual(got['B1']['unit_cost'], '1.5')

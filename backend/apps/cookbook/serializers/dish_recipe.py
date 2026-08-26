@@ -4,7 +4,8 @@ from apps.cookbook.models import (
     MenuCategory, Section, ServiceStyle, Approver, Allergen, UnitScale,
     DishPriceHistory, DishRecipeActivityLog, ActivityActionType,
 )
-from apps.cookbook.services import calculate_recipe_cost
+from apps.cookbook.services import apply_cost
+from apps.cookbook.versioning import archive_current_version, edit_is_a_new_version
 from .reference import (
     MenuCategorySerializer, SectionSerializer, ServiceStyleSerializer,
     ApproverSerializer, AllergenSerializer, UnitScaleSerializer,
@@ -53,9 +54,9 @@ class DishRecipeListSerializer(serializers.ModelSerializer):
     class Meta:
         model  = DishRecipe
         fields = [
-            'id', 'name_en', 'name_ar', 'branch', 'category', 'category_name',
+            'id', 'name_en', 'name_ar', 'recipe_code', 'branch', 'category', 'category_name',
             'section', 'section_name', 'pos_item_name', 'selling_price', 'cost',
-            'rating', 'version', 'is_current', 'ingredient_count', 'created_at',
+            'rating', 'rating_status', 'version', 'is_current', 'ingredient_count', 'created_at',
         ]
 
 
@@ -76,10 +77,12 @@ class DishRecipeDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model  = DishRecipe
         fields = [
-            'id', 'name_en', 'name_ar', 'branch', 'category', 'section',
+            'id', 'name_en', 'name_ar', 'recipe_code', 'revision', 'revision_date',
+            'branch', 'branch_ref', 'category', 'section',
             'service_style', 'allergens', 'pos_item_name', 'selling_price',
-            'rating', 'taste_profile', 'prep_time_minutes', 'expected_waste_pct',
-            'include_labor_cost', 'labor_cost', 'cost', 'food_cost_pct',
+            'rating', 'rating_status', 'rating_date', 'taste_profile',
+            'prep_time_minutes', 'expected_waste_pct',
+            'include_labor_cost', 'labor_cost', 'cost', 'cost_breakdown', 'food_cost_pct',
             'approved_by', 'qa_approved_by', 'approved_at', 'notes',
             'version', 'is_current', 'ingredients', 'steps', 'standard',
             'price_history', 'activity_log',
@@ -87,6 +90,9 @@ class DishRecipeDetailSerializer(serializers.ModelSerializer):
         ]
 
     def get_food_cost_pct(self, obj):
+        fcp = (obj.cost_breakdown or {}).get('food_cost_pct')
+        if fcp is not None:
+            return fcp
         if obj.selling_price and obj.selling_price > 0:
             return round((obj.cost / obj.selling_price) * 100, 2)
         return None
@@ -106,12 +112,15 @@ class DishRecipeWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model  = DishRecipe
         fields = [
-            'name_en', 'name_ar', 'branch', 'category', 'section', 'service_style',
-            'allergens', 'pos_item_name', 'selling_price', 'rating', 'taste_profile',
-            'prep_time_minutes', 'expected_waste_pct', 'include_labor_cost', 'labor_cost',
+            'name_en', 'name_ar', 'recipe_code', 'revision', 'revision_date',
+            'branch', 'branch_ref', 'category', 'section', 'service_style',
+            'allergens', 'pos_item_name', 'selling_price',
+            'rating', 'rating_status', 'rating_date', 'taste_profile',
+            'prep_time_minutes', 'expected_waste_pct', 'include_labor_cost',
             'approved_by', 'qa_approved_by', 'approved_at', 'notes',
             'ingredients', 'steps', 'standard',
         ]
+        # labor_cost is recomputed on save, not accepted from the client
 
     def _save_ingredients(self, recipe, ingredient_data):
         for i, ing in enumerate(ingredient_data):
@@ -156,13 +165,13 @@ class DishRecipeWriteSerializer(serializers.ModelSerializer):
         standard_data   = validated_data.pop('standard', None)
         allergens       = validated_data.pop('allergens', [])
 
-        cost, unknown_skus = calculate_recipe_cost(ingredient_data)
-        recipe = DishRecipe.objects.create(cost=cost, **validated_data)
+        recipe = DishRecipe(**validated_data)
+        apply_cost(recipe, ingredient_data)      # sets cost / labor_cost / cost_breakdown
+        recipe.save()
         recipe.allergens.set(allergens)
         self._save_ingredients(recipe, ingredient_data)
         self._save_steps(recipe, step_data)
         self._save_standard(recipe, standard_data)
-        recipe._unknown_skus = unknown_skus  # surfaced by the view, not stored
         self._snapshot_price(recipe)
         self._log(recipe, ActivityActionType.CREATED)
         return recipe
@@ -174,14 +183,18 @@ class DishRecipeWriteSerializer(serializers.ModelSerializer):
         allergens       = validated_data.pop('allergens', None)
 
         old_cost, old_price = instance.cost, instance.selling_price
+
+        versioned = edit_is_a_new_version(instance, validated_data, ingredient_data, step_data)
+        if versioned:
+            archive_current_version(instance)          # snapshot the pre-edit state
+            instance.version = (instance.version or 1) + 1
+
         for attr, val in validated_data.items():
             setattr(instance, attr, val)
 
-        unknown_skus = []
         if ingredient_data is not None:
             instance.ingredients.all().delete()
             self._save_ingredients(instance, ingredient_data)
-            instance.cost, unknown_skus = calculate_recipe_cost(ingredient_data)
 
         if step_data is not None:
             instance.steps.all().delete()
@@ -190,12 +203,15 @@ class DishRecipeWriteSerializer(serializers.ModelSerializer):
         if allergens is not None:
             instance.allergens.set(allergens)
 
+        # recompute against whatever the ingredients are now
+        apply_cost(instance, ingredient_data if ingredient_data is not None
+                             else list(instance.ingredients.all()))
         instance.save()
         if standard_data is not None:
             self._save_standard(instance, standard_data)
-        instance._unknown_skus = unknown_skus
 
         if instance.cost != old_cost or instance.selling_price != old_price:
             self._snapshot_price(instance)
-        self._log(instance, ActivityActionType.UPDATED)
+        self._log(instance, ActivityActionType.UPDATED,
+                  f'Revised to v{instance.version}' if versioned else '')
         return instance

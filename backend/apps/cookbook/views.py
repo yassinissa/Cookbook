@@ -17,7 +17,7 @@ from .serializers import (
     ProductionRecipeListSerializer, ProductionRecipeDetailSerializer, ProductionRecipeWriteSerializer,
     ItemConversionSerializer, ItemNutritionSerializer,
 )
-from .services import calculate_recipe_cost
+from .services import apply_cost
 
 
 class ReadOnlyReferenceViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
@@ -84,11 +84,22 @@ class RecipeViewSetBase(
     permission_classes = [IsAuthenticated]
     detail_serializer_class = None  # set by subclass
 
+    def get_queryset(self):
+        """The list shows only current versions; archived revisions stay
+        retrievable by id (?all_versions=1 also lists them)."""
+        qs = super().get_queryset()
+        if self.action == 'list' and self.request.query_params.get('all_versions') != '1':
+            qs = qs.filter(is_current=True)
+        return qs
+
     def _response_with_warnings(self, instance, status_code=200):
         detail = self.detail_serializer_class(instance).data
-        unknown_skus = getattr(instance, '_unknown_skus', [])
-        if unknown_skus:
-            detail['_warnings'] = [f'Unknown item SKU (cost not included): {sku}' for sku in unknown_skus]
+        warnings = [f'Unknown item SKU (not costed): {s}' for s in getattr(instance, '_unknown_skus', [])]
+        for issue in getattr(instance, '_cost_issues', []):
+            if issue['status'] != 'unknown_sku':
+                warnings.append(f"{issue['sku']}: {issue['detail'] or issue['status']}")
+        if warnings:
+            detail['_warnings'] = warnings
         return Response(detail, status=status_code)
 
     def create(self, request, *args, **kwargs):
@@ -111,16 +122,12 @@ class RecipeViewSetBase(
 
     @action(detail=True, methods=['post'])
     def recalculate(self, request, pk=None):
-        """Re-fetch live item costs and persist the total (see services.calculate_recipe_cost)."""
+        """Recompute cost from current item prices + conversions and persist."""
         recipe = self.get_object()
-        cost, unknown_skus = calculate_recipe_cost(recipe.ingredients.all())
-        recipe.cost = cost
-        recipe.save(update_fields=['cost'])
+        apply_cost(recipe)
+        recipe.save(update_fields=['cost', 'labor_cost', 'cost_breakdown'])
         self._snapshot_and_log_recalculate(recipe, request)
-        data = {'cost': cost}
-        if unknown_skus:
-            data['_warnings'] = [f'Unknown item SKU: {sku}' for sku in unknown_skus]
-        return Response(data)
+        return self._response_with_warnings(recipe)
 
 
 class DishRecipeViewSet(RecipeViewSetBase):

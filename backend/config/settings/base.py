@@ -121,3 +121,9 @@ INVENTORY_API_BASE_URL = config('INVENTORY_API_BASE_URL', default='http://localh
 # see apps.integrations.inventory_client for the exact endpoints it calls.
 INVENTORY_API_EMAIL = config('INVENTORY_API_EMAIL', default='')
 INVENTORY_API_PASSWORD = config('INVENTORY_API_PASSWORD', default='')
+
+# ─── COSTING ─────────────────────────────────────────────────────────────────
+# Labour cost per serving = section avg monthly salary / working minutes per
+# month * prep minutes. 208 h/month is what the source cook book uses (verified
+# against its computed labour figures to 12 dp).
+COOKBOOK_WORKING_HOURS_PER_MONTH = config('COOKBOOK_WORKING_HOURS_PER_MONTH', default=208, cast=int)

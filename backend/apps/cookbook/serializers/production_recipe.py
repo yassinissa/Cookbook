@@ -3,7 +3,8 @@ from apps.cookbook.models import (
     ProductionRecipe, ProductionRecipeIngredient, ProductionRecipeStep,
     ProductionCostHistory, ProductionRecipeActivityLog, ActivityActionType,
 )
-from apps.cookbook.services import calculate_recipe_cost
+from apps.cookbook.services import apply_cost
+from apps.cookbook.versioning import archive_current_version, edit_is_a_new_version
 from .reference import SectionSerializer, ApproverSerializer, UnitScaleSerializer
 
 
@@ -43,7 +44,7 @@ class ProductionRecipeListSerializer(serializers.ModelSerializer):
     class Meta:
         model  = ProductionRecipe
         fields = [
-            'id', 'name_en', 'name_ar', 'prep_kitchen', 'section', 'section_name',
+            'id', 'name_en', 'name_ar', 'recipe_code', 'prep_kitchen', 'section', 'section_name',
             'output_item_sku', 'output_qty', 'output_unit', 'output_unit_code',
             'cost', 'version', 'is_current', 'ingredient_count', 'created_at',
         ]
@@ -63,10 +64,11 @@ class ProductionRecipeDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model  = ProductionRecipe
         fields = [
-            'id', 'name_en', 'name_ar', 'prep_kitchen', 'section',
+            'id', 'name_en', 'name_ar', 'recipe_code', 'revision', 'revision_date',
+            'prep_kitchen', 'section',
             'output_item_sku', 'output_qty', 'output_unit',
             'prep_time_minutes', 'expected_waste_pct', 'include_labor_cost',
-            'labor_cost', 'cost', 'cost_per_unit',
+            'labor_cost', 'cost', 'cost_breakdown', 'cost_per_unit',
             'approved_by', 'qa_approved_by', 'approved_at', 'notes',
             'version', 'is_current', 'ingredients', 'steps',
             'cost_history', 'activity_log',
@@ -86,12 +88,14 @@ class ProductionRecipeWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model  = ProductionRecipe
         fields = [
-            'name_en', 'name_ar', 'prep_kitchen', 'section',
+            'name_en', 'name_ar', 'recipe_code', 'revision', 'revision_date',
+            'prep_kitchen', 'section',
             'output_item_sku', 'output_qty', 'output_unit',
-            'prep_time_minutes', 'expected_waste_pct', 'include_labor_cost', 'labor_cost',
+            'prep_time_minutes', 'expected_waste_pct', 'include_labor_cost',
             'approved_by', 'qa_approved_by', 'approved_at', 'notes',
             'ingredients', 'steps',
         ]
+        # labor_cost is recomputed on save, not accepted from the client
 
     def _save_ingredients(self, recipe, ingredient_data):
         for i, ing in enumerate(ingredient_data):
@@ -129,11 +133,11 @@ class ProductionRecipeWriteSerializer(serializers.ModelSerializer):
         ingredient_data = validated_data.pop('ingredients', [])
         step_data       = validated_data.pop('steps', [])
 
-        cost, unknown_skus = calculate_recipe_cost(ingredient_data)
-        recipe = ProductionRecipe.objects.create(cost=cost, **validated_data)
+        recipe = ProductionRecipe(**validated_data)
+        apply_cost(recipe, ingredient_data)
+        recipe.save()
         self._save_ingredients(recipe, ingredient_data)
         self._save_steps(recipe, step_data)
-        recipe._unknown_skus = unknown_skus
         self._snapshot_cost(recipe)
         self._log(recipe, ActivityActionType.CREATED)
         return recipe
@@ -143,23 +147,29 @@ class ProductionRecipeWriteSerializer(serializers.ModelSerializer):
         step_data       = validated_data.pop('steps', None)
 
         old_cost, old_qty = instance.cost, instance.output_qty
+
+        versioned = edit_is_a_new_version(instance, validated_data, ingredient_data, step_data)
+        if versioned:
+            archive_current_version(instance)
+            instance.version = (instance.version or 1) + 1
+
         for attr, val in validated_data.items():
             setattr(instance, attr, val)
 
-        unknown_skus = []
         if ingredient_data is not None:
             instance.ingredients.all().delete()
             self._save_ingredients(instance, ingredient_data)
-            instance.cost, unknown_skus = calculate_recipe_cost(ingredient_data)
 
         if step_data is not None:
             instance.steps.all().delete()
             self._save_steps(instance, step_data)
 
+        apply_cost(instance, ingredient_data if ingredient_data is not None
+                             else list(instance.ingredients.all()))
         instance.save()
-        instance._unknown_skus = unknown_skus
 
         if instance.cost != old_cost or instance.output_qty != old_qty:
             self._snapshot_cost(instance)
-        self._log(instance, ActivityActionType.UPDATED)
+        self._log(instance, ActivityActionType.UPDATED,
+                  f'Revised to v{instance.version}' if versioned else '')
         return instance
