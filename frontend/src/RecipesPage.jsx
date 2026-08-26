@@ -6,11 +6,13 @@ import DishRecipeCard from './DishRecipeCard'
 import ProductionRecipeList from './ProductionRecipeList'
 import ProductionRecipeForm from './ProductionRecipeForm'
 import ProductionRecipeCard from './ProductionRecipeCard'
+import DishStandardsList from './DishStandardsList'
 import { secondaryButtonClass } from './RecipeFormFields'
 
 const TABS = [
   { key: 'dish', label: 'Dish Recipes' },
   { key: 'production', label: 'Production Recipes' },
+  { key: 'standards', label: 'QA Standards' },
 ]
 
 export default function RecipesPage({ onLoggedOut, onOpenItems }) {
@@ -24,7 +26,7 @@ export default function RecipesPage({ onLoggedOut, onOpenItems }) {
 
   return (
     <div className="min-h-screen bg-stone-50 p-8">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-semibold text-stone-900 tracking-tight">Cookbook</h1>
           <div className="flex items-center gap-4">
@@ -76,6 +78,17 @@ export default function RecipesPage({ onLoggedOut, onOpenItems }) {
             onBack={() => setMode({ name: 'list' })}
             onEdit={(id) => setMode({ name: 'form', recipeId: id })}
           />
+        )}
+        {mode.name === 'card' && tab === 'standards' && (
+          <DishRecipeCard
+            recipeId={mode.recipeId}
+            onBack={() => setMode({ name: 'list' })}
+            onEdit={(id) => { setTab('dish'); setMode({ name: 'form', recipeId: id }) }}
+          />
+        )}
+
+        {mode.name === 'list' && tab === 'standards' && (
+          <DishStandardsList onOpen={(id) => setMode({ name: 'card', recipeId: id })} />
         )}
 
         {mode.name === 'list' && tab === 'dish' && (

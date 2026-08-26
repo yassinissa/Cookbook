@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { dishRecipes } from './lib/cookbookApi'
 import { primaryButtonClass, secondaryButtonClass, ErrorState, RatingPill, Spinner, money } from './RecipeFormFields'
 import CostBreakdown, { lineCostIndex } from './CostBreakdown'
+import NutritionPanel, { AllergenPanel } from './NutritionPanel'
+import { TasteAxisBar, TASTE_AXES } from './TasteAxis'
 import { useToast } from './Toast'
 import { parseApiError } from './lib/parseApiError'
 
@@ -126,29 +128,37 @@ export default function DishRecipeCard({ recipeId, onBack, onEdit }) {
         </section>
       </div>
 
+      <div className="grid grid-cols-2 gap-4">
+        <NutritionPanel nutrition={r.nutrition} />
+        <AllergenPanel rollup={r.allergen_rollup} />
+      </div>
+
       {s && (
         <section className="bg-white rounded-lg border border-stone-200 p-4">
-          <h2 className="text-sm font-semibold text-stone-700 mb-2">QA / QC Dish Standard</h2>
-          <div className="grid grid-cols-3 gap-x-6">
+          <h2 className="text-sm font-semibold text-stone-700 mb-3">QA / QC Dish Standard</h2>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-4">
             <div>
-              <Row label="Portion weight (g)" value={s.portion_weight_g} />
-              <Row label="Serving temp (°C)" value={s.serving_temp_c} />
+              <Row label="Branch applicability" value={s.branch_applicability} />
+              <Row label="Service style" value={s.service_style} />
+              <Row label="Portion weight (g)" value={s.portion_weight_g && `${s.portion_weight_g} ±${s.portion_tolerance_g ?? 0}`} />
+              <Row label="Serving temp (°C)" value={s.serving_temp_c && `${s.serving_temp_c} ±${s.temp_tolerance_c ?? 0}`} />
               <Row label="Holding time (min)" value={s.holding_time_minutes} />
               <Row label="Appearance" value={s.appearance} />
-              <Row label="Color" value={s.color} />
-            </div>
-            <div>
+              <Row label="Colour" value={s.color} />
               <Row label="Aroma" value={s.aroma} />
               <Row label="Texture" value={s.texture} />
               <Row label="Presentation" value={s.presentation} />
-              <Row label="Primary flavor" value={s.primary_flavor} />
-              <Row label="Secondary flavor" value={s.secondary_flavor} />
+              <Row label="Primary flavour" value={s.primary_flavor} />
+              <Row label="Secondary flavour" value={s.secondary_flavor} />
+              <Row label="Aftertaste" value={s.aftertaste} />
+              <Row label="Mouthfeel" value={s.mouthfeel} />
+              <Row label="Freshness standard" value={s.freshness_standard} />
+              <Row label="Critical defects" value={s.critical_defects_not_allowed} />
             </div>
-            <div>
-              {['sweetness', 'saltiness', 'sourness', 'bitterness', 'umami', 'spice', 'richness', 'smokiness'].map((k) => (
-                s[`${k}_target`] != null && (
-                  <Row key={k} label={k[0].toUpperCase() + k.slice(1)} value={`${s[`${k}_target`]} ±${s[`${k}_tolerance`] ?? 0}`} />
-                )
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide">Taste targets (0–10)</p>
+              {TASTE_AXES.map(([key, label]) => (
+                <TasteAxisBar key={key} label={label} target={s[`${key}_target`]} tolerance={s[`${key}_tolerance`]} />
               ))}
             </div>
           </div>

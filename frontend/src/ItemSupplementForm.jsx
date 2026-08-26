@@ -21,6 +21,7 @@ export default function ItemSupplementForm({ item, onBack }) {
   const [hasConversion, setHasConversion] = useState(false)
   const [nutrition, setNutrition] = useState(emptyNutrition)
   const [hasNutrition, setHasNutrition] = useState(false)
+  const [allergens, setAllergens] = useState([])
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -36,6 +37,7 @@ export default function ItemSupplementForm({ item, onBack }) {
           pieces_or_pack_per_box: c.pieces_or_pack_per_box ?? '',
         })
         setLines(c.lines.map((l) => ({ label: l.label, quantity: l.quantity, unit: l.unit, gram_equivalent: l.gram_equivalent ?? '' })))
+        setAllergens(c.allergens || [])
         setHasConversion(true)
       }
     })
@@ -69,6 +71,7 @@ export default function ItemSupplementForm({ item, onBack }) {
         pieces_per_pack: conversion.pieces_per_pack || null,
         pieces_per_kg: conversion.pieces_per_kg || null,
         pieces_or_pack_per_box: conversion.pieces_or_pack_per_box || null,
+        allergens,
         lines,
       }
       if (hasConversion) {
@@ -112,6 +115,23 @@ export default function ItemSupplementForm({ item, onBack }) {
       </div>
 
       {error && <p className="text-sm text-danger-700 bg-danger-50 border border-danger-200 rounded-md p-3 break-all">{error}</p>}
+
+      <section className="bg-white rounded-lg border border-stone-200 p-4">
+        <h2 className="text-sm font-semibold text-stone-700 mb-1">Allergens</h2>
+        <p className="text-xs text-stone-400 mb-3">Rolls up into every dish that uses this item.</p>
+        <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
+          {ref.allergens.map((a) => {
+            const on = allergens.includes(a.id)
+            return (
+              <label key={a.id} className={`text-xs px-2 py-1 rounded-full border cursor-pointer transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent-500 ${on ? 'bg-danger-600 text-white border-danger-600' : 'border-stone-300 text-stone-600 hover:bg-stone-50'}`}>
+                <input type="checkbox" className="sr-only" checked={on}
+                  onChange={() => setAllergens((cur) => on ? cur.filter((x) => x !== a.id) : [...cur, a.id])} />
+                {a.name}
+              </label>
+            )
+          })}
+        </div>
+      </section>
 
       <section className="bg-white rounded-lg border border-stone-200 p-4">
         <h2 className="text-sm font-semibold text-stone-700 mb-3">Packaging conversions</h2>

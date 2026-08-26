@@ -17,7 +17,7 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from django.conf import settings
 
-from .models import ItemConversion, UnitScale
+from .models import ItemConversion, ItemNutrition, UnitScale
 from .parsing import label_parts, to_decimal
 from .units import ConversionError, convert, invert_bridge
 
@@ -81,6 +81,10 @@ class CostContext:
         self.inventory = inventory_items_by_sku or {}
         self.units_by_code = {u.code: u for u in UnitScale.objects.all()}
         self.units_by_id = {str(u.id): u for u in self.units_by_code.values()}
+        self.nutrition = {
+            n.item_sku: n for n in
+            ItemNutrition.objects.filter(item_sku__in=skus).select_related('unit_scale')
+        }
         self._bridge_cache = {}
 
     # -- price + base unit -------------------------------------------------

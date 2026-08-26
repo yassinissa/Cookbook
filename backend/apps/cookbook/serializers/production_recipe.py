@@ -68,7 +68,7 @@ class ProductionRecipeDetailSerializer(serializers.ModelSerializer):
             'prep_kitchen', 'section',
             'output_item_sku', 'output_qty', 'output_unit',
             'prep_time_minutes', 'expected_waste_pct', 'include_labor_cost',
-            'labor_cost', 'cost', 'cost_breakdown', 'cost_per_unit',
+            'labor_cost', 'cost', 'cost_breakdown', 'nutrition', 'cost_per_unit',
             'approved_by', 'qa_approved_by', 'approved_at', 'notes',
             'version', 'is_current', 'ingredients', 'steps',
             'cost_history', 'activity_log',

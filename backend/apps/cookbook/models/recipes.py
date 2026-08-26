@@ -87,6 +87,9 @@ class RecipeCardFields(BaseModel):
     # ingredient line cost + status, price scenarios. Read by the recipe card
     # without a recompute; refreshed on save and recalculate.
     cost_breakdown       = models.JSONField(default=dict, blank=True)
+    # Per-serving nutrition roll-up (Σ ingredient nutrition × scaled qty) +
+    # a _coverage marker. Refreshed alongside cost_breakdown.
+    nutrition            = models.JSONField(default=dict, blank=True)
 
     approved_by          = models.ForeignKey(Approver, on_delete=models.PROTECT, null=True, blank=True,
                              related_name='+', help_text='Executive chef who approved this recipe.')

@@ -5,6 +5,7 @@ from apps.cookbook.models import (
     DishPriceHistory, DishRecipeActivityLog, ActivityActionType,
 )
 from apps.cookbook.services import apply_cost
+from apps.cookbook.nutrition import allergen_rollup
 from apps.cookbook.versioning import archive_current_version, edit_is_a_new_version
 from .reference import (
     MenuCategorySerializer, SectionSerializer, ServiceStyleSerializer,
@@ -50,14 +51,18 @@ class DishRecipeListSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True, default=None)
     section_name  = serializers.CharField(source='section.name', read_only=True, default=None)
     ingredient_count = serializers.IntegerField(source='ingredients.count', read_only=True)
+    has_standard = serializers.SerializerMethodField()
 
     class Meta:
         model  = DishRecipe
         fields = [
             'id', 'name_en', 'name_ar', 'recipe_code', 'branch', 'category', 'category_name',
             'section', 'section_name', 'pos_item_name', 'selling_price', 'cost',
-            'rating', 'rating_status', 'version', 'is_current', 'ingredient_count', 'created_at',
+            'rating', 'rating_status', 'has_standard', 'version', 'is_current', 'ingredient_count', 'created_at',
         ]
+
+    def get_has_standard(self, obj):
+        return hasattr(obj, 'standard') and obj.standard is not None
 
 
 class DishRecipeDetailSerializer(serializers.ModelSerializer):
@@ -71,6 +76,7 @@ class DishRecipeDetailSerializer(serializers.ModelSerializer):
     steps         = DishRecipeStepSerializer(many=True, read_only=True)
     standard      = DishStandardSerializer(read_only=True)
     food_cost_pct = serializers.SerializerMethodField()
+    allergen_rollup = serializers.SerializerMethodField()
     price_history = DishPriceHistorySerializer(many=True, read_only=True)
     activity_log  = DishRecipeActivityLogSerializer(many=True, read_only=True)
 
@@ -79,15 +85,18 @@ class DishRecipeDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name_en', 'name_ar', 'recipe_code', 'revision', 'revision_date',
             'branch', 'branch_ref', 'category', 'section',
-            'service_style', 'allergens', 'pos_item_name', 'selling_price',
+            'service_style', 'allergens', 'allergen_rollup', 'pos_item_name', 'selling_price',
             'rating', 'rating_status', 'rating_date', 'taste_profile',
             'prep_time_minutes', 'expected_waste_pct',
-            'include_labor_cost', 'labor_cost', 'cost', 'cost_breakdown', 'food_cost_pct',
+            'include_labor_cost', 'labor_cost', 'cost', 'cost_breakdown', 'nutrition', 'food_cost_pct',
             'approved_by', 'qa_approved_by', 'approved_at', 'notes',
             'version', 'is_current', 'ingredients', 'steps', 'standard',
             'price_history', 'activity_log',
             'created_at', 'updated_at',
         ]
+
+    def get_allergen_rollup(self, obj):
+        return allergen_rollup(obj)
 
     def get_food_cost_pct(self, obj):
         fcp = (obj.cost_breakdown or {}).get('food_cost_pct')

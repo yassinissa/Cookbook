@@ -24,7 +24,7 @@ Two distinct concerns kept apart, per instruction not to merge:
 """
 from django.db import models
 from apps.core.models import BaseModel
-from .reference import UnitScale, Approver
+from .reference import UnitScale, Approver, Allergen
 
 
 class CostSource(models.TextChoices):
@@ -48,6 +48,9 @@ class ItemConversion(BaseModel):
     item_sku      = models.CharField(max_length=100, unique=True,
                       help_text='SKU of the inventory-platform Item this supplements.')
     note_to_add   = models.TextField(blank=True)
+    allergens     = models.ManyToManyField(Allergen, blank=True, related_name='items',
+                      help_text='Allergens this item carries — feeds the dish allergen roll-up. '
+                                'Cookbook-local; report upstream if it should be permanent.')
 
     # ── Recipe cost ──────────────────────────────────────────────────────────
     base_unit          = models.ForeignKey(UnitScale, on_delete=models.PROTECT, null=True, blank=True,

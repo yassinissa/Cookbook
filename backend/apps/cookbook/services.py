@@ -17,6 +17,7 @@ from .costing import (
     CostContext, calculate_items_cost, compose_serving_cost, labor_cost,
     pricing_scenarios, serialize_cost_result,
 )
+from .nutrition import roll_up_nutrition
 
 
 def get_inventory_items_by_sku():
@@ -78,6 +79,7 @@ def cost_recipe(*, lines, section=None, prep_minutes=None, expected_waste_pct=0,
         'labor': breakdown['labor'],
         'breakdown': breakdown,
         'scenarios': pricing_scenarios(per_serving),
+        'nutrition': roll_up_nutrition(lines, ctx),
         'food_cost_pct': None,
         'revenue_pct': None,
         'cost_per_unit': None,
@@ -119,6 +121,7 @@ def apply_cost(recipe, ingredient_lines=None, items_by_sku=None):
     recipe.cost = result['breakdown']['per_serving']
     recipe.labor_cost = result['labor']
     recipe.cost_breakdown = serialize_cost_result(result)
+    recipe.nutrition = {k: (str(v) if hasattr(v, 'quantize') else v) for k, v in result['nutrition'].items()}
     recipe._unknown_skus = result['unknown_skus']
     recipe._cost_issues = [
         {'sku': lc.sku, 'status': lc.status, 'detail': lc.detail} for lc in result['issues']

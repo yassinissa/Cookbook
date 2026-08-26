@@ -1,15 +1,17 @@
 import { api } from './api'
 
 export async function fetchReferenceData() {
-  const [categories, sections, approvers, allergens, serviceStyles, units] = await Promise.all([
+  const [categories, branches, sections, approvers, allergens, serviceStyles, units, tasteDescriptors] = await Promise.all([
     api.get('/cookbook/reference/categories/').then((r) => r.data),
+    api.get('/cookbook/reference/branches/').then((r) => r.data),
     api.get('/cookbook/reference/sections/').then((r) => r.data),
     api.get('/cookbook/reference/approvers/').then((r) => r.data),
     api.get('/cookbook/reference/allergens/').then((r) => r.data),
     api.get('/cookbook/reference/service-styles/').then((r) => r.data),
     api.get('/cookbook/reference/units/').then((r) => r.data),
+    api.get('/cookbook/reference/taste-descriptors/').then((r) => r.data),
   ])
-  return { categories, sections, approvers, allergens, serviceStyles, units }
+  return { categories, branches, sections, approvers, allergens, serviceStyles, units, tasteDescriptors }
 }
 
 export async function fetchInventoryItems() {

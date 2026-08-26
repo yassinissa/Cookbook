@@ -13,6 +13,8 @@ class DishStandard(BaseModel):
     dish_recipe            = models.OneToOneField(DishRecipe, on_delete=models.CASCADE, related_name='standard')
 
     service_style          = models.CharField(max_length=100, blank=True)
+    branch_applicability   = models.CharField(max_length=40, blank=True,
+                               help_text='"All Branches", "Selected Branches", or a specific branch.')
     portion_weight_g       = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     portion_tolerance_g    = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     serving_temp_c         = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)

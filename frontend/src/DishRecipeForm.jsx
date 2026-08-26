@@ -7,9 +7,11 @@ import {
   primaryButtonClass, secondaryButtonClass, Spinner,
 } from './RecipeFormFields'
 import CostBreakdown from './CostBreakdown'
+import { TasteAxisInput, TASTE_AXES } from './TasteAxis'
 
 const emptyStandard = {
-  service_style: '', portion_weight_g: '', portion_tolerance_g: '', serving_temp_c: '', temp_tolerance_c: '',
+  service_style: '', branch_applicability: '',
+  portion_weight_g: '', portion_tolerance_g: '', serving_temp_c: '', temp_tolerance_c: '',
   holding_time_minutes: '', appearance: '', color: '', aroma: '', texture: '', presentation: '',
   sweetness_target: '', sweetness_tolerance: '', saltiness_target: '', saltiness_tolerance: '',
   sourness_target: '', sourness_tolerance: '', bitterness_target: '', bitterness_tolerance: '',
@@ -87,6 +89,7 @@ export default function DishRecipeForm({ recipeId, onDone, onCancel }) {
   }
 
   const setField = (key, value) => setForm((f) => ({ ...f, [key]: value }))
+  const setStd = (key, value) => setStandard((s) => ({ ...s, [key]: value }))
   const errFor = (key) => fieldErrors[key]
 
   function toggleAllergen(aid) {
@@ -305,35 +308,56 @@ export default function DishRecipeForm({ recipeId, onDone, onCancel }) {
           Include QA/QC Dish Standard
         </label>
         {showStandard && (
-          <div className="grid grid-cols-4 gap-3">
-            <Field label="Portion weight (g)"><input type="number" step="0.01" className={inputClass} value={standard.portion_weight_g} onChange={(e) => setStandard((s) => ({ ...s, portion_weight_g: e.target.value }))} /></Field>
-            <Field label="Portion tolerance (g)"><input type="number" step="0.01" className={inputClass} value={standard.portion_tolerance_g} onChange={(e) => setStandard((s) => ({ ...s, portion_tolerance_g: e.target.value }))} /></Field>
-            <Field label="Serving temp (°C)"><input type="number" step="0.1" className={inputClass} value={standard.serving_temp_c} onChange={(e) => setStandard((s) => ({ ...s, serving_temp_c: e.target.value }))} /></Field>
-            <Field label="Temp tolerance (°C)"><input type="number" step="0.1" className={inputClass} value={standard.temp_tolerance_c} onChange={(e) => setStandard((s) => ({ ...s, temp_tolerance_c: e.target.value }))} /></Field>
-            <Field label="Holding time (min)"><input type="number" className={inputClass} value={standard.holding_time_minutes} onChange={(e) => setStandard((s) => ({ ...s, holding_time_minutes: e.target.value }))} /></Field>
-            <Field label="Appearance"><input className={inputClass} value={standard.appearance} onChange={(e) => setStandard((s) => ({ ...s, appearance: e.target.value }))} /></Field>
-            <Field label="Color"><input className={inputClass} value={standard.color} onChange={(e) => setStandard((s) => ({ ...s, color: e.target.value }))} /></Field>
-            <Field label="Aroma"><input className={inputClass} value={standard.aroma} onChange={(e) => setStandard((s) => ({ ...s, aroma: e.target.value }))} /></Field>
-            <Field label="Texture"><input className={inputClass} value={standard.texture} onChange={(e) => setStandard((s) => ({ ...s, texture: e.target.value }))} /></Field>
-            <Field label="Presentation"><input className={inputClass} value={standard.presentation} onChange={(e) => setStandard((s) => ({ ...s, presentation: e.target.value }))} /></Field>
+          <div className="space-y-4">
+            <div className="grid grid-cols-4 gap-3">
+              <Field label="Branch applicability">
+                <select className={inputClass} value={standard.branch_applicability} onChange={(e) => setStd('branch_applicability', e.target.value)}>
+                  <option value="">—</option>
+                  <option>All Branches</option>
+                  <option>Selected Branches</option>
+                  {(ref.branches || []).map((b) => <option key={b.id}>{b.name_en}</option>)}
+                </select>
+              </Field>
+              <Field label="Service style"><input className={inputClass} value={standard.service_style} onChange={(e) => setStd('service_style', e.target.value)} /></Field>
+              <Field label="Portion weight (g)"><input type="number" step="0.01" className={`${inputClass} tabular-nums`} value={standard.portion_weight_g} onChange={(e) => setStd('portion_weight_g', e.target.value)} /></Field>
+              <Field label="Portion tolerance (±g)"><input type="number" step="0.01" className={`${inputClass} tabular-nums`} value={standard.portion_tolerance_g} onChange={(e) => setStd('portion_tolerance_g', e.target.value)} /></Field>
+              <Field label="Serving temp (°C)"><input type="number" step="0.1" className={`${inputClass} tabular-nums`} value={standard.serving_temp_c} onChange={(e) => setStd('serving_temp_c', e.target.value)} /></Field>
+              <Field label="Temp tolerance (±°C)"><input type="number" step="0.1" className={`${inputClass} tabular-nums`} value={standard.temp_tolerance_c} onChange={(e) => setStd('temp_tolerance_c', e.target.value)} /></Field>
+              <Field label="Holding time (min)"><input type="number" className={`${inputClass} tabular-nums`} value={standard.holding_time_minutes} onChange={(e) => setStd('holding_time_minutes', e.target.value)} /></Field>
+            </div>
 
-            {[
-              ['sweetness', 'Sweetness'], ['saltiness', 'Saltiness'], ['sourness', 'Sourness'],
-              ['bitterness', 'Bitterness'], ['umami', 'Umami'], ['spice', 'Spice'],
-              ['richness', 'Richness'], ['smokiness', 'Smokiness'],
-            ].map(([key, label]) => (
-              <div key={key} className="col-span-2 grid grid-cols-2 gap-2">
-                <Field label={`${label} target (0-10)`}><input type="number" step="0.1" min="0" max="10" className={inputClass} value={standard[`${key}_target`]} onChange={(e) => setStandard((s) => ({ ...s, [`${key}_target`]: e.target.value }))} /></Field>
-                <Field label={`${label} tolerance (±)`}><input type="number" step="0.1" className={inputClass} value={standard[`${key}_tolerance`]} onChange={(e) => setStandard((s) => ({ ...s, [`${key}_tolerance`]: e.target.value }))} /></Field>
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="Appearance"><input className={inputClass} value={standard.appearance} onChange={(e) => setStd('appearance', e.target.value)} /></Field>
+              <Field label="Colour"><input className={inputClass} value={standard.color} onChange={(e) => setStd('color', e.target.value)} /></Field>
+              <Field label="Aroma"><input className={inputClass} value={standard.aroma} onChange={(e) => setStd('aroma', e.target.value)} /></Field>
+              <Field label="Texture"><input className={inputClass} value={standard.texture} onChange={(e) => setStd('texture', e.target.value)} /></Field>
+              <Field label="Presentation"><input className={inputClass} value={standard.presentation} onChange={(e) => setStd('presentation', e.target.value)} /></Field>
+              <Field label="Primary flavour"><input className={inputClass} value={standard.primary_flavor} onChange={(e) => setStd('primary_flavor', e.target.value)} /></Field>
+              <Field label="Secondary flavour"><input className={inputClass} value={standard.secondary_flavor} onChange={(e) => setStd('secondary_flavor', e.target.value)} /></Field>
+              <Field label="Aftertaste"><input className={inputClass} value={standard.aftertaste} onChange={(e) => setStd('aftertaste', e.target.value)} /></Field>
+              <Field label="Mouthfeel"><input className={inputClass} value={standard.mouthfeel} onChange={(e) => setStd('mouthfeel', e.target.value)} /></Field>
+            </div>
+
+            <div>
+              <div className="grid grid-cols-[1fr_4rem_4rem] gap-2 text-[11px] uppercase tracking-wide text-stone-400 mb-1 px-1">
+                <span>Taste axis</span><span className="text-center">Target</span><span className="text-center">± Tol.</span>
               </div>
-            ))}
+              <div className="space-y-1.5">
+                {TASTE_AXES.map(([key, label]) => (
+                  <TasteAxisInput
+                    key={key} label={label}
+                    target={standard[`${key}_target`]} tolerance={standard[`${key}_tolerance`]}
+                    onTarget={(v) => setStd(`${key}_target`, v)}
+                    onTolerance={(v) => setStd(`${key}_tolerance`, v)}
+                  />
+                ))}
+              </div>
+            </div>
 
-            <Field label="Primary flavor"><input className={inputClass} value={standard.primary_flavor} onChange={(e) => setStandard((s) => ({ ...s, primary_flavor: e.target.value }))} /></Field>
-            <Field label="Secondary flavor"><input className={inputClass} value={standard.secondary_flavor} onChange={(e) => setStandard((s) => ({ ...s, secondary_flavor: e.target.value }))} /></Field>
-            <Field label="Aftertaste"><input className={inputClass} value={standard.aftertaste} onChange={(e) => setStandard((s) => ({ ...s, aftertaste: e.target.value }))} /></Field>
-            <Field label="Mouthfeel"><input className={inputClass} value={standard.mouthfeel} onChange={(e) => setStandard((s) => ({ ...s, mouthfeel: e.target.value }))} /></Field>
-            <div className="col-span-2"><Field label="Freshness standard"><textarea className={inputClass} rows={2} value={standard.freshness_standard} onChange={(e) => setStandard((s) => ({ ...s, freshness_standard: e.target.value }))} /></Field></div>
-            <div className="col-span-2"><Field label="Critical defects not allowed"><textarea className={inputClass} rows={2} value={standard.critical_defects_not_allowed} onChange={(e) => setStandard((s) => ({ ...s, critical_defects_not_allowed: e.target.value }))} /></Field></div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Freshness standard"><textarea className={inputClass} rows={2} value={standard.freshness_standard} onChange={(e) => setStd('freshness_standard', e.target.value)} /></Field>
+              <Field label="Critical defects not allowed"><textarea className={inputClass} rows={2} value={standard.critical_defects_not_allowed} onChange={(e) => setStd('critical_defects_not_allowed', e.target.value)} /></Field>
+            </div>
           </div>
         )}
       </section>

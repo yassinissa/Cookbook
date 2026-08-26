@@ -1,9 +1,9 @@
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
-from apps.cookbook.models import ItemConversion, ItemConversionLine, ItemNutrition
+from apps.cookbook.models import Allergen, ItemConversion, ItemConversionLine, ItemNutrition
 from apps.cookbook.models.item_supplement import CostSource
-from .reference import UnitScaleSerializer, ApproverSerializer
+from .reference import UnitScaleSerializer, ApproverSerializer, AllergenSerializer
 
 
 class ItemConversionLineSerializer(serializers.ModelSerializer):
@@ -24,11 +24,13 @@ class ItemConversionSerializer(serializers.ModelSerializer):
     updated_by_detail  = ApproverSerializer(source='updated_by', read_only=True)
     approved_by_detail = ApproverSerializer(source='approved_by', read_only=True)
     base_unit_detail   = UnitScaleSerializer(source='base_unit', read_only=True)
+    allergens          = serializers.PrimaryKeyRelatedField(queryset=Allergen.objects.all(), many=True, required=False)
+    allergens_detail   = AllergenSerializer(source='allergens', many=True, read_only=True)
 
     class Meta:
         model  = ItemConversion
         fields = [
-            'id', 'item_sku', 'note_to_add',
+            'id', 'item_sku', 'note_to_add', 'allergens', 'allergens_detail',
             'base_unit', 'base_unit_detail', 'cost_per_base_unit',
             'order_unit', 'order_cost', 'pack_qty', 'cost_source', 'cost_updated_at',
             'grams_per_piece', 'pieces_per_pack', 'pieces_per_kg', 'pieces_or_pack_per_box',
@@ -59,18 +61,24 @@ class ItemConversionSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def create(self, validated_data):
         lines_data = validated_data.pop('lines', [])
+        allergens = validated_data.pop('allergens', None)
         self._stamp_cost(validated_data)
         instance = ItemConversion.objects.create(**validated_data)
+        if allergens is not None:
+            instance.allergens.set(allergens)
         self._save_lines(instance, lines_data)
         return instance
 
     @transaction.atomic
     def update(self, instance, validated_data):
         lines_data = validated_data.pop('lines', None)
+        allergens = validated_data.pop('allergens', None)
         self._stamp_cost(validated_data)
         for attr, val in validated_data.items():
             setattr(instance, attr, val)
         instance.save()
+        if allergens is not None:
+            instance.allergens.set(allergens)
         if lines_data is not None:
             self._save_lines(instance, lines_data)
         return instance
