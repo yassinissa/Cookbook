@@ -199,13 +199,20 @@ class Command(BaseCommand):
             cats_created += was_created
         created['categories'] = cats_created
 
-        branches_created = 0
+        from apps.cookbook.models import Menu
+        branches_created = menus_created = 0
         for i, (name_en, name_ar) in enumerate(BRANCHES.items()):
-            _, was_created = Branch.objects.update_or_create(
+            branch, was_created = Branch.objects.update_or_create(
                 name_en=name_en, defaults={'name_ar': name_ar, 'sort_order': i},
             )
             branches_created += was_created
+            _, m_created = Menu.objects.get_or_create(
+                branch=branch, is_active=True,
+                defaults={'name': f'{name_en} Menu', 'name_ar': f'قائمة {name_ar}'},
+            )
+            menus_created += m_created
         created['branches'] = branches_created
+        created['menus'] = menus_created
 
         created['sections'] = sum(
             Section.objects.get_or_create(name=n, defaults={'avg_monthly_salary': s})[1]

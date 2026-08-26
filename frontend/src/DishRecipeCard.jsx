@@ -52,13 +52,18 @@ export default function DishRecipeCard({ recipeId, onBack, onEdit }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <button onClick={onBack} className={`${secondaryButtonClass} mb-1`}>← Back</button>
-          <h1 className="text-2xl font-semibold text-stone-900 tracking-tight">{r.name_en}</h1>
-          <div className="flex items-center gap-2 mt-0.5">
-            {r.name_ar && <p className="text-stone-500" dir="rtl">{r.name_ar}</p>}
-            {r.recipe_code && <span className="text-xs text-stone-400 tabular-nums">#{r.recipe_code}</span>}
-            <RatingPill status={r.rating_status} rating={r.rating} />
+        <div className="flex items-start gap-4">
+          {r.image_url && (
+            <img src={r.image_url} alt="" className="w-16 h-16 rounded-lg object-cover border border-stone-200 flex-none mt-7" />
+          )}
+          <div>
+            <button onClick={onBack} className={`${secondaryButtonClass} mb-1`}>← Back</button>
+            <h1 className="text-2xl font-semibold text-stone-900 tracking-tight">{r.name_en}</h1>
+            <div className="flex items-center gap-2 mt-0.5">
+              {r.name_ar && <p className="text-stone-500" dir="rtl">{r.name_ar}</p>}
+              {r.recipe_code && <span className="text-xs text-stone-400 tabular-nums">#{r.recipe_code}</span>}
+              <RatingPill status={r.rating_status} rating={r.rating} />
+            </div>
           </div>
         </div>
         <button onClick={() => onEdit(r.id)} className={primaryButtonClass}>

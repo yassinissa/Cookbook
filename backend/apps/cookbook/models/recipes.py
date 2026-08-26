@@ -156,6 +156,7 @@ class DishRecipe(RecipeCardFields):
     rating_date     = models.DateField(null=True, blank=True)
     taste_profile   = models.CharField(max_length=255, blank=True,
                         help_text='Short free-text summary, e.g. "Fresh, Tangy, Sour, Light."')
+    image_url       = models.URLField(blank=True, help_text='Plated-dish photo shown on the menu and card.')
 
     def __str__(self):
         return f'{self.name_en} v{self.version}'

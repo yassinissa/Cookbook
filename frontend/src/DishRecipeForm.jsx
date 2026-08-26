@@ -32,7 +32,8 @@ export default function DishRecipeForm({ recipeId, onDone, onCancel }) {
 
   const [id, setId] = useState(recipeId)
   const [form, setForm] = useState({
-    name_en: '', name_ar: '', recipe_code: '', revision: '', branch: '', pos_item_name: '',
+    name_en: '', name_ar: '', recipe_code: '', revision: '', branch: '', branch_ref: '',
+    image_url: '', pos_item_name: '',
     category: '', section: '', service_style: '',
     selling_price: '', rating: '', rating_status: '', rating_date: '', taste_profile: '',
     prep_time_minutes: '', expected_waste_pct: '0', include_labor_cost: true,
@@ -61,7 +62,8 @@ export default function DishRecipeForm({ recipeId, onDone, onCancel }) {
     setId(r.id)
     setForm({
       name_en: r.name_en, name_ar: r.name_ar, recipe_code: r.recipe_code || '', revision: r.revision || '',
-      branch: r.branch, pos_item_name: r.pos_item_name,
+      branch: r.branch, branch_ref: r.branch_ref ?? '', image_url: r.image_url || '',
+      pos_item_name: r.pos_item_name,
       category: r.category?.id ?? '', section: r.section?.id ?? '', service_style: r.service_style?.id ?? '',
       selling_price: r.selling_price ?? '', rating: r.rating ?? '',
       rating_status: r.rating_status || '', rating_date: r.rating_date ?? '',
@@ -115,6 +117,7 @@ export default function DishRecipeForm({ recipeId, onDone, onCancel }) {
         ...form,
         category: form.category || null, section: form.section || null, service_style: form.service_style || null,
         approved_by: form.approved_by || null, qa_approved_by: form.qa_approved_by || null,
+        branch_ref: form.branch_ref || null,
         approved_at: form.approved_at || null, rating_date: form.rating_date || null,
         selling_price: form.selling_price || null, rating: form.rating || null,
         prep_time_minutes: form.prep_time_minutes || null,
@@ -185,11 +188,20 @@ export default function DishRecipeForm({ recipeId, onDone, onCancel }) {
         <Field label="Revision" help='e.g. "Rev.01" or "Fix"' error={errFor('revision')}>
           <input className={inputClass} value={form.revision} onChange={(e) => setField('revision', e.target.value)} />
         </Field>
-        <Field label="Branch" error={errFor('branch')}>
+        <Field label="Branch (label)" help="Free text, as written in the cook book" error={errFor('branch')}>
           <input className={inputClass} placeholder="Dine" value={form.branch} onChange={(e) => setField('branch', e.target.value)} />
+        </Field>
+        <Field label="Branch (linked)" help="Puts this dish on that branch's menu" error={errFor('branch_ref')}>
+          <select className={inputClass} value={form.branch_ref} onChange={(e) => setField('branch_ref', e.target.value)}>
+            <option value="">—</option>
+            {(ref.branches || []).map((b) => <option key={b.id} value={b.id}>{b.name_en}</option>)}
+          </select>
         </Field>
         <Field label="POS item name" error={errFor('pos_item_name')}>
           <input className={inputClass} value={form.pos_item_name} onChange={(e) => setField('pos_item_name', e.target.value)} />
+        </Field>
+        <Field label="Image URL" help="Shown on the menu and the dish card" error={errFor('image_url')}>
+          <input type="url" className={inputClass} placeholder="https://…" value={form.image_url} onChange={(e) => setField('image_url', e.target.value)} />
         </Field>
         <Field label="Category" error={errFor('category')}>
           <select className={inputClass} value={form.category} onChange={(e) => setField('category', e.target.value)}>

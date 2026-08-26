@@ -124,3 +124,26 @@ class ItemConversionAdmin(admin.ModelAdmin):
 class ItemNutritionAdmin(admin.ModelAdmin):
     list_display  = ['item_sku', 'unit_scale', 'calories', 'protein_g', 'fat_g', 'verification_notes']
     search_fields = ['item_sku']
+
+
+# ── Menus ─────────────────────────────────────────────────────────────────
+from .models import Menu, MenuLine, MenuSnapshot, MenuSnapshotLine  # noqa: E402
+
+
+class MenuLineInline(admin.TabularInline):
+    model = MenuLine
+    extra = 0
+    raw_id_fields = ['dish']
+
+
+@admin.register(Menu)
+class MenuAdmin(admin.ModelAdmin):
+    list_display  = ['__str__', 'branch', 'is_active', 'last_snapshot_at']
+    list_filter   = ['branch', 'is_active']
+    inlines       = [MenuLineInline]
+
+
+@admin.register(MenuSnapshot)
+class MenuSnapshotAdmin(admin.ModelAdmin):
+    list_display  = ['menu', 'label', 'taken_by', 'created_at']
+    list_filter   = ['menu']

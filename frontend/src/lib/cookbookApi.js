@@ -28,6 +28,20 @@ export const dishRecipes = {
   recalculate: (id) => api.post(`/cookbook/dish-recipes/${id}/recalculate/`).then((r) => r.data),
 }
 
+export const menus = {
+  list: () => api.get('/cookbook/menus/').then((r) => r.data),
+  get: (id) => api.get(`/cookbook/menus/${id}/`).then((r) => r.data),
+  build: (id) => api.post(`/cookbook/menus/${id}/build/`).then((r) => r.data),
+  addDish: (id, dish) => api.post(`/cookbook/menus/${id}/lines/`, { dish }).then((r) => r.data),
+  snapshot: (id, label) => api.post(`/cookbook/menus/${id}/snapshot/`, { label }).then((r) => r.data),
+  trends: (id) => api.get(`/cookbook/menus/${id}/trends/`).then((r) => r.data),
+}
+
+export const menuLines = {
+  update: (id, payload) => api.patch(`/cookbook/menu-lines/${id}/`, payload).then((r) => r.data),
+  remove: (id) => api.delete(`/cookbook/menu-lines/${id}/`),
+}
+
 export const productionRecipes = {
   list: () => api.get('/cookbook/production-recipes/').then((r) => r.data),
   get: (id) => api.get(`/cookbook/production-recipes/${id}/`).then((r) => r.data),

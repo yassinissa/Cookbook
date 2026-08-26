@@ -7,12 +7,14 @@ import ProductionRecipeList from './ProductionRecipeList'
 import ProductionRecipeForm from './ProductionRecipeForm'
 import ProductionRecipeCard from './ProductionRecipeCard'
 import DishStandardsList from './DishStandardsList'
+import MenusPage from './MenusPage'
 import { secondaryButtonClass } from './RecipeFormFields'
 
 const TABS = [
   { key: 'dish', label: 'Dish Recipes' },
   { key: 'production', label: 'Production Recipes' },
   { key: 'standards', label: 'QA Standards' },
+  { key: 'menus', label: 'Menus' },
 ]
 
 export default function RecipesPage({ onLoggedOut, onOpenItems }) {
@@ -90,6 +92,8 @@ export default function RecipesPage({ onLoggedOut, onOpenItems }) {
         {mode.name === 'list' && tab === 'standards' && (
           <DishStandardsList onOpen={(id) => setMode({ name: 'card', recipeId: id })} />
         )}
+
+        {mode.name === 'list' && tab === 'menus' && <MenusPage />}
 
         {mode.name === 'list' && tab === 'dish' && (
           <DishRecipeList
