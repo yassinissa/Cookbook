@@ -21,31 +21,40 @@ before calling anything done — not just "the happy path returns 200."
   + `views_activity.py` + `views_dashboard.py`,
   `services.py`/`costing.py`/`nutrition.py`/`versioning.py`/`publishing.py`.
   `apps/integrations/inventory_client.py` is the *only* place that talks
-  to inventory-platform — items/units/stores/branches are read live, never
-  duplicated locally. `get_items()` walks every page (for the ingredient
-  picker); `search_items()` / `GET /api/inventory/items/search/` is one
-  paged, server-searched page (for the Inventory screen). Ingredients
-  reference inventory items by SKU string, not a local FK. **Recipe push
-  (`publishing.py`)**: a `recipe.publish`-gated `dish-recipes/<id>/publish/`
-  + `production-recipes/<id>/publish/` action pushes the recipe to
-  inventory-platform — resolves SKU→item id and unit code→unit id against a
-  live catalogue pull, POSTs first / PATCHes once `inventory_recipe_id` is
-  stored, unknown SKUs become `warnings` not failures. Manual per-recipe
-  (button on the detail page). Needs the service account
-  (`INVENTORY_API_EMAIL`) to be SUPER_ADMIN on inventory-platform. Recipe versions
-  share a `lineage_key` UUID (on `RecipeCardFields`);
-  `dish-recipes/<id>/versions/` + `/diff/` and `cookbook/dashboard/` are the
-  read-only aggregate endpoints on top. `cookbook/dish-standards/` is the
-  standalone QA-standards API (`views_standards.py`): addressed by *dish id*,
-  list is one row per current dish (so QA sees gaps), `PATCH` upserts the
-  `DishStandard` OneToOne *without* versioning the recipe or re-costing,
-  `POST .../approve/` stamps `qa_approved_by` + `approval_date`.
-  `cookbook/activity/` (`views_activity.py`) is the merged, paginated,
-  filterable audit feed over both `*ActivityLog` tables (dish branch-scoped,
-  production prep-kitchen-scoped + `production.view`-gated). **Gotcha**: point
-  `INVENTORY_API_BASE_URL` at `127.0.0.1`, never `localhost` — on Windows the
-  `::1` attempt stalls for seconds before the IPv4 fallback, turning a 0.3s
-  proxy call into 4-13s.
+  to inventory-platform. Items/units/stores/branches are read live (never
+  duplicated) — `get_items()` walks every page and returns *active* items
+  only (for the ingredient picker); `search_items()` /
+  `GET /api/inventory/items/search/` is one paged, server-searched page (for
+  the Inventory screen). Ingredients reference inventory items by SKU
+  string, not a local FK. Recipe versions share a `lineage_key` UUID (on
+  `RecipeCardFields`); `dish-recipes/<id>/versions/` + `/diff/` and
+  `cookbook/dashboard/` are the read-only aggregates on top.
+  - **Standalone read/action APIs**: `cookbook/dish-standards/`
+    (`views_standards.py`) — addressed by *dish id*, list is one row per
+    current dish (so QA sees gaps), `PATCH` upserts the `DishStandard`
+    OneToOne *without* versioning the recipe or re-costing,
+    `POST .../approve/` stamps `qa_approved_by` + `approval_date`.
+    `cookbook/activity/` (`views_activity.py`) — merged, paginated,
+    filterable audit feed over both `*ActivityLog` tables (dish
+    branch-scoped, production prep-kitchen-scoped + `production.view`-gated;
+    the dashboard's `recent_activity` is a small unfiltered slice of the
+    same data).
+  - **Recipe publish** (`publishing.py`): a `recipe.publish`-gated
+    `POST /cookbook/{dish,production}-recipes/<id>/publish/` action pushes a
+    recipe to inventory-platform. Resolves SKU→item id and unit code→unit id
+    against a live catalogue pull; unknown SKUs become `warnings`, not
+    failures. First publish POSTs then re-finds the row by name (the
+    platform's write response has no `id`) and stores it on
+    `RecipeCardFields.inventory_recipe_id`; later publishes PATCH that id.
+    `published_at` older than `updated_at` ⇒ `publish_stale`. Manual,
+    per-recipe (button on the detail page). Verified end-to-end 2026-08-28.
+    Setup: `INVENTORY_API_EMAIL` must be SUPER_ADMIN on inventory-platform
+    (the local dev account `cookbook-service@greenhills.local` already is;
+    a Render deploy needs the same), and each `PrepKitchen.inventory_store_id`
+    must map to a production store there for production publishes.
+  - **Gotcha**: point `INVENTORY_API_BASE_URL` at `127.0.0.1`, never
+    `localhost` — on Windows the `::1` attempt stalls for seconds before the
+    IPv4 fallback, turning a 0.3s proxy call into 4-13s.
 - **Frontend**: rebuilt 2026-08-26 as a routed TypeScript app (React 19 +
   Vite + Tailwind 3.4 + react-router 7 + @tanstack/react-query). Structure:
   `src/{components}` (design-system primitives), `src/shell` (AppShell /
@@ -56,29 +65,35 @@ before calling anything done — not just "the happy path returns 200."
   more,placeholder,production,standards,activity}`, `src/lib/{api,queries,http,format,seed}`,
   `src/i18n` (bespoke EN/AR provider, full RTL via `dir` + logical
   `ms-*/pe-*` utils), `src/theme` (light/dark via `data-theme`). Slice 1
-  screens built: Dashboard, Dish list / editor / detail (live cost
-  breakdown, nutrition, version-history drawer + diff), Production
-  (prep-kitchen) list / editor / detail — same shape as Dishes minus the
-  plated photo, food-cost only (no labour — see below), yield card shows
-  cost per output unit; `VersionDrawer` is shared, `kind="production"`.
-  QA Standards (`src/features/standards`) list / detail / editor — coverage
-  KPIs + gap list + status filters; detail renders `StandardCard`
-  (`StandardView.tsx`, extracted from the old DishDetailPage local one and
-  reused there); editor reuses `QaStandardFields`; inline approve dialog.
-  Activity & History (`src/features/activity`) — one filterable feed
-  (kind / action / actor / date / recipe / search) grouped by day, from
-  `cookbook/activity/` (`views_activity.py`, dish + production logs merged
-  in Python, branch/prep-kitchen scoped, `activity.view`).
-  Menus list / branch detail (trend charts, snapshots), Inventory Items
-  (`src/features/inventory` — server-searched, paged table + read-only
-  detail drawer; reads through the Cookbook proxy).
-  Documents / POS routes render
-  `ComingSoonPage` until their slice lands. **Labour cost is deferred**
-  until a separate HR app exists — the Production editor hides labour
-  fields and sends `include_labor_cost: false`; `Section` stays in the
-  model but its labour role is dormant. `VITE_USE_SEED=1`
-  serves `src/lib/seed` (curated Lebanese demo data) instead of the API —
-  hermetic, for the leadership demo.
+  screens built:
+  - **Dashboard**; **Dish** list (thumbnails via `<DishImage>`, its
+    placeholder covers photo-less dishes) / editor / detail (live cost
+    breakdown, nutrition, version-history drawer + diff).
+  - **Production** (prep-kitchen) list / editor / detail — same shape as
+    Dishes minus the plated photo, food-cost only (no labour — see below),
+    yield card shows cost per output unit. `VersionDrawer` is shared
+    (`kind="production"`).
+  - **QA Standards** (`src/features/standards`) list / detail / editor —
+    coverage KPIs + gap list + status filters; detail renders `StandardCard`
+    (`StandardView.tsx`, extracted from DishDetailPage's old local one and
+    reused there); editor reuses `QaStandardFields`; inline approve dialog.
+  - **Activity & History** (`src/features/activity`) — one URL-param-driven
+    filterable feed (kind / action / actor / date / recipe / search) grouped
+    by day.
+  - **Menus** list / branch detail (trend charts, snapshots); **Inventory
+    Items** (`src/features/inventory` — server-searched, paged table +
+    read-only detail drawer; reads through the Cookbook proxy).
+  - `<PublishControl>` (`src/components/`) on the Dish + Production detail
+    rail — publish/re-publish button + status (not published / published
+    Xago / edited-since), gated `can('recipe.publish')`.
+  - **Documents / POS** routes render `ComingSoonPage` until their slice
+    lands.
+
+  **Labour cost is deferred** until a separate HR app exists — the
+  Production editor hides labour fields and sends `include_labor_cost:
+  false`; `Section` stays in the model but its labour role is dormant.
+  `VITE_USE_SEED=1` serves `src/lib/seed` (curated Lebanese demo data)
+  instead of the API — hermetic, for the leadership demo.
 - **Design system** ("Test-Kitchen Ledger", 2026-08-26 pass): tokens are CSS
   custom properties in `src/styles/tokens.css` (`--surface`, `--ink`,
   `--accent`, `--accent-on` [text on an accent fill], status families,
@@ -121,10 +136,13 @@ before calling anything done — not just "the happy path returns 200."
   (`RequireCapability`), nav + action buttons gated by `can(cap)`,
   `src/features/admin/` screens. Seed builds carry a TopBar **identity
   switcher** (`src/shell/IdentitySwitcher.tsx`) to demo scoped users.
-- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 92 tests
-  (`APITestCase`; cookbook test clients are superusers so they bypass RBAC —
-  `apps/accounts/tests/` covers enforcement). Frontend has none yet. Grow
-  both alongside new work.
+- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 92 `APITestCase`
+  tests. The older cookbook suites use superuser clients (RBAC bypassed —
+  `apps/accounts/tests/` covers enforcement broadly), but the newer ones
+  (`test_{production,standards,activity,publishing}_api.py`) exercise scoped
+  non-superusers and capability gates directly. `test_publishing.py` fakes
+  `InventoryClient` — nothing in the suite hits the network. Frontend has no
+  tests yet. Grow both alongside new work.
 - **Auth**: JWT via default Django `User` (+ `accounts.UserProfile`), one
   superuser (`cookadmin`). Roles: Administrator / Executive Chef / QA Manager
   / Cost Controller / Restaurant Cook / Prep Cook, seeded and admin-editable.
