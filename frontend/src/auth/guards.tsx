@@ -46,6 +46,7 @@ export function RequireCapability({
             <Icon name="standards" size={20} />
           </span>
           <h1 className="text-base font-semibold text-ink">{t('access.denied.title')}</h1>
+
           <p className="mt-1 text-sm text-ink-subtle">{t('access.denied.body')}</p>
           <Button variant="secondary" className="mt-5" icon="arrowLeft" onClick={() => history.back()}>
             {t('action.back')}
