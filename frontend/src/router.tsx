@@ -15,6 +15,7 @@ import { ProductionDetailPage } from '@/features/production/ProductionDetailPage
 import { StandardsListPage } from '@/features/standards/StandardsListPage'
 import { StandardDetailPage } from '@/features/standards/StandardDetailPage'
 import { StandardEditorPage } from '@/features/standards/StandardEditorPage'
+import { ActivityPage } from '@/features/activity/ActivityPage'
 import { MenuListPage } from '@/features/menus/MenuListPage'
 import { MenuDetailPage } from '@/features/menus/MenuDetailPage'
 import { UsersPage } from '@/features/admin/UsersPage'
@@ -60,7 +61,7 @@ export const router = createBrowserRouter([
           { path: '/standards/:dishId', ...cap('standard.view', <StandardDetailPage />) },
           { path: '/standards/:dishId/edit', ...cap('standard.edit', <StandardEditorPage />) },
           { path: '/inventory', ...cap('inventory.view', <InventoryListPage />) },
-          { path: '/activity', element: <ComingSoonPage titleKey="nav.activity" icon="activity" /> },
+          { path: '/activity', ...cap('activity.view', <ActivityPage />) },
           { path: '/documents', element: <ComingSoonPage titleKey="nav.documents" icon="documents" /> },
           { path: '/pos', element: <ComingSoonPage titleKey="nav.pos" icon="pos" /> },
 

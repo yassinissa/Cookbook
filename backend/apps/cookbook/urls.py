@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from . import views
 from . import views_menu
 from . import views_standards
+from .views_activity import ActivityFeedView
 from .views_dashboard import DashboardView
 
 router = DefaultRouter()
@@ -26,5 +27,6 @@ router.register(r'menu-lines', views_menu.MenuLineViewSet, basename='menu-line')
 
 urlpatterns = [
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
+    path('activity/', ActivityFeedView.as_view(), name='activity'),
     path('', include(router.urls)),
 ]

@@ -18,7 +18,8 @@ before calling anything done — not just "the happy path returns 200."
 - **Backend**: `backend/apps/cookbook/` — models split into
   `models/{reference,recipes,standards,item_supplement,history,menu}.py`,
   mirrored `serializers/`, `views.py` + `views_menu.py` + `views_standards.py`
-  + `views_dashboard.py`, `services.py`/`costing.py`/`nutrition.py`/`versioning.py`.
+  + `views_activity.py` + `views_dashboard.py`,
+  `services.py`/`costing.py`/`nutrition.py`/`versioning.py`.
   `apps/integrations/inventory_client.py` is the *only* place that talks
   to inventory-platform — items/units/stores/branches are read live, never
   duplicated locally. `get_items()` walks every page (for the ingredient
@@ -31,7 +32,10 @@ before calling anything done — not just "the happy path returns 200."
   standalone QA-standards API (`views_standards.py`): addressed by *dish id*,
   list is one row per current dish (so QA sees gaps), `PATCH` upserts the
   `DishStandard` OneToOne *without* versioning the recipe or re-costing,
-  `POST .../approve/` stamps `qa_approved_by` + `approval_date`. **Gotcha**: point
+  `POST .../approve/` stamps `qa_approved_by` + `approval_date`.
+  `cookbook/activity/` (`views_activity.py`) is the merged, paginated,
+  filterable audit feed over both `*ActivityLog` tables (dish branch-scoped,
+  production prep-kitchen-scoped + `production.view`-gated). **Gotcha**: point
   `INVENTORY_API_BASE_URL` at `127.0.0.1`, never `localhost` — on Windows the
   `::1` attempt stalls for seconds before the IPv4 fallback, turning a 0.3s
   proxy call into 4-13s.
@@ -42,7 +46,7 @@ before calling anything done — not just "the happy path returns 200."
   `NAV` for the desktop Sidebar, `BOTTOM_NAV` for the mobile bar whose
   last tab, "More", opens `src/features/more` = the whole capability-
   filtered nav as a screen), `src/features/{dashboard,dishes,menus,auth,
-  more,placeholder,production,standards}`, `src/lib/{api,queries,http,format,seed}`,
+  more,placeholder,production,standards,activity}`, `src/lib/{api,queries,http,format,seed}`,
   `src/i18n` (bespoke EN/AR provider, full RTL via `dir` + logical
   `ms-*/pe-*` utils), `src/theme` (light/dark via `data-theme`). Slice 1
   screens built: Dashboard, Dish list / editor / detail (live cost
@@ -54,10 +58,14 @@ before calling anything done — not just "the happy path returns 200."
   KPIs + gap list + status filters; detail renders `StandardCard`
   (`StandardView.tsx`, extracted from the old DishDetailPage local one and
   reused there); editor reuses `QaStandardFields`; inline approve dialog.
+  Activity & History (`src/features/activity`) — one filterable feed
+  (kind / action / actor / date / recipe / search) grouped by day, from
+  `cookbook/activity/` (`views_activity.py`, dish + production logs merged
+  in Python, branch/prep-kitchen scoped, `activity.view`).
   Menus list / branch detail (trend charts, snapshots), Inventory Items
   (`src/features/inventory` — server-searched, paged table + read-only
   detail drawer; reads through the Cookbook proxy).
-  Activity / Documents / POS routes render
+  Documents / POS routes render
   `ComingSoonPage` until their slice lands. **Labour cost is deferred**
   until a separate HR app exists — the Production editor hides labour
   fields and sends `include_labor_cost: false`; `Section` stays in the
@@ -103,7 +111,7 @@ before calling anything done — not just "the happy path returns 200."
   (`RequireCapability`), nav + action buttons gated by `can(cap)`,
   `src/features/admin/` screens. Seed builds carry a TopBar **identity
   switcher** (`src/shell/IdentitySwitcher.tsx`) to demo scoped users.
-- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 73 tests
+- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 83 tests
   (`APITestCase`; cookbook test clients are superusers so they bypass RBAC —
   `apps/accounts/tests/` covers enforcement). Frontend has none yet. Grow
   both alongside new work.

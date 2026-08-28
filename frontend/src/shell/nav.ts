@@ -32,7 +32,7 @@ export const NAV: NavSection[] = [
     items: [
       { to: '/menus', labelKey: 'nav.menus', icon: 'menu', ready: true, capability: 'menu.view' },
       { to: '/inventory', labelKey: 'nav.inventory', icon: 'inventory', ready: true, capability: 'inventory.view' },
-      { to: '/activity', labelKey: 'nav.activity', icon: 'activity', ready: false, capability: 'activity.view' },
+      { to: '/activity', labelKey: 'nav.activity', icon: 'activity', ready: true, capability: 'activity.view' },
       { to: '/documents', labelKey: 'nav.documents', icon: 'documents', ready: false, capability: 'document.export' },
       { to: '/pos', labelKey: 'nav.pos', icon: 'pos', ready: false, capability: 'pos.manage' },
     ],

@@ -61,6 +61,15 @@ export function useDishDiff(id: string | undefined, a?: string, b?: string, enab
   })
 }
 
+export function useActivity(params: import('@/types/api').ActivityQuery) {
+  return useQuery({
+    queryKey: qk.activity(params as Record<string, unknown>),
+    queryFn: () => api.fetchActivity(params),
+    placeholderData: (prev) => prev,
+    staleTime: 30_000,
+  })
+}
+
 export function useDishStandards(enabled = true) {
   return useQuery({ queryKey: qk.standards, queryFn: api.fetchDishStandards, enabled })
 }

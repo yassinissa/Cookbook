@@ -22,6 +22,7 @@ export const qk = {
   dishDiff: (id: string, a?: string, b?: string) => ['dishes', id, 'diff', a ?? '', b ?? ''] as const,
   standards: ['standards'] as const,
   standard: (id: string) => ['standards', id] as const,
+  activity: (params: Record<string, unknown>) => ['activity', params] as const,
   production: ['production'] as const,
   productionRecipe: (id: string) => ['production', id] as const,
   productionVersions: (id: string) => ['production', id, 'versions'] as const,

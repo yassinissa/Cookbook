@@ -5,6 +5,7 @@
  */
 import { seedIdentity } from './access'
 import type {
+  ActivityFeed,
   Dashboard,
   DishRecipeDetail,
   DishRecipeListItem,
@@ -51,6 +52,23 @@ export function filterDishDetail(dish: DishRecipeDetail): DishRecipeDetail {
 export function filterStandardList(rows: DishStandardListItem[]): DishStandardListItem[] {
   const scope = branchScope()
   return scope === 'all' ? rows : rows.filter((r) => scope.has(r.branch))
+}
+
+/** Activity feed: hide production rows without `production.view`, and
+ * branch-filter the dish rows for a scoped identity. Recomputes count /
+ * pagination so the seed matches what the real endpoint returns. */
+export function filterActivityFeed(feed: ActivityFeed): ActivityFeed {
+  const scope = branchScope()
+  const seeProd = can('production.view')
+  const visible = feed.results.filter((e) => {
+    if (e.kind === 'production') return seeProd
+    return scope === 'all' || (e.scope_name != null && scope.has(e.scope_name))
+  })
+  // the seed builder already sliced to page 1; if a scoped user filtered
+  // rows out we just return the shorter list rather than re-paginating a
+  // set we no longer hold — acceptable for the hermetic demo.
+  const count = scope === 'all' && seeProd ? feed.count : visible.length
+  return { ...feed, results: visible, count, num_pages: Math.max(1, Math.ceil(count / feed.page_size)) }
 }
 
 export function filterMenuList(rows: MenuListItem[]): MenuListItem[] {

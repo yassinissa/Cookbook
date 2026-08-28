@@ -12,6 +12,8 @@ import type {
   MenuSnapshot,
   MenuTrends,
   NutritionRollup,
+  ActivityFeed,
+  ActivityQuery,
   DishStandardDetail,
   DishStandardListItem,
   ProductionRecipeDetail,
@@ -230,6 +232,7 @@ export function seedDishList(): DishRecipeListItem[] {
       pos_item_name: d.name_en,
       selling_price: r3(d.price),
       cost: r3(c.perServing),
+      image_url: d.image,
       rating: String(d.rating),
       rating_status: d.ratingStatus,
       has_standard: true,
@@ -895,6 +898,131 @@ export function seedStandardDetail(id: string): DishStandardDetail {
     needs_review: has && !approved,
     qa_approved_by: approved ? APPROVERS[2] : null,
     updated_at: '2026-08-07T09:00:00Z',
+  }
+}
+
+/* ── activity & history ───────────────────────────────────────────── */
+const ACTIVITY_ACTIONS = [
+  { value: 'created', label: 'Created' },
+  { value: 'updated', label: 'Updated' },
+  { value: 'recalculated', label: 'Cost recalculated' },
+  { value: 'deleted', label: 'Deleted' },
+  { value: 'standard_updated', label: 'QA standard updated' },
+  { value: 'standard_approved', label: 'QA standard approved' },
+]
+const ACTORS = ['nadia', 'omar', 'karim', 'lina', 'yassin']
+const ACTIVITY_BASE = Date.parse('2026-08-28T09:00:00Z')
+
+interface SeedActivity {
+  id: string
+  kind: 'dish' | 'production'
+  action: string
+  description: string
+  recipe_id: string
+  recipe_name: string
+  recipe_name_ar: string
+  recipe_code: string
+  recipe_path: string
+  scope_name: string | null
+  changed_by: string
+  ts: number
+}
+
+const HOUR = 3600_000
+
+function buildActivity(): SeedActivity[] {
+  const out: SeedActivity[] = []
+  // each recipe gets a "birth" further back in time; its events lay forward
+  // from there (created oldest), so the merged feed reads naturally.
+  const recipes = [
+    ...DISHES.map((d, i) => ({
+      kind: 'dish' as const, i, slug: d.slug, name: d.name_en, name_ar: d.name_ar,
+      code: d.code, path: `/recipes/dishes/${d.slug}`,
+      scope: branchById(d.branchSlugs[0]).name_en,
+    })),
+    ...PRODUCTION.map((p, i) => ({
+      kind: 'production' as const, i: DISHES.length + i, slug: p.slug, name: p.name_en,
+      name_ar: p.name_ar, code: p.code, path: `/recipes/production/${p.slug}`,
+      scope: PREP_KITCHENS.find((k) => k.id === p.prepKitchen)?.name_en ?? null,
+    })),
+  ]
+
+  for (const r of recipes) {
+    const birth = ACTIVITY_BASE - (r.i + 2) * 17 * HOUR
+    const base = {
+      kind: r.kind, recipe_id: r.slug, recipe_name: r.name, recipe_name_ar: r.name_ar,
+      recipe_code: r.code, recipe_path: r.path, scope_name: r.scope,
+    }
+    const events: Array<[string, string, string, number]> = [
+      ['c', 'created', '', 0],
+    ]
+    if (r.i % 2 === 0)
+      events.push(['u', 'updated', r.i % 4 === 0 ? 'Revised to v2' : 'Price change', 6])
+    if (r.kind === 'production' || r.i % 3 === 0)
+      events.push(['r', 'recalculated', '', 10])
+    if (r.kind === 'dish' && r.i % 3 === 1)
+      events.push(['sa', 'standard_approved', 'Approved by Lina Aoun (QA)', 13])
+    if (r.kind === 'dish' && r.i % 5 === 2)
+      events.push(['su', 'standard_updated', 'QA standard revised', 4])
+
+    for (const [suffix, action, description, hourOffset] of events) {
+      out.push({
+        ...base,
+        id: `act-${r.slug}-${suffix}`,
+        action,
+        description,
+        changed_by:
+          action.startsWith('standard') ? (action === 'standard_updated' ? 'omar' : 'lina')
+          : r.kind === 'production' ? ACTORS[r.i % 4]
+          : ACTORS[r.i % 5],
+        ts: Math.min(ACTIVITY_BASE - HOUR, birth + hourOffset * HOUR),
+      })
+    }
+  }
+
+  return out.sort((a, b) => b.ts - a.ts)
+}
+
+const ALL_ACTIVITY = buildActivity()
+
+export function seedActivityFeed(params: ActivityQuery): ActivityFeed {
+  const pageSize = 30
+  const page = Math.max(1, params.page ?? 1)
+  const actions = (params.action ?? '').split(',').filter(Boolean)
+  const from = params.date_from ? Date.parse(`${params.date_from}T00:00:00Z`) : null
+  const to = params.date_to ? Date.parse(`${params.date_to}T23:59:59Z`) : null
+  const q = (params.q ?? '').trim().toLowerCase()
+
+  let rows = ALL_ACTIVITY
+  if (params.kind) rows = rows.filter((r) => r.kind === params.kind)
+  if (actions.length) rows = rows.filter((r) => actions.includes(r.action))
+  if (params.actor) rows = rows.filter((r) => r.changed_by === params.actor)
+  if (params.recipe) rows = rows.filter((r) => r.recipe_id === params.recipe)
+  if (q) rows = rows.filter((r) => r.recipe_name.toLowerCase().includes(q))
+  if (from !== null) rows = rows.filter((r) => r.ts >= from)
+  if (to !== null) rows = rows.filter((r) => r.ts <= to)
+
+  const count = rows.length
+  const start = (page - 1) * pageSize
+  const slice = rows.slice(start, start + pageSize)
+
+  return {
+    count,
+    page,
+    page_size: pageSize,
+    num_pages: Math.max(1, Math.ceil(count / pageSize)),
+    results: slice.map((r) => {
+      const { ts, changed_by, action, ...rest } = r
+      return {
+        ...rest,
+        action,
+        action_display: ACTIVITY_ACTIONS.find((a) => a.value === action)?.label ?? action,
+        changed_by,
+        created_at: new Date(ts).toISOString(),
+      }
+    }),
+    actors: Array.from(new Set(ALL_ACTIVITY.map((r) => r.changed_by))).sort(),
+    action_types: ACTIVITY_ACTIONS,
   }
 }
 

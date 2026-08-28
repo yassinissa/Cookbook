@@ -162,6 +162,7 @@ export interface DishRecipeListItem {
   pos_item_name: string
   selling_price: string | null
   cost: string
+  image_url: string
   rating: string | null
   rating_status: RatingStatus
   has_standard: boolean
@@ -364,6 +365,49 @@ export interface DishStandardDetail {
   qa_approved_by: Approver | null
   updated_at: string
   _warnings?: string[]
+}
+
+/* ── activity & history feed ────────────────────────────────────────── */
+export interface ActivityEntry {
+  id: ID
+  kind: 'dish' | 'production'
+  action: string
+  action_display: string
+  description: string
+  recipe_id: ID
+  recipe_name: string
+  recipe_name_ar: string
+  recipe_code: string
+  recipe_path: string
+  scope_name: string | null
+  changed_by: string | null
+  created_at: string
+}
+
+export interface ActivityActionOption {
+  value: string
+  label: string
+}
+
+export interface ActivityFeed {
+  count: number
+  page: number
+  page_size: number
+  num_pages: number
+  results: ActivityEntry[]
+  actors: string[]
+  action_types: ActivityActionOption[]
+}
+
+export interface ActivityQuery {
+  page?: number
+  kind?: string
+  action?: string
+  actor?: string
+  recipe?: string
+  q?: string
+  date_from?: string
+  date_to?: string
 }
 
 /* ── version history ────────────────────────────────────────────────── */

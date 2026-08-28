@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
+import { DishImage } from '@/components/DishImage'
 import { FoodCostValue } from '@/components/Meter'
 import { Icon } from '@/components/Icon'
 import { Input } from '@/components/Input'
@@ -164,11 +165,18 @@ export function DishListPage() {
                       onClick={() => navigate(`/recipes/dishes/${r.id}`)}
                       className="cursor-pointer transition-colors hover:bg-surface-sunken"
                     >
-                      <td className="px-4 py-2.5">
-                        <BiName en={r.name_en} ar={r.name_ar} className="font-medium" />
-                        {r.version > 1 && (
-                          <span className="ms-2 text-2xs text-ink-subtle">v{r.version}</span>
-                        )}
+                      <td className="px-4 py-2">
+                        <div className="flex items-center gap-3">
+                          <span className="h-9 w-9 flex-none overflow-hidden rounded-md ring-1 ring-hairline">
+                            <DishImage src={r.image_url} name={r.name_en} rounded="rounded-md" />
+                          </span>
+                          <span>
+                            <BiName en={r.name_en} ar={r.name_ar} className="font-medium" />
+                            {r.version > 1 && (
+                              <span className="ms-2 text-2xs text-ink-subtle">v{r.version}</span>
+                            )}
+                          </span>
+                        </div>
                       </td>
                       <td className="tnum px-3 py-2.5 font-mono text-xs text-ink-subtle">
                         {r.recipe_code || '—'}
@@ -199,20 +207,25 @@ export function DishListPage() {
               <li key={r.id}>
                 <Link
                   to={`/recipes/dishes/${r.id}`}
-                  className="block rounded-card border border-hairline bg-surface p-3.5 transition-colors active:bg-surface-sunken"
+                  className="flex gap-3 rounded-card border border-hairline bg-surface p-3 transition-colors active:bg-surface-sunken"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <BiName en={r.name_en} ar={r.name_ar} className="font-medium" />
-                    <RatingPill status={r.rating_status} rating={r.rating} />
-                  </div>
-                  <div className="mt-2 flex items-center justify-between text-[13px]">
-                    <span className="text-ink-subtle">
-                      {r.branch} · #{r.recipe_code}
-                    </span>
-                    <span className="flex items-center gap-3">
-                      <FoodCostValue value={foodCostPct(r)} />
-                      <span className="tnum text-ink">{kwd(r.selling_price)}</span>
-                    </span>
+                  <span className="h-16 w-16 flex-none overflow-hidden rounded-lg ring-1 ring-hairline">
+                    <DishImage src={r.image_url} name={r.name_en} rounded="rounded-lg" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <BiName en={r.name_en} ar={r.name_ar} className="font-medium" />
+                      <RatingPill status={r.rating_status} rating={r.rating} />
+                    </div>
+                    <div className="mt-1.5 flex items-center justify-between text-[13px]">
+                      <span className="truncate text-ink-subtle">
+                        {r.branch} · #{r.recipe_code}
+                      </span>
+                      <span className="flex flex-none items-center gap-3">
+                        <FoodCostValue value={foodCostPct(r)} />
+                        <span className="tnum text-ink">{kwd(r.selling_price)}</span>
+                      </span>
+                    </div>
                   </div>
                 </Link>
               </li>
@@ -247,7 +260,8 @@ function ListSkeleton() {
   return (
     <Card className="overflow-hidden">
       {Array.from({ length: 8 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-4 border-b border-hairline px-4 py-3 last:border-0">
+        <div key={i} className="flex items-center gap-3 border-b border-hairline px-4 py-2.5 last:border-0">
+          <Skeleton className="h-9 w-9 flex-none rounded-md" />
           <Skeleton className="h-4 w-48" />
           <Skeleton className="h-4 w-16" />
           <Skeleton className="ms-auto h-4 w-12" />

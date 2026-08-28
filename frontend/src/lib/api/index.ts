@@ -6,6 +6,7 @@
 import { http, listData, USE_SEED } from '@/lib/http'
 import * as seed from '@/lib/seed'
 import {
+  filterActivityFeed,
   filterDashboard,
   filterDishDetail,
   filterDishList,
@@ -14,6 +15,8 @@ import {
   filterStandardList,
 } from '@/lib/seed/filterForIdentity'
 import type {
+  ActivityFeed,
+  ActivityQuery,
   Dashboard,
   DishRecipeDetail,
   DishRecipeListItem,
@@ -302,6 +305,20 @@ export async function fetchProductionDiff(
   const { data } = await http.get(
     `/cookbook/production-recipes/${id}/diff/?${params.toString()}`,
   )
+  return data
+}
+
+/* ── activity & history ───────────────────────────────────────────── */
+export async function fetchActivity(params: ActivityQuery): Promise<ActivityFeed> {
+  if (USE_SEED) {
+    await delay(200)
+    return filterActivityFeed(seed.seedActivityFeed(params))
+  }
+  const clean: Record<string, string | number> = {}
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== '' && v !== null) clean[k] = v as string | number
+  }
+  const { data } = await http.get<ActivityFeed>('/cookbook/activity/', { params: clean })
   return data
 }
 

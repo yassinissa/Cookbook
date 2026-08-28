@@ -60,7 +60,7 @@ class DishRecipeListSerializer(HidesCostingFields, serializers.ModelSerializer):
         model  = DishRecipe
         fields = [
             'id', 'name_en', 'name_ar', 'recipe_code', 'branch', 'category', 'category_name',
-            'section', 'section_name', 'pos_item_name', 'selling_price', 'cost',
+            'section', 'section_name', 'pos_item_name', 'selling_price', 'cost', 'image_url',
             'rating', 'rating_status', 'has_standard', 'version', 'is_current', 'ingredient_count', 'created_at',
         ]
 
