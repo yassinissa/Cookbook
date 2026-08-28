@@ -4,23 +4,43 @@ import { Drawer } from '@/components/Drawer'
 import { Icon } from '@/components/Icon'
 import { Pill } from '@/components/Pill'
 import { ErrorState, LoadingRow } from '@/components/States'
-import { useDishDiff, useDishVersions } from '@/lib/queries'
+import {
+  useDishDiff,
+  useDishVersions,
+  useProductionDiff,
+  useProductionVersions,
+} from '@/lib/queries'
 import { kwd, shortDate } from '@/lib/format'
 import { cn } from '@/lib/cn'
 import { useI18n, type TFunc } from '@/i18n'
 import type { VersionDiff, VersionRow } from '@/types/api'
 
+type RecipeKind = 'dish' | 'production'
+
+function useVersions(kind: RecipeKind, id: string, enabled: boolean) {
+  const dish = useDishVersions(id, enabled && kind === 'dish')
+  const prod = useProductionVersions(id, enabled && kind === 'production')
+  return kind === 'dish' ? dish : prod
+}
+function useDiff(kind: RecipeKind, id: string, versionId: string) {
+  const dish = useDishDiff(id, versionId, undefined, kind === 'dish')
+  const prod = useProductionDiff(id, versionId, undefined, kind === 'production')
+  return kind === 'dish' ? dish : prod
+}
+
 export function VersionDrawer({
-  dishId,
+  recipeId,
+  kind = 'dish',
   open,
   onClose,
 }: {
-  dishId: string
+  recipeId: string
+  kind?: RecipeKind
   open: boolean
   onClose: () => void
 }) {
   const { t, locale } = useI18n()
-  const { data: versions, isLoading, isError, refetch } = useDishVersions(dishId, open)
+  const { data: versions, isLoading, isError, refetch } = useVersions(kind, recipeId, open)
   const [compare, setCompare] = useState<string | null>(null)
 
   return (
@@ -50,7 +70,14 @@ export function VersionDrawer({
             ))}
           </ol>
 
-          {compare && <DiffView dishId={dishId} versionId={compare} onClear={() => setCompare(null)} />}
+          {compare && (
+            <DiffView
+              kind={kind}
+              recipeId={recipeId}
+              versionId={compare}
+              onClear={() => setCompare(null)}
+            />
+          )}
         </div>
       )}
     </Drawer>
@@ -124,16 +151,18 @@ function VersionItem({
 }
 
 function DiffView({
-  dishId,
+  kind,
+  recipeId,
   versionId,
   onClear,
 }: {
-  dishId: string
+  kind: RecipeKind
+  recipeId: string
   versionId: string
   onClear: () => void
 }) {
   const { t } = useI18n()
-  const { data, isLoading, isError, refetch } = useDishDiff(dishId, versionId, undefined, true)
+  const { data, isLoading, isError, refetch } = useDiff(kind, recipeId, versionId)
 
   return (
     <div className="rounded-card border border-hairline bg-surface-sunken p-4">

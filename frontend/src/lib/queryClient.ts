@@ -20,6 +20,11 @@ export const qk = {
   dish: (id: string) => ['dishes', id] as const,
   dishVersions: (id: string) => ['dishes', id, 'versions'] as const,
   dishDiff: (id: string, a?: string, b?: string) => ['dishes', id, 'diff', a ?? '', b ?? ''] as const,
+  production: ['production'] as const,
+  productionRecipe: (id: string) => ['production', id] as const,
+  productionVersions: (id: string) => ['production', id, 'versions'] as const,
+  productionDiff: (id: string, a?: string, b?: string) =>
+    ['production', id, 'diff', a ?? '', b ?? ''] as const,
   menus: ['menus'] as const,
   menuByBranch: (branchId: string) => ['menus', 'branch', branchId] as const,
   menuSnapshots: (menuId: string) => ['menus', menuId, 'snapshots'] as const,

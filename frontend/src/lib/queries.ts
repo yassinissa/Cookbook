@@ -61,6 +61,40 @@ export function useDishDiff(id: string | undefined, a?: string, b?: string, enab
   })
 }
 
+export function useProductionRecipes(enabled = true) {
+  return useQuery({
+    queryKey: qk.production,
+    queryFn: api.fetchProductionRecipes,
+    enabled,
+  })
+}
+export function useProductionRecipe(id: string | undefined) {
+  return useQuery({
+    queryKey: qk.productionRecipe(id ?? ''),
+    queryFn: () => api.fetchProductionRecipe(id as string),
+    enabled: !!id,
+  })
+}
+export function useProductionVersions(id: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: qk.productionVersions(id ?? ''),
+    queryFn: () => api.fetchProductionVersions(id as string),
+    enabled: !!id && enabled,
+  })
+}
+export function useProductionDiff(
+  id: string | undefined,
+  a?: string,
+  b?: string,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: qk.productionDiff(id ?? '', a, b),
+    queryFn: () => api.fetchProductionDiff(id as string, a, b),
+    enabled: !!id && enabled,
+  })
+}
+
 export function useMenus() {
   return useQuery({ queryKey: qk.menus, queryFn: api.fetchMenus })
 }

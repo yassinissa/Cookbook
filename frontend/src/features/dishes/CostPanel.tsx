@@ -17,11 +17,17 @@ export function CostPanel({
   sellingPrice,
   onRecalculate,
   recalculating,
+  hideLabour,
+  perServingLabel,
 }: {
   breakdown: CostBreakdown | Record<string, never> | null | undefined
   sellingPrice?: string | null
   onRecalculate?: () => void
   recalculating?: boolean
+  /** Labour cost is deferred until the HR app exists — hide the tile for production. */
+  hideLabour?: boolean
+  /** Override the "Per serving" tile label (production says "Per batch"). */
+  perServingLabel?: string
 }) {
   const { t } = useI18n()
   const bd = isBreakdown(breakdown) ? breakdown : null
@@ -65,11 +71,20 @@ export function CostPanel({
         }
       />
       <CardBody className="space-y-4">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div
+          className={cn(
+            'grid gap-2',
+            hideLabour ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-4',
+          )}
+        >
           <Tile label={t('cost.tile.ingredients')} value={bd.items} />
           <Tile label={t('cost.tile.waste')} value={bd.waste} />
-          <Tile label={t('cost.tile.labour')} value={bd.labor} />
-          <Tile label={t('cost.tile.perServing')} value={bd.per_serving} accent />
+          {!hideLabour && <Tile label={t('cost.tile.labour')} value={bd.labor} />}
+          <Tile
+            label={perServingLabel ?? t('cost.tile.perServing')}
+            value={bd.per_serving}
+            accent
+          />
         </div>
 
         {fcp !== null && band && (

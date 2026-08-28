@@ -576,7 +576,7 @@ export function DishEditorPage() {
       </div>
 
       {savedId && (
-        <VersionDrawer dishId={savedId} open={versionsOpen} onClose={() => setVersionsOpen(false)} />
+        <VersionDrawer recipeId={savedId} open={versionsOpen} onClose={() => setVersionsOpen(false)} />
       )}
     </form>
   )

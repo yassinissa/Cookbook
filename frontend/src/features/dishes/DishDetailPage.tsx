@@ -236,7 +236,7 @@ export function DishDetailPage() {
         </div>
       </div>
 
-      {id && <VersionDrawer dishId={id} open={versionsOpen} onClose={() => setVersionsOpen(false)} />}
+      {id && <VersionDrawer recipeId={id} open={versionsOpen} onClose={() => setVersionsOpen(false)} />}
 
       <ConfirmDialog
         open={confirmDelete}

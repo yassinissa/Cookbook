@@ -248,6 +248,71 @@ export interface DishStandard {
   [k: string]: string | number | null | undefined
 }
 
+/* ── production recipes (prep kitchen) ──────────────────────────────── */
+export interface ProductionRecipeListItem {
+  id: ID
+  name_en: string
+  name_ar: string
+  recipe_code: string
+  prep_kitchen: string
+  prep_kitchen_ref: ID | null
+  prep_kitchen_name: string | null
+  section: ID | null
+  section_name: string | null
+  output_item_sku: string
+  output_qty: string
+  output_unit: ID | null
+  output_unit_code: string | null
+  cost: string
+  version: number
+  is_current: boolean
+  ingredient_count: number
+  created_at: string
+}
+
+export interface ProductionCostHistoryRow {
+  id: ID
+  cost: string
+  output_qty: string
+  created_at: string
+}
+
+export interface ProductionRecipeDetail {
+  id: ID
+  name_en: string
+  name_ar: string
+  recipe_code: string
+  revision: string
+  revision_date: string | null
+  prep_kitchen: string
+  prep_kitchen_ref: ID | null
+  section: Section | null
+  output_item_sku: string
+  output_qty: string
+  output_unit: UnitScale | null
+  prep_time_minutes: number | null
+  expected_waste_pct: string
+  include_labor_cost: boolean
+  labor_cost: string
+  cost: string
+  cost_breakdown: CostBreakdown | Record<string, never>
+  nutrition: NutritionRollup | Record<string, never>
+  cost_per_unit: string | null
+  approved_by: Approver | null
+  qa_approved_by: Approver | null
+  approved_at: string | null
+  notes: string
+  version: number
+  is_current: boolean
+  ingredients: IngredientLine[]
+  steps: StepLine[]
+  cost_history: ProductionCostHistoryRow[]
+  activity_log: ActivityLogEntry[]
+  created_at: string
+  updated_at: string
+  _warnings?: string[]
+}
+
 /* ── version history ────────────────────────────────────────────────── */
 export interface VersionSummary {
   fields_changed: string[]

@@ -24,6 +24,8 @@ import type {
   MenuSnapshot,
   MenuTrends,
   Paginated,
+  ProductionRecipeDetail,
+  ProductionRecipeListItem,
   ReferenceData,
   VersionDiff,
   VersionRow,
@@ -211,6 +213,92 @@ export async function fetchDishDiff(
   if (a) params.set('a', a)
   if (b) params.set('b', b)
   const { data } = await http.get(`/cookbook/dish-recipes/${id}/diff/?${params.toString()}`)
+  return data
+}
+
+/* ── production recipes (prep kitchen) ─────────────────────────────── */
+export async function fetchProductionRecipes(): Promise<ProductionRecipeListItem[]> {
+  if (USE_SEED) {
+    await delay()
+    return seed.seedProductionList()
+  }
+  const { data } = await http.get<
+    Paginated<ProductionRecipeListItem> | ProductionRecipeListItem[]
+  >('/cookbook/production-recipes/')
+  return listData(data)
+}
+
+export async function fetchProductionRecipe(id: string): Promise<ProductionRecipeDetail> {
+  if (USE_SEED) {
+    await delay()
+    return seed.seedProductionDetail(id)
+  }
+  const { data } = await http.get(`/cookbook/production-recipes/${id}/`)
+  return data
+}
+
+export async function createProductionRecipe(payload: unknown): Promise<ProductionRecipeDetail> {
+  if (USE_SEED) {
+    await delay()
+    return seed.seedProductionDetail('toum')
+  }
+  const { data } = await http.post('/cookbook/production-recipes/', payload)
+  return data
+}
+
+export async function updateProductionRecipe(
+  id: string,
+  payload: unknown,
+): Promise<ProductionRecipeDetail> {
+  if (USE_SEED) {
+    await delay()
+    return seed.seedProductionDetail(id)
+  }
+  const { data } = await http.patch(`/cookbook/production-recipes/${id}/`, payload)
+  return data
+}
+
+export async function deleteProductionRecipe(id: string): Promise<void> {
+  if (USE_SEED) {
+    await delay()
+    return
+  }
+  await http.delete(`/cookbook/production-recipes/${id}/`)
+}
+
+export async function recalcProductionRecipe(id: string): Promise<ProductionRecipeDetail> {
+  if (USE_SEED) {
+    await delay(500)
+    return seed.seedProductionDetail(id)
+  }
+  const { data } = await http.post(`/cookbook/production-recipes/${id}/recalculate/`)
+  return data
+}
+
+export async function fetchProductionVersions(id: string): Promise<VersionRow[]> {
+  if (USE_SEED) {
+    await delay()
+    return seed.seedProductionVersions(id).versions
+  }
+  const { data } = await http.get(`/cookbook/production-recipes/${id}/versions/`)
+  return data.versions
+}
+
+export async function fetchProductionDiff(
+  id: string,
+  a?: string,
+  b?: string,
+): Promise<VersionDiff> {
+  if (USE_SEED) {
+    await delay()
+    return seed.seedProductionDiff()
+  }
+  const params = new URLSearchParams()
+  if (a) params.set('a', a)
+  if (b) params.set('b', b)
+  const { data } = await http.get(
+    `/cookbook/production-recipes/${id}/diff/?${params.toString()}`,
+  )
   return data
 }
 

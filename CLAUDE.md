@@ -38,15 +38,22 @@ before calling anything done — not just "the happy path returns 200."
   `NAV` for the desktop Sidebar, `BOTTOM_NAV` for the mobile bar whose
   last tab, "More", opens `src/features/more` = the whole capability-
   filtered nav as a screen), `src/features/{dashboard,dishes,menus,auth,
-  more,placeholder}`, `src/lib/{api,queries,http,format,seed}`, `src/i18n`
-  (bespoke EN/AR provider, full RTL via `dir` + logical `ms-*/pe-*` utils),
-  `src/theme` (light/dark via `data-theme`). Slice 1 screens built:
-  Dashboard, Dish list / editor / detail (live cost breakdown, nutrition,
-  version-history drawer + diff), Menus list / branch detail (trend charts,
-  snapshots), Inventory Items (`src/features/inventory` — server-searched,
-  paged table + read-only detail drawer; reads through the Cookbook proxy).
-  Production / QA-standards / Activity / Documents / POS routes render
-  `ComingSoonPage` until their slice lands. `VITE_USE_SEED=1`
+  more,placeholder,production}`, `src/lib/{api,queries,http,format,seed}`,
+  `src/i18n` (bespoke EN/AR provider, full RTL via `dir` + logical
+  `ms-*/pe-*` utils), `src/theme` (light/dark via `data-theme`). Slice 1
+  screens built: Dashboard, Dish list / editor / detail (live cost
+  breakdown, nutrition, version-history drawer + diff), Production
+  (prep-kitchen) list / editor / detail — same shape as Dishes minus the
+  plated photo, food-cost only (no labour — see below), yield card shows
+  cost per output unit; `VersionDrawer` is shared, `kind="production"`.
+  Menus list / branch detail (trend charts, snapshots), Inventory Items
+  (`src/features/inventory` — server-searched, paged table + read-only
+  detail drawer; reads through the Cookbook proxy).
+  QA-standards / Activity / Documents / POS routes render
+  `ComingSoonPage` until their slice lands. **Labour cost is deferred**
+  until a separate HR app exists — the Production editor hides labour
+  fields and sends `include_labor_cost: false`; `Section` stays in the
+  model but its labour role is dormant. `VITE_USE_SEED=1`
   serves `src/lib/seed` (curated Lebanese demo data) instead of the API —
   hermetic, for the leadership demo.
 - **Design system** ("Test-Kitchen Ledger", 2026-08-26 pass): tokens are CSS
@@ -88,7 +95,7 @@ before calling anything done — not just "the happy path returns 200."
   (`RequireCapability`), nav + action buttons gated by `can(cap)`,
   `src/features/admin/` screens. Seed builds carry a TopBar **identity
   switcher** (`src/shell/IdentitySwitcher.tsx`) to demo scoped users.
-- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 59 tests
+- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 65 tests
   (`APITestCase`; cookbook test clients are superusers so they bypass RBAC —
   `apps/accounts/tests/` covers enforcement). Frontend has none yet. Grow
   both alongside new work.

@@ -12,6 +12,8 @@ import type {
   MenuSnapshot,
   MenuTrends,
   NutritionRollup,
+  ProductionRecipeDetail,
+  ProductionRecipeListItem,
   ReferenceData,
   VersionDiff,
   VersionRow,
@@ -424,6 +426,382 @@ export function seedDiff(): VersionDiff {
       count_from: 3,
       count_to: 4,
     },
+  }
+}
+
+/* ── production recipes (prep kitchen) ─────────────────────────────── */
+interface SeedProdIngredient {
+  sku: string
+  name: string
+  name_ar?: string
+  prep?: string
+  qty: string
+  unit: string
+  amount: number
+}
+interface SeedProd {
+  slug: string
+  name_en: string
+  name_ar: string
+  code: string
+  prepKitchen: string
+  section: string
+  output_sku: string
+  output_qty: string
+  output_unit: string
+  prepMinutes: number
+  wastePct: number
+  ingredients: SeedProdIngredient[]
+  steps: string[]
+  version?: number
+}
+
+const PRODUCTION: SeedProd[] = [
+  {
+    slug: 'toum',
+    name_en: 'Toum — Garlic Emulsion',
+    name_ar: 'ثوم مستحلب',
+    code: 'P-101',
+    prepKitchen: 'pk-sauce',
+    section: 'sec-cold',
+    output_sku: 'PR-TOUM',
+    output_qty: '2.400',
+    output_unit: 'u-kg',
+    prepMinutes: 25,
+    wastePct: 3,
+    ingredients: [
+      { sku: 'B41', name: 'Garlic, peeled', prep: 'Cloves', qty: '500', unit: 'u-g', amount: 1.94 },
+      { sku: 'B2050', name: 'Lemon juice', prep: 'Fresh', qty: '180', unit: 'u-ml', amount: 0.63 },
+      { sku: 'B77', name: 'Sunflower oil', qty: '1600', unit: 'u-ml', amount: 2.72 },
+      { sku: 'B13', name: 'Sea salt', qty: '18', unit: 'u-g', amount: 0.05 },
+    ],
+    steps: [
+      'Blitz garlic with salt to a smooth paste, scraping down twice.',
+      'With the motor running, stream oil and lemon juice alternately, thin ribbons only.',
+      'Emulsion should hold a peak; pack into sanitised tubs, film to the surface.',
+    ],
+  },
+  {
+    slug: 'tahini-sauce',
+    name_en: 'Tahini Sauce Base',
+    name_ar: 'صلصة الطحينة',
+    code: 'P-102',
+    prepKitchen: 'pk-sauce',
+    section: 'sec-cold',
+    output_sku: 'PR-TAHINI',
+    output_qty: '3.000',
+    output_unit: 'u-kg',
+    prepMinutes: 15,
+    wastePct: 2,
+    ingredients: [
+      { sku: 'B90', name: 'Tahini paste', qty: '1400', unit: 'u-g', amount: 3.36 },
+      { sku: 'B2050', name: 'Lemon juice', prep: 'Fresh', qty: '360', unit: 'u-ml', amount: 1.26 },
+      { sku: 'B41', name: 'Garlic, peeled', prep: 'Grated', qty: '60', unit: 'u-g', amount: 0.23 },
+      { sku: 'B13', name: 'Sea salt', qty: '22', unit: 'u-g', amount: 0.06 },
+      { sku: 'B99', name: 'Water, chilled', qty: '1100', unit: 'u-ml', amount: 0 },
+    ],
+    steps: [
+      'Whisk tahini with lemon and garlic — it will seize, keep going.',
+      'Add cold water in stages until it loosens to a pourable cream.',
+      'Season, pass through a fine chinois, store cold.',
+    ],
+  },
+  {
+    slug: 'pita-dough',
+    name_en: 'Pita Dough',
+    name_ar: 'عجينة الخبز',
+    code: 'P-201',
+    prepKitchen: 'pk-bread',
+    section: 'sec-pastry',
+    output_sku: 'PR-PITADOUGH',
+    output_qty: '48.000',
+    output_unit: 'u-pc',
+    prepMinutes: 40,
+    wastePct: 4,
+    ingredients: [
+      { sku: 'B01', name: 'Bread flour', qty: '3000', unit: 'u-g', amount: 1.68 },
+      { sku: 'B02', name: 'Fresh yeast', qty: '60', unit: 'u-g', amount: 0.21 },
+      { sku: 'B77', name: 'Sunflower oil', qty: '90', unit: 'u-ml', amount: 0.15 },
+      { sku: 'B13', name: 'Sea salt', qty: '54', unit: 'u-g', amount: 0.14 },
+      { sku: 'B99', name: 'Water, warm', qty: '1900', unit: 'u-ml', amount: 0 },
+    ],
+    steps: [
+      'Dissolve yeast in warm water; add flour, salt, oil.',
+      'Knead 8 minutes to a smooth, slightly tacky dough; bulk prove 45 minutes.',
+      'Scale to 95 g, ball, bench-rest 15 minutes, then sheet and bake at 300°C.',
+    ],
+    version: 2,
+  },
+  {
+    slug: 'chicken-stock',
+    name_en: 'Brown Chicken Stock',
+    name_ar: 'مرق الدجاج',
+    code: 'P-301',
+    prepKitchen: 'pk-hot',
+    section: 'sec-hot',
+    output_sku: 'PR-CHXSTOCK',
+    output_qty: '18.000',
+    output_unit: 'u-ltr',
+    prepMinutes: 30,
+    wastePct: 6,
+    ingredients: [
+      { sku: 'B120', name: 'Chicken carcass', prep: 'Roasted', qty: '6000', unit: 'u-g', amount: 4.2 },
+      { sku: 'B121', name: 'Mirepoix mix', prep: 'Rough cut', qty: '1800', unit: 'u-g', amount: 0.9 },
+      { sku: 'B122', name: 'Tomato paste', qty: '200', unit: 'u-g', amount: 0.32 },
+      { sku: 'B123', name: 'Bay & peppercorn sachet', qty: '2', unit: 'u-pc', amount: 0.18 },
+    ],
+    steps: [
+      'Roast carcasses and mirepoix to deep colour; deglaze the tray.',
+      'Cover with cold water, bring to a bare simmer, skim for the first hour.',
+      'Simmer 6 hours, strain, chill rapidly, portion into 3 L bags.',
+    ],
+  },
+  {
+    slug: 'pomegranate-reduction',
+    name_en: 'Pomegranate Molasses Reduction',
+    name_ar: 'دبس الرمان المركّز',
+    code: 'P-103',
+    prepKitchen: 'pk-sauce',
+    section: 'sec-hot',
+    output_sku: 'PR-POMRED',
+    output_qty: '1.600',
+    output_unit: 'u-ltr',
+    prepMinutes: 20,
+    wastePct: 8,
+    ingredients: [
+      { sku: 'B60', name: 'Pomegranate juice', qty: '3000', unit: 'u-ml', amount: 5.1 },
+      { sku: 'B61', name: 'Caster sugar', qty: '240', unit: 'u-g', amount: 0.19 },
+      { sku: 'B2050', name: 'Lemon juice', prep: 'Fresh', qty: '90', unit: 'u-ml', amount: 0.32 },
+    ],
+    steps: [
+      'Combine juice and sugar, bring to a simmer.',
+      'Reduce slowly by just over half until it coats a spoon.',
+      'Finish with lemon, cool — it thickens further; bottle.',
+    ],
+  },
+  {
+    slug: 'shawarma-marinade',
+    name_en: 'Chicken Shawarma Marinade',
+    name_ar: 'تتبيلة شاورما الدجاج',
+    code: 'P-401',
+    prepKitchen: 'pk-poultry',
+    section: 'sec-grill',
+    output_sku: 'PR-SHWMAR',
+    output_qty: '4.500',
+    output_unit: 'u-kg',
+    prepMinutes: 20,
+    wastePct: 3,
+    ingredients: [
+      { sku: 'B70', name: 'Laban / yoghurt', qty: '1600', unit: 'u-g', amount: 1.44 },
+      { sku: 'B71', name: 'Shawarma spice blend', qty: '260', unit: 'u-g', amount: 1.95 },
+      { sku: 'B72', name: 'Garlic paste', qty: '180', unit: 'u-g', amount: 0.7 },
+      { sku: 'B2050', name: 'Lemon juice', prep: 'Fresh', qty: '300', unit: 'u-ml', amount: 1.05 },
+      { sku: 'B77', name: 'Sunflower oil', qty: '400', unit: 'u-ml', amount: 0.68 },
+      { sku: 'B13', name: 'Sea salt', qty: '70', unit: 'u-g', amount: 0.18 },
+    ],
+    steps: [
+      'Blend all wet ingredients smooth; whisk in the spice blend.',
+      'Check seasoning against a poached test piece.',
+      'Label with the batch date — use within 48 hours.',
+    ],
+  },
+]
+
+const prodBreakdown = (p: SeedProd) => {
+  const items = p.ingredients.reduce((s, i) => s + i.amount, 0)
+  const waste = items * (p.wastePct / 100)
+  const perBatch = items + waste
+  const perUnit = Number(p.output_qty) > 0 ? perBatch / Number(p.output_qty) : null
+  return {
+    items: r3(items),
+    waste: r3(waste),
+    labor: '0.000',
+    per_serving: r3(perBatch),
+    food_cost_pct: null,
+    revenue_pct: null,
+    cost_per_unit: perUnit === null ? null : r3(perUnit),
+    scenarios: [] as never[],
+    lines: p.ingredients.map((i) => ({
+      sku: i.sku,
+      quantity: i.qty,
+      unit: unitCode(i.unit),
+      amount: i.amount.toFixed(4),
+      status: 'ok' as const,
+      detail: '',
+    })),
+    issues: [] as never[],
+  }
+}
+
+const prodCost = (p: SeedProd) => Number(prodBreakdown(p).per_serving)
+
+export function seedProductionList(): ProductionRecipeListItem[] {
+  return PRODUCTION.map((p) => ({
+    id: p.slug,
+    name_en: p.name_en,
+    name_ar: p.name_ar,
+    recipe_code: p.code,
+    prep_kitchen: PREP_KITCHENS.find((k) => k.id === p.prepKitchen)?.name_en ?? '',
+    prep_kitchen_ref: p.prepKitchen,
+    prep_kitchen_name: PREP_KITCHENS.find((k) => k.id === p.prepKitchen)?.name_en ?? null,
+    section: p.section,
+    section_name: secById(p.section).name,
+    output_item_sku: p.output_sku,
+    output_qty: p.output_qty,
+    output_unit: p.output_unit,
+    output_unit_code: unitCode(p.output_unit),
+    cost: r3(prodCost(p)),
+    version: p.version ?? 1,
+    is_current: true,
+    ingredient_count: p.ingredients.length,
+    created_at: '2026-06-15T08:00:00Z',
+  }))
+}
+
+export function seedProductionDetail(id: string): ProductionRecipeDetail {
+  const p = PRODUCTION.find((x) => x.slug === id) ?? PRODUCTION[0]
+  const bd = prodBreakdown(p)
+  return {
+    id: p.slug,
+    name_en: p.name_en,
+    name_ar: p.name_ar,
+    recipe_code: p.code,
+    revision: p.version && p.version > 1 ? `Rev.0${p.version}` : 'Rev.01',
+    revision_date: '2026-08-04',
+    prep_kitchen: PREP_KITCHENS.find((k) => k.id === p.prepKitchen)?.name_en ?? '',
+    prep_kitchen_ref: p.prepKitchen,
+    section: secById(p.section),
+    output_item_sku: p.output_sku,
+    output_qty: p.output_qty,
+    output_unit: UNITS.find((u) => u.id === p.output_unit) ?? null,
+    prep_time_minutes: p.prepMinutes,
+    expected_waste_pct: r2(p.wastePct),
+    include_labor_cost: false,
+    labor_cost: '0.000',
+    cost: r3(prodCost(p)),
+    cost_breakdown: bd,
+    nutrition: {},
+    cost_per_unit: bd.cost_per_unit,
+    approved_by: APPROVERS[1],
+    qa_approved_by: APPROVERS[2],
+    approved_at: '2026-08-05',
+    notes: 'Yield assumes standard trim. Re-cost when the base oil contract changes.',
+    version: p.version ?? 1,
+    is_current: true,
+    ingredients: p.ingredients.map((i, idx) => ({
+      id: `${p.slug}-ing-${idx}`,
+      order: idx + 1,
+      item_sku: i.sku,
+      item_name_snapshot: i.name,
+      prep_note: i.prep ?? '',
+      quantity: i.qty,
+      unit: i.unit,
+      unit_detail: UNITS.find((u) => u.id === i.unit) ?? null,
+    })),
+    steps: p.steps.map((instruction, idx) => ({
+      id: `${p.slug}-step-${idx}`,
+      step_number: idx + 1,
+      instruction,
+    })),
+    cost_history: [
+      { id: `${p.slug}-ch-1`, cost: r3(prodCost(p) * 0.93), output_qty: p.output_qty, created_at: '2026-06-15T08:00:00Z' },
+      { id: `${p.slug}-ch-2`, cost: r3(prodCost(p)), output_qty: p.output_qty, created_at: '2026-08-04T10:00:00Z' },
+    ],
+    activity_log: [
+      { id: `${p.slug}-al-1`, action_type: 'created', action_type_display: 'Created', description: '', changed_by: 'karim', created_at: '2026-06-15T08:00:00Z' },
+      { id: `${p.slug}-al-2`, action_type: 'recalculated', action_type_display: 'Cost recalculated', description: '', changed_by: 'omar', created_at: '2026-08-04T10:00:00Z' },
+    ],
+    created_at: '2026-06-15T08:00:00Z',
+    updated_at: '2026-08-04T10:00:00Z',
+  }
+}
+
+export function seedProductionVersions(id: string): { lineage_key: string; versions: VersionRow[] } {
+  const p = PRODUCTION.find((x) => x.slug === id) ?? PRODUCTION[0]
+  const current = seedProductionDetail(id)
+  if ((p.version ?? 1) <= 1) {
+    return {
+      lineage_key: `lin-${id}`,
+      versions: [
+        {
+          id,
+          version: 1,
+          is_current: true,
+          is_viewed: true,
+          revision: 'Rev.01',
+          revision_date: '2026-06-15',
+          cost: current.cost,
+          selling_price: null,
+          output_qty: p.output_qty,
+          created_at: '2026-06-15T08:00:00Z',
+          updated_at: '2026-06-15T08:00:00Z',
+          changes_from_previous: null,
+        },
+      ],
+    }
+  }
+  return {
+    lineage_key: `lin-${id}`,
+    versions: [
+      {
+        id: `${id}-v1`,
+        version: 1,
+        is_current: false,
+        is_viewed: false,
+        revision: 'Rev.01',
+        revision_date: '2026-06-15',
+        cost: r3(prodCost(p) * 0.93),
+        selling_price: null,
+        output_qty: '44.000',
+        created_at: '2026-06-15T08:00:00Z',
+        updated_at: '2026-06-15T08:00:00Z',
+        changes_from_previous: null,
+      },
+      {
+        id,
+        version: 2,
+        is_current: true,
+        is_viewed: true,
+        revision: 'Rev.02',
+        revision_date: '2026-08-04',
+        cost: current.cost,
+        selling_price: null,
+        output_qty: p.output_qty,
+        created_at: '2026-08-04T10:00:00Z',
+        updated_at: '2026-08-04T10:00:00Z',
+        changes_from_previous: {
+          fields_changed: ['output_qty', 'expected_waste_pct'],
+          ingredients_added: 1,
+          ingredients_removed: 0,
+          ingredients_changed: 1,
+          steps_added: 0,
+          steps_removed: 0,
+        },
+      },
+    ],
+  }
+}
+
+export function seedProductionDiff(): VersionDiff {
+  return {
+    from: { id: 'pita-dough-v1', version: 1 },
+    to: { id: 'pita-dough', version: 2 },
+    fields: [
+      { field: 'output_qty', from: '44.000', to: '48.000' },
+      { field: 'expected_waste_pct', from: '6.00', to: '4.00' },
+    ],
+    ingredients: {
+      added: [{ item_sku: 'B77', item_name_snapshot: 'Sunflower oil', prep_note: '', quantity: '90', unit: 'ml' }],
+      removed: [],
+      changed: [
+        {
+          label: 'B02 (Fresh yeast)',
+          from: { item_sku: 'B02', item_name_snapshot: 'Fresh yeast', prep_note: '', quantity: '75', unit: 'g' },
+          to: { item_sku: 'B02', item_name_snapshot: 'Fresh yeast', prep_note: '', quantity: '60', unit: 'g' },
+        },
+      ],
+    },
+    steps: { added: [], removed: [], count_from: 3, count_to: 3 },
   }
 }
 
