@@ -149,7 +149,11 @@ class InventoryClient:
         params = {**(params or {}), 'store_type': 'production'}
         return self._get_all_pages('/stores/', params=params)
 
-    # ── write: recipe content (not wired yet — see plan Stage 8) ──────────
+    # ── write: recipe content (apps.cookbook.publishing) ─────────────────
+    # The platform's recipe write serializers do NOT echo the row `id` (they
+    # reuse the write serializer for the response, and `id` isn't a write
+    # field), so after a create the caller looks the row up by name via
+    # find_*_recipe below.
     def create_production_recipe(self, payload):
         return self._request('POST', '/recipes/production/', json=payload)
 
@@ -161,3 +165,15 @@ class InventoryClient:
 
     def update_dish_recipe(self, recipe_id, payload):
         return self._request('PATCH', f'/recipes/dish/{recipe_id}/', json=payload)
+
+    def find_dish_recipe(self, name_en):
+        rows = self._get_all_pages('/recipes/dish/', params={'search': name_en})
+        return next((r for r in rows
+                     if r.get('name_en') == name_en and r.get('is_current')), None)
+
+    def find_production_recipe(self, name_en, prep_kitchen_id):
+        rows = self._get_all_pages('/recipes/production/')
+        return next((r for r in rows
+                     if r.get('name_en') == name_en
+                     and str(r.get('prep_kitchen')) == str(prep_kitchen_id)
+                     and r.get('is_current')), None)

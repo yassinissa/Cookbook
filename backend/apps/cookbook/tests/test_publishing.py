@@ -43,12 +43,19 @@ class FakeClient:
         self.calls.append((verb, payload))
         if self.fail:
             raise InventoryAPIError('POST /recipes/dish/ failed: 400 {"name_en": ["exists"]}')
-        return {'id': 'inv-999'}
+        # the platform's write serializers do not echo `id`
+        return {k: payload.get(k) for k in ('name_en', 'name_ar', 'pos_item_name', 'notes')}
 
     def create_dish_recipe(self, payload):        return self._record('create_dish', payload)
     def update_dish_recipe(self, rid, payload):   return self._record(f'update_dish:{rid}', payload)
     def create_production_recipe(self, payload):  return self._record('create_prod', payload)
     def update_production_recipe(self, rid, p):   return self._record(f'update_prod:{rid}', p)
+
+    def find_dish_recipe(self, name_en):
+        return {'id': 'inv-999', 'name_en': name_en, 'is_current': True}
+
+    def find_production_recipe(self, name_en, prep_kitchen_id):
+        return {'id': 'inv-999', 'name_en': name_en, 'prep_kitchen': prep_kitchen_id, 'is_current': True}
 
 
 def patch_client(fake):

@@ -87,14 +87,19 @@ def publish_dish_recipe(recipe, *, client=None):
     }
     try:
         if recipe.inventory_recipe_id:
-            data = client.update_dish_recipe(recipe.inventory_recipe_id, payload)
+            client.update_dish_recipe(recipe.inventory_recipe_id, payload)
+            remote_id = recipe.inventory_recipe_id
         else:
-            data = client.create_dish_recipe(payload)
+            client.create_dish_recipe(payload)
+            row = client.find_dish_recipe(recipe.name_en)
+            if not row:
+                raise InventoryAPIError('recipe was created but could not be found to link its id')
+            remote_id = row['id']
     except InventoryAPIError as e:
         _finish_error(recipe, e)
         raise RecipePublishError(f'inventory-platform rejected the recipe: {e}')
 
-    _finish_ok(recipe, data['id'])
+    _finish_ok(recipe, remote_id)
     return _result(recipe, warnings)
 
 
@@ -126,14 +131,19 @@ def publish_production_recipe(recipe, *, client=None):
     }
     try:
         if recipe.inventory_recipe_id:
-            data = client.update_production_recipe(recipe.inventory_recipe_id, payload)
+            client.update_production_recipe(recipe.inventory_recipe_id, payload)
+            remote_id = recipe.inventory_recipe_id
         else:
-            data = client.create_production_recipe(payload)
+            client.create_production_recipe(payload)
+            row = client.find_production_recipe(recipe.name_en, prep_kitchen_id)
+            if not row:
+                raise InventoryAPIError('recipe was created but could not be found to link its id')
+            remote_id = row['id']
     except InventoryAPIError as e:
         _finish_error(recipe, e)
         raise RecipePublishError(f'inventory-platform rejected the recipe: {e}')
 
-    _finish_ok(recipe, data['id'])
+    _finish_ok(recipe, remote_id)
     return _result(recipe, warnings)
 
 
