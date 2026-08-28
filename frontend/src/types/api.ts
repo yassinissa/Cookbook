@@ -166,6 +166,7 @@ export interface DishRecipeListItem {
   rating: string | null
   rating_status: RatingStatus
   has_standard: boolean
+  is_published: boolean
   version: number
   is_current: boolean
   ingredient_count: number
@@ -212,9 +213,20 @@ export interface DishRecipeDetail {
   standard: DishStandard | null
   price_history: { id: ID; cost: string; selling_price: string | null; created_at: string }[]
   activity_log: ActivityLogEntry[]
+  inventory_recipe_id: string
+  published_at: string | null
+  publish_error: string
+  publish_stale: boolean
   created_at: string
   updated_at: string
   _warnings?: string[]
+  _publish?: PublishResult
+}
+
+export interface PublishResult {
+  inventory_recipe_id: string
+  published_at: string
+  warnings: string[]
 }
 
 export interface ActivityLogEntry {
@@ -269,6 +281,7 @@ export interface ProductionRecipeListItem {
   cost: string
   version: number
   is_current: boolean
+  is_published: boolean
   ingredient_count: number
   created_at: string
 }
@@ -311,9 +324,14 @@ export interface ProductionRecipeDetail {
   steps: StepLine[]
   cost_history: ProductionCostHistoryRow[]
   activity_log: ActivityLogEntry[]
+  inventory_recipe_id: string
+  published_at: string | null
+  publish_error: string
+  publish_stale: boolean
   created_at: string
   updated_at: string
   _warnings?: string[]
+  _publish?: PublishResult
 }
 
 /* ── QA/QC standards (standalone screen) ────────────────────────────── */

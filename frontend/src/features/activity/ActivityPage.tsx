@@ -20,6 +20,7 @@ const ACTION_ICON: Record<string, IconName> = {
   deleted: 'trash',
   standard_updated: 'shield',
   standard_approved: 'check',
+  published: 'external',
 }
 
 export function ActivityPage() {

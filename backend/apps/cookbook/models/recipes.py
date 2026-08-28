@@ -109,6 +109,16 @@ class RecipeCardFields(BaseModel):
 
     notes                = models.TextField(blank=True)
 
+    # ── inventory-platform publish link ───────────────────────────────────
+    # Cookbook authors recipes; a finished one is pushed to inventory-platform
+    # (apps.cookbook.publishing). The remote id is stored here so a re-publish
+    # PATCHes the same record instead of creating a duplicate. `published_at`
+    # older than `updated_at` means the recipe was edited since its last push.
+    inventory_recipe_id  = models.CharField(max_length=64, blank=True, db_index=True)
+    published_at         = models.DateTimeField(null=True, blank=True)
+    publish_error        = models.TextField(blank=True,
+                             help_text='Last publish failure; cleared on the next success.')
+
     class Meta(BaseModel.Meta):
         abstract = True
 

@@ -25,6 +25,7 @@ class ActivityActionType(models.TextChoices):
     DELETED           = 'deleted',           'Deleted'
     STANDARD_UPDATED  = 'standard_updated',  'QA standard updated'
     STANDARD_APPROVED = 'standard_approved', 'QA standard approved'
+    PUBLISHED         = 'published',         'Published to inventory'
 
 
 class DishPriceHistory(BaseModel):

@@ -10,6 +10,7 @@ export const CAPABILITIES: { code: CapabilityCode; label: string; group: string 
   { code: 'production.view', label: 'View production recipes', group: 'Production recipes' },
   { code: 'production.edit', label: 'Create & edit production recipes', group: 'Production recipes' },
   { code: 'production.delete', label: 'Delete production recipes', group: 'Production recipes' },
+  { code: 'recipe.publish', label: 'Publish recipes to inventory-platform', group: 'Publishing' },
   { code: 'menu.view', label: 'View branch menus', group: 'Menus' },
   { code: 'menu.edit', label: 'Edit menu lines & build menus', group: 'Menus' },
   { code: 'menu.snapshot', label: 'Take menu cost snapshots', group: 'Menus' },

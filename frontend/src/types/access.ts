@@ -4,6 +4,7 @@ export type CapabilityCode =
   | 'dashboard.view'
   | 'dish.view' | 'dish.edit' | 'dish.delete' | 'recipe.history'
   | 'production.view' | 'production.edit' | 'production.delete'
+  | 'recipe.publish'
   | 'menu.view' | 'menu.edit' | 'menu.snapshot'
   | 'standard.view' | 'standard.edit'
   | 'costing.view' | 'costing.recalculate'

@@ -26,6 +26,9 @@ CAPABILITIES = [
     ('production.edit',     'Create & edit production recipes',  'Production recipes'),
     ('production.delete',   'Delete production recipes',         'Production recipes'),
 
+    # Publishing to inventory-platform
+    ('recipe.publish',      'Publish recipes to inventory-platform', 'Publishing'),
+
     # Menus & branches
     ('menu.view',           'View branch menus',                 'Menus'),
     ('menu.edit',           'Edit menu lines & build menus',     'Menus'),
@@ -82,7 +85,7 @@ SYSTEM_ROLES = [
             'menu.view', 'menu.edit', 'menu.snapshot',
             'standard.view', 'standard.edit',
             'costing.view', 'costing.recalculate', 'inventory.view', 'nutrition.view',
-            'document.export', 'activity.view',
+            'document.export', 'activity.view', 'recipe.publish',
         ],
         'grants_all_branches': True,
         'grants_all_prep_kitchens': True,

@@ -55,6 +55,7 @@ const TASTE_AXES = [
 
 const r3 = (n: number) => n.toFixed(3)
 const r2 = (n: number) => n.toFixed(2)
+const codeNum = (code: string) => Number(code.replace(/\D/g, '') || '0')
 
 function branchById(id: string) {
   return BRANCHES.find((b) => b.id === id)!
@@ -236,6 +237,7 @@ export function seedDishList(): DishRecipeListItem[] {
       rating: String(d.rating),
       rating_status: d.ratingStatus,
       has_standard: true,
+      is_published: dishPublished(d),
       version: d.slug === 'tabbouleh' ? 3 : 1,
       is_current: true,
       ingredient_count: d.ingredients.length,
@@ -307,8 +309,31 @@ export function seedDishDetail(id: string): DishRecipeDetail {
       { id: `${d.slug}-al-2`, action_type: 'updated', action_type_display: 'Updated', description: 'Revised to v2', changed_by: 'karim', created_at: '2026-07-18T11:10:00Z' },
       { id: `${d.slug}-al-3`, action_type: 'recalculated', action_type_display: 'Cost recalculated', description: '', changed_by: 'omar', created_at: '2026-08-10T14:30:00Z' },
     ],
+    inventory_recipe_id: dishPublished(d) ? `inv-d-${d.slug}` : '',
+    published_at: dishPublished(d) ? '2026-08-12T10:00:00Z' : null,
+    publish_error: '',
+    publish_stale: dishPublished(d) && codeNum(d.code) % 4 === 0,
     created_at: '2026-06-01T09:00:00Z',
     updated_at: '2026-08-10T14:30:00Z',
+  }
+}
+
+/** deterministic: even recipe codes are already published to inventory */
+const dishPublished = (d: SeedDish) => codeNum(d.code) % 2 === 0
+
+export function seedPublishDish(id: string): DishRecipeDetail {
+  const base = seedDishDetail(id)
+  return {
+    ...base,
+    inventory_recipe_id: `inv-d-${id}`,
+    published_at: new Date().toISOString(),
+    publish_error: '',
+    publish_stale: false,
+    _publish: {
+      inventory_recipe_id: `inv-d-${id}`,
+      published_at: new Date().toISOString(),
+      warnings: [],
+    },
   }
 }
 
@@ -658,10 +683,13 @@ export function seedProductionList(): ProductionRecipeListItem[] {
     cost: r3(prodCost(p)),
     version: p.version ?? 1,
     is_current: true,
+    is_published: prodPublished(p),
     ingredient_count: p.ingredients.length,
     created_at: '2026-06-15T08:00:00Z',
   }))
 }
+
+const prodPublished = (p: SeedProd) => codeNum(p.code) % 2 === 0
 
 export function seedProductionDetail(id: string): ProductionRecipeDetail {
   const p = PRODUCTION.find((x) => x.slug === id) ?? PRODUCTION[0]
@@ -716,8 +744,25 @@ export function seedProductionDetail(id: string): ProductionRecipeDetail {
       { id: `${p.slug}-al-1`, action_type: 'created', action_type_display: 'Created', description: '', changed_by: 'karim', created_at: '2026-06-15T08:00:00Z' },
       { id: `${p.slug}-al-2`, action_type: 'recalculated', action_type_display: 'Cost recalculated', description: '', changed_by: 'omar', created_at: '2026-08-04T10:00:00Z' },
     ],
+    inventory_recipe_id: prodPublished(p) ? `inv-p-${p.slug}` : '',
+    published_at: prodPublished(p) ? '2026-08-12T10:00:00Z' : null,
+    publish_error: '',
+    publish_stale: false,
     created_at: '2026-06-15T08:00:00Z',
     updated_at: '2026-08-04T10:00:00Z',
+  }
+}
+
+export function seedPublishProduction(id: string): ProductionRecipeDetail {
+  const base = seedProductionDetail(id)
+  const now = new Date().toISOString()
+  return {
+    ...base,
+    inventory_recipe_id: `inv-p-${id}`,
+    published_at: now,
+    publish_error: '',
+    publish_stale: false,
+    _publish: { inventory_recipe_id: `inv-p-${id}`, published_at: now, warnings: [] },
   }
 }
 
@@ -819,7 +864,6 @@ const COVERAGE_GROUPS: Record<string, string[]> = {
   defects: ['critical_defects_not_allowed', 'freshness_standard'],
 }
 
-const codeNum = (code: string) => Number(code.replace(/\D/g, '') || '0')
 /** deterministic split: every 3rd dish has no standard yet */
 const hasStd = (d: SeedDish) => codeNum(d.code) % 3 !== 0
 /** of the rest, even codes are signed off, odd ones await review */
@@ -909,6 +953,7 @@ const ACTIVITY_ACTIONS = [
   { value: 'deleted', label: 'Deleted' },
   { value: 'standard_updated', label: 'QA standard updated' },
   { value: 'standard_approved', label: 'QA standard approved' },
+  { value: 'published', label: 'Published to inventory' },
 ]
 const ACTORS = ['nadia', 'omar', 'karim', 'lina', 'yassin']
 const ACTIVITY_BASE = Date.parse('2026-08-28T09:00:00Z')

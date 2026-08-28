@@ -55,17 +55,22 @@ class DishRecipeListSerializer(HidesCostingFields, serializers.ModelSerializer):
     section_name  = serializers.CharField(source='section.name', read_only=True, default=None)
     ingredient_count = serializers.IntegerField(source='ingredients.count', read_only=True)
     has_standard = serializers.SerializerMethodField()
+    is_published = serializers.SerializerMethodField()
 
     class Meta:
         model  = DishRecipe
         fields = [
             'id', 'name_en', 'name_ar', 'recipe_code', 'branch', 'category', 'category_name',
             'section', 'section_name', 'pos_item_name', 'selling_price', 'cost', 'image_url',
-            'rating', 'rating_status', 'has_standard', 'version', 'is_current', 'ingredient_count', 'created_at',
+            'rating', 'rating_status', 'has_standard', 'is_published',
+            'version', 'is_current', 'ingredient_count', 'created_at',
         ]
 
     def get_has_standard(self, obj):
         return hasattr(obj, 'standard') and obj.standard is not None
+
+    def get_is_published(self, obj):
+        return bool(obj.inventory_recipe_id)
 
 
 class DishRecipeDetailSerializer(HidesCostingFields, serializers.ModelSerializer):
@@ -82,6 +87,7 @@ class DishRecipeDetailSerializer(HidesCostingFields, serializers.ModelSerializer
     allergen_rollup = serializers.SerializerMethodField()
     price_history = DishPriceHistorySerializer(many=True, read_only=True)
     activity_log  = DishRecipeActivityLogSerializer(many=True, read_only=True)
+    publish_stale = serializers.SerializerMethodField()
 
     class Meta:
         model  = DishRecipe
@@ -95,8 +101,15 @@ class DishRecipeDetailSerializer(HidesCostingFields, serializers.ModelSerializer
             'approved_by', 'qa_approved_by', 'approved_at', 'notes',
             'version', 'is_current', 'ingredients', 'steps', 'standard',
             'price_history', 'activity_log',
+            'inventory_recipe_id', 'published_at', 'publish_error', 'publish_stale',
             'created_at', 'updated_at',
         ]
+
+    def get_publish_stale(self, obj):
+        # a > 1s gap is a real edit; sub-second is just the publish save itself
+        if obj.published_at is None:
+            return False
+        return (obj.updated_at - obj.published_at).total_seconds() > 1
 
     def get_allergen_rollup(self, obj):
         return allergen_rollup(obj)

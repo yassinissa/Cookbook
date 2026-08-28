@@ -44,6 +44,7 @@ class ProductionRecipeListSerializer(HidesCostingFields, serializers.ModelSerial
     prep_kitchen_name = serializers.CharField(source='prep_kitchen_ref.name_en', read_only=True, default=None)
     output_unit_code = serializers.CharField(source='output_unit.code', read_only=True, default=None)
     ingredient_count = serializers.IntegerField(source='ingredients.count', read_only=True)
+    is_published = serializers.SerializerMethodField()
 
     class Meta:
         model  = ProductionRecipe
@@ -51,8 +52,11 @@ class ProductionRecipeListSerializer(HidesCostingFields, serializers.ModelSerial
             'id', 'name_en', 'name_ar', 'recipe_code', 'prep_kitchen', 'prep_kitchen_ref',
             'prep_kitchen_name', 'section', 'section_name',
             'output_item_sku', 'output_qty', 'output_unit', 'output_unit_code',
-            'cost', 'version', 'is_current', 'ingredient_count', 'created_at',
+            'cost', 'version', 'is_current', 'is_published', 'ingredient_count', 'created_at',
         ]
+
+    def get_is_published(self, obj):
+        return bool(obj.inventory_recipe_id)
 
 
 class ProductionRecipeDetailSerializer(HidesCostingFields, serializers.ModelSerializer):
@@ -65,6 +69,7 @@ class ProductionRecipeDetailSerializer(HidesCostingFields, serializers.ModelSeri
     cost_per_unit = serializers.SerializerMethodField()
     cost_history  = ProductionCostHistorySerializer(many=True, read_only=True)
     activity_log  = ProductionRecipeActivityLogSerializer(many=True, read_only=True)
+    publish_stale = serializers.SerializerMethodField()
 
     class Meta:
         model  = ProductionRecipe
@@ -77,8 +82,15 @@ class ProductionRecipeDetailSerializer(HidesCostingFields, serializers.ModelSeri
             'approved_by', 'qa_approved_by', 'approved_at', 'notes',
             'version', 'is_current', 'ingredients', 'steps',
             'cost_history', 'activity_log',
+            'inventory_recipe_id', 'published_at', 'publish_error', 'publish_stale',
             'created_at', 'updated_at',
         ]
+
+    def get_publish_stale(self, obj):
+        # a > 1s gap is a real edit; sub-second is just the publish save itself
+        if obj.published_at is None:
+            return False
+        return (obj.updated_at - obj.published_at).total_seconds() > 1
 
     def get_cost_per_unit(self, obj):
         if obj.output_qty and obj.output_qty > 0:

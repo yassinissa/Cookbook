@@ -6,6 +6,7 @@ import { Card, CardBody, CardHeader } from '@/components/Card'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Page } from '@/components/Page'
 import { ErrorState, Skeleton } from '@/components/States'
+import { PublishControl } from '@/components/PublishControl'
 import { CostPanel } from '@/features/dishes/CostPanel'
 import { NutritionPanel } from '@/features/dishes/NutritionPanel'
 import { VersionDrawer } from '@/features/dishes/VersionDrawer'
@@ -33,6 +34,7 @@ export function ProductionDetailPage() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [recalculating, setRecalculating] = useState(false)
+  const [publishing, setPublishing] = useState(false)
 
   if (isLoading) return <DetailSkeleton />
   if (isError || !recipe) {
@@ -61,6 +63,23 @@ export function ProductionDetailPage() {
       toast.error(parseApiError(e).message || t('state.errorGeneric'))
     } finally {
       setRecalculating(false)
+    }
+  }
+
+  async function onPublish() {
+    if (!id) return
+    setPublishing(true)
+    try {
+      const r = await api.publishProductionRecipe(id)
+      qc.setQueryData(qk.productionRecipe(id), r)
+      qc.invalidateQueries({ queryKey: qk.production, exact: true })
+      const warnings = r._publish?.warnings ?? []
+      if (warnings.length) toast.info(t('publish.warnings', { n: warnings.length }))
+      else toast.success(t('publish.ok'))
+    } catch (e) {
+      toast.error(parseApiError(e).message || t('publish.failed'))
+    } finally {
+      setPublishing(false)
     }
   }
 
@@ -230,6 +249,17 @@ export function ProductionDetailPage() {
             perServingLabel={t('production.cost.perBatch')}
           />
           <NutritionPanel nutrition={recipe.nutrition} />
+
+          <PublishControl
+            isPublished={!!recipe.inventory_recipe_id}
+            publishedAt={recipe.published_at}
+            publishStale={recipe.publish_stale}
+            publishError={recipe.publish_error}
+            inventoryRecipeId={recipe.inventory_recipe_id}
+            canPublish={can('recipe.publish')}
+            busy={publishing}
+            onPublish={onPublish}
+          />
 
           {(recipe.approved_by || recipe.qa_approved_by) && (
             <Card elevated>

@@ -23,6 +23,7 @@ from .serializers import (
 )
 from .serializers.reference import PrepKitchenSerializer
 from .services import apply_cost
+from .publishing import RecipePublishError, publish_dish_recipe, publish_production_recipe
 from .versioning import diff_recipes, diff_summary
 
 
@@ -140,6 +141,31 @@ class RecipeViewSetBase(
         self._snapshot_and_log_recalculate(recipe, request)
         return self._response_with_warnings(recipe)
 
+    # ── publish to inventory-platform ────────────────────────────────────
+    def _publish_to_inventory(self, recipe):
+        """Override per recipe type: call the right publishing.* function,
+        return its {inventory_recipe_id, published_at, warnings} dict."""
+        raise NotImplementedError
+
+    def _log_published(self, recipe, request):
+        """Override per recipe type: write an activity-log entry."""
+        raise NotImplementedError
+
+    @action(detail=True, methods=['post'])
+    def publish(self, request, pk=None):
+        """Push this recipe to inventory-platform (POST first time, PATCH
+        after). Ingredient/unit mismatches come back as `warnings`, not
+        failures; a hard failure is a 502 with the platform's message."""
+        recipe = self.get_object()
+        try:
+            result = self._publish_to_inventory(recipe)
+        except RecipePublishError as e:
+            return Response({'detail': str(e)}, status=502)
+        self._log_published(recipe, request)
+        detail = self.detail_serializer_class(recipe).data
+        detail['_publish'] = result
+        return Response(detail)
+
     # ── version history ──────────────────────────────────────────────────
     def _lineage(self, recipe):
         """Every version row for this recipe, oldest first. Archived rows are
@@ -209,6 +235,7 @@ class DishRecipeViewSet(ScopedQuerySetMixin, RecipeViewSetBase):
         'destroy': 'dish.delete',
         'recalculate': 'costing.recalculate',
         'versions': 'recipe.history', 'diff': 'recipe.history',
+        'publish': 'recipe.publish',
     })]
     queryset = DishRecipe.objects.select_related(
         'category', 'section', 'service_style', 'approved_by', 'qa_approved_by', 'branch_ref',
@@ -228,6 +255,15 @@ class DishRecipeViewSet(ScopedQuerySetMixin, RecipeViewSetBase):
             recipe=recipe, action_type=ActivityActionType.RECALCULATED, changed_by=request.user.username,
         )
 
+    def _publish_to_inventory(self, recipe):
+        return publish_dish_recipe(recipe)
+
+    def _log_published(self, recipe, request):
+        DishRecipeActivityLog.objects.create(
+            recipe=recipe, action_type=ActivityActionType.PUBLISHED, changed_by=request.user.username,
+            description=f'Pushed to inventory-platform (#{recipe.inventory_recipe_id})',
+        )
+
 
 class ProductionRecipeViewSet(ScopedQuerySetMixin, RecipeViewSetBase):
     scope_kind = 'prep_kitchen'
@@ -238,6 +274,7 @@ class ProductionRecipeViewSet(ScopedQuerySetMixin, RecipeViewSetBase):
         'destroy': 'production.delete',
         'recalculate': 'costing.recalculate',
         'versions': 'recipe.history', 'diff': 'recipe.history',
+        'publish': 'recipe.publish',
     })]
     queryset = ProductionRecipe.objects.select_related(
         'section', 'approved_by', 'qa_approved_by', 'output_unit', 'prep_kitchen_ref',
@@ -255,6 +292,15 @@ class ProductionRecipeViewSet(ScopedQuerySetMixin, RecipeViewSetBase):
         ProductionCostHistory.objects.create(production_recipe=recipe, cost=recipe.cost, output_qty=recipe.output_qty)
         ProductionRecipeActivityLog.objects.create(
             recipe=recipe, action_type=ActivityActionType.RECALCULATED, changed_by=request.user.username,
+        )
+
+    def _publish_to_inventory(self, recipe):
+        return publish_production_recipe(recipe)
+
+    def _log_published(self, recipe, request):
+        ProductionRecipeActivityLog.objects.create(
+            recipe=recipe, action_type=ActivityActionType.PUBLISHED, changed_by=request.user.username,
+            description=f'Pushed to inventory-platform (#{recipe.inventory_recipe_id})',
         )
 
 

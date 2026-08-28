@@ -19,13 +19,20 @@ before calling anything done — not just "the happy path returns 200."
   `models/{reference,recipes,standards,item_supplement,history,menu}.py`,
   mirrored `serializers/`, `views.py` + `views_menu.py` + `views_standards.py`
   + `views_activity.py` + `views_dashboard.py`,
-  `services.py`/`costing.py`/`nutrition.py`/`versioning.py`.
+  `services.py`/`costing.py`/`nutrition.py`/`versioning.py`/`publishing.py`.
   `apps/integrations/inventory_client.py` is the *only* place that talks
   to inventory-platform — items/units/stores/branches are read live, never
   duplicated locally. `get_items()` walks every page (for the ingredient
   picker); `search_items()` / `GET /api/inventory/items/search/` is one
   paged, server-searched page (for the Inventory screen). Ingredients
-  reference inventory items by SKU string, not a local FK. Recipe versions
+  reference inventory items by SKU string, not a local FK. **Recipe push
+  (`publishing.py`)**: a `recipe.publish`-gated `dish-recipes/<id>/publish/`
+  + `production-recipes/<id>/publish/` action pushes the recipe to
+  inventory-platform — resolves SKU→item id and unit code→unit id against a
+  live catalogue pull, POSTs first / PATCHes once `inventory_recipe_id` is
+  stored, unknown SKUs become `warnings` not failures. Manual per-recipe
+  (button on the detail page). Needs the service account
+  (`INVENTORY_API_EMAIL`) to be SUPER_ADMIN on inventory-platform. Recipe versions
   share a `lineage_key` UUID (on `RecipeCardFields`);
   `dish-recipes/<id>/versions/` + `/diff/` and `cookbook/dashboard/` are the
   read-only aggregate endpoints on top. `cookbook/dish-standards/` is the
@@ -104,14 +111,17 @@ before calling anything done — not just "the happy path returns 200."
   scope-filtered (dishes/menus by branch → `branch_ref`, production by prep
   kitchen → `ProductionRecipe.prep_kitchen_ref` → new `cookbook.PrepKitchen`).
   Serializers strip cost/price fields when the caller lacks `costing.view`
-  (`serializers/mixins.py::HidesCostingFields`). `/api/auth/me/` returns the
+  (`serializers/mixins.py::HidesCostingFields`). `recipe.publish` (added
+  2026-08-28, Administrator + Executive Chef) gates the inventory-platform
+  push — accounts migration `0003` re-syncs role grants; add a capability
+  then bump a migration like it. `/api/auth/me/` returns the
   resolved capabilities + scope; `/api/accounts/{roles,users,capabilities}/`
   is the admin API (gated on `admin.roles` / `admin.users`). Superuser
   bypasses everything. Frontend: `src/auth/AuthProvider` + `guards.tsx`
   (`RequireCapability`), nav + action buttons gated by `can(cap)`,
   `src/features/admin/` screens. Seed builds carry a TopBar **identity
   switcher** (`src/shell/IdentitySwitcher.tsx`) to demo scoped users.
-- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 83 tests
+- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 92 tests
   (`APITestCase`; cookbook test clients are superusers so they bypass RBAC —
   `apps/accounts/tests/` covers enforcement). Frontend has none yet. Grow
   both alongside new work.

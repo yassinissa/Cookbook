@@ -197,6 +197,15 @@ export async function recalcDishRecipe(id: string): Promise<DishRecipeDetail> {
   return data
 }
 
+export async function publishDishRecipe(id: string): Promise<DishRecipeDetail> {
+  if (USE_SEED) {
+    await delay(600)
+    return seed.seedPublishDish(id)
+  }
+  const { data } = await http.post(`/cookbook/dish-recipes/${id}/publish/`)
+  return data
+}
+
 export async function fetchDishVersions(id: string): Promise<VersionRow[]> {
   if (USE_SEED) {
     await delay()
@@ -278,6 +287,15 @@ export async function recalcProductionRecipe(id: string): Promise<ProductionReci
     return seed.seedProductionDetail(id)
   }
   const { data } = await http.post(`/cookbook/production-recipes/${id}/recalculate/`)
+  return data
+}
+
+export async function publishProductionRecipe(id: string): Promise<ProductionRecipeDetail> {
+  if (USE_SEED) {
+    await delay(600)
+    return seed.seedPublishProduction(id)
+  }
+  const { data } = await http.post(`/cookbook/production-recipes/${id}/publish/`)
   return data
 }
 

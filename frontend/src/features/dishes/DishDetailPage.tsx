@@ -9,6 +9,7 @@ import { Meter } from '@/components/Meter'
 import { Page } from '@/components/Page'
 import { RatingPill } from '@/components/Pill'
 import { ErrorState, Skeleton } from '@/components/States'
+import { PublishControl } from '@/components/PublishControl'
 import { StandardCard } from '@/features/standards/StandardView'
 import { CostPanel } from './CostPanel'
 import { AllergenPanel, NutritionPanel } from './NutritionPanel'
@@ -37,6 +38,7 @@ export function DishDetailPage() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [recalculating, setRecalculating] = useState(false)
+  const [publishing, setPublishing] = useState(false)
 
   if (isLoading) return <DetailSkeleton />
   if (isError || !dish) {
@@ -66,6 +68,23 @@ export function DishDetailPage() {
       toast.error(parseApiError(e).message || t('state.errorGeneric'))
     } finally {
       setRecalculating(false)
+    }
+  }
+
+  async function onPublish() {
+    if (!id) return
+    setPublishing(true)
+    try {
+      const r = await api.publishDishRecipe(id)
+      qc.setQueryData(qk.dish(id), r)
+      qc.invalidateQueries({ queryKey: qk.dishes, exact: true })
+      const warnings = r._publish?.warnings ?? []
+      if (warnings.length) toast.info(t('publish.warnings', { n: warnings.length }))
+      else toast.success(t('publish.ok'))
+    } catch (e) {
+      toast.error(parseApiError(e).message || t('publish.failed'))
+    } finally {
+      setPublishing(false)
     }
   }
 
@@ -199,6 +218,17 @@ export function DishDetailPage() {
           <CostPanel breakdown={breakdown} sellingPrice={dish.selling_price} />
           <NutritionPanel nutrition={nutrition} />
           <AllergenPanel rollup={dish.allergen_rollup} />
+
+          <PublishControl
+            isPublished={!!dish.inventory_recipe_id}
+            publishedAt={dish.published_at}
+            publishStale={dish.publish_stale}
+            publishError={dish.publish_error}
+            inventoryRecipeId={dish.inventory_recipe_id}
+            canPublish={can('recipe.publish')}
+            busy={publishing}
+            onPublish={onPublish}
+          />
 
           {(dish.approved_by || dish.qa_approved_by) && (
             <Card elevated>

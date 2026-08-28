@@ -8,7 +8,7 @@ import { BRANCHES } from './catalog'
 
 const ALL: CapabilityCode[] = [
   'dashboard.view', 'dish.view', 'dish.edit', 'dish.delete', 'recipe.history',
-  'production.view', 'production.edit', 'production.delete',
+  'production.view', 'production.edit', 'production.delete', 'recipe.publish',
   'menu.view', 'menu.edit', 'menu.snapshot', 'standard.view', 'standard.edit',
   'costing.view', 'costing.recalculate', 'inventory.view', 'nutrition.view',
   'document.export', 'pos.manage', 'activity.view', 'admin.users', 'admin.roles',
