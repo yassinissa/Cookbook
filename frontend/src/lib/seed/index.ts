@@ -12,6 +12,8 @@ import type {
   MenuSnapshot,
   MenuTrends,
   NutritionRollup,
+  DishStandardDetail,
+  DishStandardListItem,
   ProductionRecipeDetail,
   ProductionRecipeListItem,
   ReferenceData,
@@ -802,6 +804,97 @@ export function seedProductionDiff(): VersionDiff {
       ],
     },
     steps: { added: [], removed: [], count_from: 3, count_to: 3 },
+  }
+}
+
+/* ── QA/QC standards ──────────────────────────────────────────────── */
+const COVERAGE_GROUPS: Record<string, string[]> = {
+  portioning: ['portion_weight_g', 'serving_temp_c', 'holding_time_minutes'],
+  sensory: ['appearance', 'color', 'aroma', 'texture', 'presentation'],
+  flavour: ['primary_flavor', 'secondary_flavor', 'aftertaste', 'mouthfeel'],
+  taste_bands: TASTE_AXES.map((a) => `${a}_target`),
+  defects: ['critical_defects_not_allowed', 'freshness_standard'],
+}
+
+const codeNum = (code: string) => Number(code.replace(/\D/g, '') || '0')
+/** deterministic split: every 3rd dish has no standard yet */
+const hasStd = (d: SeedDish) => codeNum(d.code) % 3 !== 0
+/** of the rest, even codes are signed off, odd ones await review */
+const stdApproved = (d: SeedDish) => hasStd(d) && codeNum(d.code) % 2 === 0
+
+function specCoverage(std: Record<string, unknown> | null) {
+  if (!std) return { filled: 0, total: 5 }
+  const filled = Object.values(COVERAGE_GROUPS).filter((fields) =>
+    fields.some((f) => std[f] !== null && std[f] !== undefined && std[f] !== ''),
+  ).length
+  return { filled, total: 5 }
+}
+
+function tasteAxisCount(std: Record<string, unknown> | null) {
+  if (!std) return 0
+  return TASTE_AXES.filter((a) => std[`${a}_target`] != null && std[`${a}_target`] !== '').length
+}
+
+export function seedStandardList(): DishStandardListItem[] {
+  return DISHES.map((d) => {
+    const has = hasStd(d)
+    const std = has ? (standard(d) as Record<string, unknown>) : null
+    const approved = stdApproved(d)
+    return {
+      id: d.slug,
+      name_en: d.name_en,
+      name_ar: d.name_ar,
+      recipe_code: d.code,
+      branch: branchById(d.branchSlugs[0]).name_en,
+      branch_ref: d.branchSlugs[0],
+      category: d.category,
+      category_name: catById(d.category).name,
+      rating_status: d.ratingStatus,
+      has_standard: has,
+      is_approved: approved,
+      qa_approved_by_name: approved ? APPROVERS[2].name : null,
+      approval_date: approved ? '2026-08-06' : null,
+      portion_weight_g: (std?.portion_weight_g as string) ?? null,
+      serving_temp_c: (std?.serving_temp_c as string) ?? null,
+      holding_time_minutes: (std?.holding_time_minutes as number) ?? null,
+      taste_axis_count: tasteAxisCount(std),
+      spec_coverage: specCoverage(std),
+      needs_review: has && !approved,
+    }
+  })
+}
+
+export function seedStandardDetail(id: string): DishStandardDetail {
+  const d = DISHES.find((x) => x.slug === id) ?? DISHES[0]
+  const has = hasStd(d)
+  const approved = stdApproved(d)
+  const std = has
+    ? {
+        ...standard(d),
+        qa_approved_by: approved ? APPROVERS[2].id : null,
+        approval_date: approved ? '2026-08-06' : null,
+      }
+    : null
+  return {
+    id: d.slug,
+    name_en: d.name_en,
+    name_ar: d.name_ar,
+    recipe_code: d.code,
+    revision: 'Rev.01',
+    branch: branchById(d.branchSlugs[0]).name_en,
+    branch_ref: d.branchSlugs[0],
+    category: catById(d.category).name,
+    section: secById(d.section).name,
+    image_url: d.image,
+    rating: String(d.rating),
+    rating_status: d.ratingStatus,
+    taste_profile: d.taste,
+    version: 1,
+    standard: std as DishStandardDetail['standard'],
+    spec_coverage: specCoverage(std as Record<string, unknown> | null),
+    needs_review: has && !approved,
+    qa_approved_by: approved ? APPROVERS[2] : null,
+    updated_at: '2026-08-07T09:00:00Z',
   }
 }
 

@@ -24,7 +24,7 @@ export const NAV: NavSection[] = [
       { to: '/', labelKey: 'nav.dashboard', icon: 'dashboard', ready: true, capability: 'dashboard.view' },
       { to: '/recipes/dishes', labelKey: 'nav.dishes', icon: 'dish', ready: true, capability: 'dish.view' },
       { to: '/recipes/production', labelKey: 'nav.production', icon: 'production', ready: true, capability: 'production.view' },
-      { to: '/standards', labelKey: 'nav.standards', icon: 'standards', ready: false, capability: 'standard.view' },
+      { to: '/standards', labelKey: 'nav.standards', icon: 'standards', ready: true, capability: 'standard.view' },
     ],
   },
   {

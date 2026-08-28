@@ -19,10 +19,12 @@ from .recipes import DishRecipe, ProductionRecipe
 
 
 class ActivityActionType(models.TextChoices):
-    CREATED      = 'created',      'Created'
-    UPDATED      = 'updated',      'Updated'
-    RECALCULATED = 'recalculated', 'Cost recalculated'
-    DELETED      = 'deleted',      'Deleted'
+    CREATED           = 'created',           'Created'
+    UPDATED           = 'updated',           'Updated'
+    RECALCULATED      = 'recalculated',      'Cost recalculated'
+    DELETED           = 'deleted',           'Deleted'
+    STANDARD_UPDATED  = 'standard_updated',  'QA standard updated'
+    STANDARD_APPROVED = 'standard_approved', 'QA standard approved'
 
 
 class DishPriceHistory(BaseModel):
@@ -51,7 +53,7 @@ class ProductionCostHistory(BaseModel):
 
 class DishRecipeActivityLog(BaseModel):
     recipe      = models.ForeignKey(DishRecipe, on_delete=models.CASCADE, related_name='activity_log')
-    action_type = models.CharField(max_length=15, choices=ActivityActionType.choices)
+    action_type = models.CharField(max_length=20, choices=ActivityActionType.choices)
     description = models.TextField(blank=True)
     changed_by  = models.CharField(max_length=255, blank=True, help_text='Cookbook username who made the change.')
 
@@ -61,7 +63,7 @@ class DishRecipeActivityLog(BaseModel):
 
 class ProductionRecipeActivityLog(BaseModel):
     recipe      = models.ForeignKey(ProductionRecipe, on_delete=models.CASCADE, related_name='activity_log')
-    action_type = models.CharField(max_length=15, choices=ActivityActionType.choices)
+    action_type = models.CharField(max_length=20, choices=ActivityActionType.choices)
     description = models.TextField(blank=True)
     changed_by  = models.CharField(max_length=255, blank=True, help_text='Cookbook username who made the change.')
 

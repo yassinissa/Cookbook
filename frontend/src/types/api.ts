@@ -245,6 +245,8 @@ export interface DishStandard {
   mouthfeel: string
   freshness_standard: string
   critical_defects_not_allowed: string
+  qa_approved_by?: ID | null
+  approval_date?: string | null
   [k: string]: string | number | null | undefined
 }
 
@@ -309,6 +311,57 @@ export interface ProductionRecipeDetail {
   cost_history: ProductionCostHistoryRow[]
   activity_log: ActivityLogEntry[]
   created_at: string
+  updated_at: string
+  _warnings?: string[]
+}
+
+/* ── QA/QC standards (standalone screen) ────────────────────────────── */
+export interface SpecCoverage {
+  filled: number
+  total: number
+}
+
+export interface DishStandardListItem {
+  id: ID
+  name_en: string
+  name_ar: string
+  recipe_code: string
+  branch: string
+  branch_ref: ID | null
+  category: ID | null
+  category_name: string | null
+  rating_status: RatingStatus
+  has_standard: boolean
+  is_approved: boolean
+  qa_approved_by_name: string | null
+  approval_date: string | null
+  portion_weight_g: string | null
+  serving_temp_c: string | null
+  holding_time_minutes: number | null
+  taste_axis_count: number
+  spec_coverage: SpecCoverage
+  needs_review: boolean
+}
+
+export interface DishStandardDetail {
+  id: ID
+  name_en: string
+  name_ar: string
+  recipe_code: string
+  revision: string
+  branch: string
+  branch_ref: ID | null
+  category: string | null
+  section: string | null
+  image_url: string
+  rating: string | null
+  rating_status: RatingStatus
+  taste_profile: string
+  version: number
+  standard: DishStandard | null
+  spec_coverage: SpecCoverage
+  needs_review: boolean
+  qa_approved_by: Approver | null
   updated_at: string
   _warnings?: string[]
 }

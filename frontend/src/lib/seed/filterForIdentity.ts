@@ -8,6 +8,7 @@ import type {
   Dashboard,
   DishRecipeDetail,
   DishRecipeListItem,
+  DishStandardListItem,
   MenuDetail,
   MenuListItem,
 } from '@/types/api'
@@ -45,6 +46,11 @@ export function filterDishList(rows: DishRecipeListItem[]): DishRecipeListItem[]
 
 export function filterDishDetail(dish: DishRecipeDetail): DishRecipeDetail {
   return stripCost(dish)
+}
+
+export function filterStandardList(rows: DishStandardListItem[]): DishStandardListItem[] {
+  const scope = branchScope()
+  return scope === 'all' ? rows : rows.filter((r) => scope.has(r.branch))
 }
 
 export function filterMenuList(rows: MenuListItem[]): MenuListItem[] {

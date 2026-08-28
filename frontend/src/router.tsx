@@ -12,6 +12,9 @@ import { DishDetailPage } from '@/features/dishes/DishDetailPage'
 import { ProductionListPage } from '@/features/production/ProductionListPage'
 import { ProductionEditorPage } from '@/features/production/ProductionEditorPage'
 import { ProductionDetailPage } from '@/features/production/ProductionDetailPage'
+import { StandardsListPage } from '@/features/standards/StandardsListPage'
+import { StandardDetailPage } from '@/features/standards/StandardDetailPage'
+import { StandardEditorPage } from '@/features/standards/StandardEditorPage'
 import { MenuListPage } from '@/features/menus/MenuListPage'
 import { MenuDetailPage } from '@/features/menus/MenuDetailPage'
 import { UsersPage } from '@/features/admin/UsersPage'
@@ -53,7 +56,9 @@ export const router = createBrowserRouter([
           { path: '/recipes/production/new', ...cap('production.edit', <ProductionEditorPage />) },
           { path: '/recipes/production/:id', ...cap('production.view', <ProductionDetailPage />) },
           { path: '/recipes/production/:id/edit', ...cap('production.edit', <ProductionEditorPage />) },
-          { path: '/standards', element: <ComingSoonPage titleKey="nav.standards" icon="standards" /> },
+          { path: '/standards', ...cap('standard.view', <StandardsListPage />) },
+          { path: '/standards/:dishId', ...cap('standard.view', <StandardDetailPage />) },
+          { path: '/standards/:dishId/edit', ...cap('standard.edit', <StandardEditorPage />) },
           { path: '/inventory', ...cap('inventory.view', <InventoryListPage />) },
           { path: '/activity', element: <ComingSoonPage titleKey="nav.activity" icon="activity" /> },
           { path: '/documents', element: <ComingSoonPage titleKey="nav.documents" icon="documents" /> },

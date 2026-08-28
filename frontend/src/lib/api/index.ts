@@ -11,11 +11,14 @@ import {
   filterDishList,
   filterMenuDetail,
   filterMenuList,
+  filterStandardList,
 } from '@/lib/seed/filterForIdentity'
 import type {
   Dashboard,
   DishRecipeDetail,
   DishRecipeListItem,
+  DishStandardDetail,
+  DishStandardListItem,
   InventoryItem,
   InventoryItemDetail,
   MenuDetail,
@@ -299,6 +302,53 @@ export async function fetchProductionDiff(
   const { data } = await http.get(
     `/cookbook/production-recipes/${id}/diff/?${params.toString()}`,
   )
+  return data
+}
+
+/* ── QA/QC standards ──────────────────────────────────────────────── */
+export async function fetchDishStandards(): Promise<DishStandardListItem[]> {
+  if (USE_SEED) {
+    await delay()
+    return filterStandardList(seed.seedStandardList())
+  }
+  const { data } = await http.get<
+    Paginated<DishStandardListItem> | DishStandardListItem[]
+  >('/cookbook/dish-standards/')
+  return listData(data)
+}
+
+export async function fetchDishStandard(dishId: string): Promise<DishStandardDetail> {
+  if (USE_SEED) {
+    await delay()
+    return seed.seedStandardDetail(dishId)
+  }
+  const { data } = await http.get(`/cookbook/dish-standards/${dishId}/`)
+  return data
+}
+
+export async function updateDishStandard(
+  dishId: string,
+  payload: unknown,
+): Promise<DishStandardDetail> {
+  if (USE_SEED) {
+    await delay()
+    return seed.seedStandardDetail(dishId)
+  }
+  const { data } = await http.patch(`/cookbook/dish-standards/${dishId}/`, payload)
+  return data
+}
+
+export async function approveDishStandard(
+  dishId: string,
+  approverId: string | null,
+): Promise<DishStandardDetail> {
+  if (USE_SEED) {
+    await delay(400)
+    return seed.seedStandardDetail(dishId)
+  }
+  const { data } = await http.post(`/cookbook/dish-standards/${dishId}/approve/`, {
+    qa_approved_by: approverId,
+  })
   return data
 }
 

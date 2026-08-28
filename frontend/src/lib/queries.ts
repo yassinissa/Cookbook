@@ -61,6 +61,17 @@ export function useDishDiff(id: string | undefined, a?: string, b?: string, enab
   })
 }
 
+export function useDishStandards(enabled = true) {
+  return useQuery({ queryKey: qk.standards, queryFn: api.fetchDishStandards, enabled })
+}
+export function useDishStandard(dishId: string | undefined) {
+  return useQuery({
+    queryKey: qk.standard(dishId ?? ''),
+    queryFn: () => api.fetchDishStandard(dishId as string),
+    enabled: !!dishId,
+  })
+}
+
 export function useProductionRecipes(enabled = true) {
   return useQuery({
     queryKey: qk.production,

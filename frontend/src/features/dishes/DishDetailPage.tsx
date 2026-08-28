@@ -9,7 +9,7 @@ import { Meter } from '@/components/Meter'
 import { Page } from '@/components/Page'
 import { RatingPill } from '@/components/Pill'
 import { ErrorState, Skeleton } from '@/components/States'
-import { TASTE_AXES, TasteAxisBar } from '@/components/TasteAxis'
+import { StandardCard } from '@/features/standards/StandardView'
 import { CostPanel } from './CostPanel'
 import { AllergenPanel, NutritionPanel } from './NutritionPanel'
 import { VersionDrawer } from './VersionDrawer'
@@ -21,8 +21,8 @@ import { useToast } from '@/components/Toast'
 import { parseApiError } from '@/lib/parseApiError'
 import { kwd, shortDate } from '@/lib/format'
 import { useAuth } from '@/auth/AuthProvider'
-import { useI18n, type TFunc } from '@/i18n'
-import type { CostBreakdown, DishStandard, NutritionRollup } from '@/types/api'
+import { useI18n } from '@/i18n'
+import type { CostBreakdown, NutritionRollup } from '@/types/api'
 
 export function DishDetailPage() {
   const { id } = useParams()
@@ -249,50 +249,6 @@ export function DishDetailPage() {
         onCancel={() => setConfirmDelete(false)}
       />
     </Page>
-  )
-}
-
-function StandardCard({ std, t }: { std: DishStandard; t: TFunc }) {
-  return (
-    <Card elevated>
-      <CardHeader title={t('editor.section.standard')} />
-      <CardBody className="space-y-4">
-        <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-          <Spec label="Portion" value={std.portion_weight_g && `${std.portion_weight_g} ± ${std.portion_tolerance_g ?? 0} g`} />
-          <Spec label="Serving temp" value={std.serving_temp_c && `${std.serving_temp_c} ± ${std.temp_tolerance_c ?? 0} °C`} />
-          <Spec label="Holding" value={std.holding_time_minutes != null ? `${std.holding_time_minutes} min` : ''} />
-          <Spec label="Primary flavour" value={std.primary_flavor} />
-          <Spec label="Aftertaste" value={std.aftertaste} />
-          <Spec label="Mouthfeel" value={std.mouthfeel} />
-        </div>
-        <div className="space-y-1.5 border-t border-hairline pt-4">
-          {TASTE_AXES.map(([key, label]) => (
-            <TasteAxisBar
-              key={key}
-              label={label}
-              target={std[`${key}_target`]}
-              tolerance={std[`${key}_tolerance`]}
-            />
-          ))}
-        </div>
-        {std.freshness_standard && (
-          <p className="border-t border-hairline pt-3 text-sm text-ink-muted">
-            <span className="font-medium text-ink">Freshness — </span>
-            {std.freshness_standard}
-          </p>
-        )}
-      </CardBody>
-    </Card>
-  )
-}
-
-function Spec({ label, value }: { label: string; value?: string | number | null }) {
-  if (!value) return null
-  return (
-    <div>
-      <dt className="text-2xs uppercase tracking-wide text-ink-subtle">{label}</dt>
-      <dd className="tnum text-ink">{value}</dd>
-    </div>
   )
 }
 
