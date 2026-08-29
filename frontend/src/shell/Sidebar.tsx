@@ -16,7 +16,7 @@ export function Sidebar() {
   })).filter((s) => s.items.length > 0)
 
   return (
-    <aside className="relative hidden w-60 flex-none flex-col border-e border-hairline bg-surface lg:flex">
+    <aside className="no-print relative hidden w-60 flex-none flex-col border-e border-hairline bg-surface lg:flex">
       <span aria-hidden className="spice-rail absolute inset-y-0 end-0 z-10 w-[3px]" />
       <div className="flex h-14 items-center gap-2.5 border-b border-hairline px-5">
         <Wordmark />

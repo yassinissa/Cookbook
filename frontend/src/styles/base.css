@@ -172,4 +172,35 @@
   body {
     background: #fff;
   }
+  /* drop the warm ground + grain — ink on white for the kitchen printer */
+  body::before,
+  body::after {
+    display: none !important;
+  }
+  main {
+    padding-bottom: 0 !important;
+  }
+  /* a printed sheet manages its own margins; kill the app's max-width gutter */
+  .print-reset {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .print-sheet {
+    color: #000;
+  }
+  .print-sheet table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .print-sheet th,
+  .print-sheet td {
+    border: 1px solid #999;
+    padding: 6px 8px;
+    text-align: start;
+    vertical-align: top;
+  }
+  @page {
+    margin: 14mm;
+  }
 }

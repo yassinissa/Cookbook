@@ -11,7 +11,7 @@ export function BottomNav() {
   const { can } = useAuth()
   const items = BOTTOM_NAV.filter((i) => !i.capability || can(i.capability))
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-hairline bg-surface lg:hidden">
+    <nav className="no-print fixed inset-x-0 bottom-0 z-40 flex border-t border-hairline bg-surface lg:hidden">
       {items.map((item) => (
         <NavLink
           key={item.to}

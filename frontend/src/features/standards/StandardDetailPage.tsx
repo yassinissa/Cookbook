@@ -10,6 +10,7 @@ import { Page } from '@/components/Page'
 import { Pill } from '@/components/Pill'
 import { EmptyState, ErrorState, Skeleton } from '@/components/States'
 import { StandardCard } from './StandardView'
+import { ScoreSheet } from './ScoreSheet'
 import * as api from '@/lib/api'
 import { qk } from '@/lib/queryClient'
 import { useDishStandard, useReference } from '@/lib/queries'
@@ -73,7 +74,8 @@ export function StandardDetailPage() {
     .join('  ·  ')
 
   return (
-    <Page stagger>
+    <>
+    <Page stagger className="print:hidden">
       <div className="mb-4 flex items-center justify-between">
         <Button
           variant="ghost"
@@ -84,6 +86,16 @@ export function StandardDetailPage() {
           {t('standards.detail.back')}
         </Button>
         <div className="flex items-center gap-2">
+          {std && (
+            <Button
+              variant="secondary"
+              size="sm"
+              icon="documents"
+              onClick={() => window.print()}
+            >
+              {t('action.printScoresheet')}
+            </Button>
+          )}
           {canEdit && std && (
             <Button
               variant="secondary"
@@ -194,6 +206,12 @@ export function StandardDetailPage() {
         }
       />
     </Page>
+    {std && (
+      <div className="print-reset">
+        <ScoreSheet data={data} std={std} t={t} locale={locale} />
+      </div>
+    )}
+    </>
   )
 }
 
