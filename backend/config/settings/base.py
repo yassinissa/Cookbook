@@ -108,6 +108,11 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Dish photos are posted inline as a base64 data: URI on the recipe JSON, so the
+# request body runs a few MB past Django's 2.5 MB default. Cap the decoded image
+# at 5 MB (serializer) → ~7 MB of base64 text; 12 MB leaves headroom.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
+
 # ─── DEFAULT PRIMARY KEY ──────────────────────────────────────────────────────
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

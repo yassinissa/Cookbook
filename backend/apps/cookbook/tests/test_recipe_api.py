@@ -2,13 +2,21 @@
 End-to-end: create / update / recalculate a dish recipe through the API and
 check the stored cost + breakdown match the engine.
 """
+import tempfile
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 from rest_framework.test import APIClient, APITestCase
 
 from apps.cookbook.models import DishRecipe, MenuCategory, Section
 from .support import TABBOULEH_LINES, fake_inventory_items, make_tabbouleh_items, make_units
+
+# 1x1 transparent PNG
+_PNG_1PX = (
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ'
+    'AAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+)
 
 
 class DishRecipeApiTests(APITestCase):
@@ -86,6 +94,43 @@ class DishRecipeApiTests(APITestCase):
             resp = self.client.patch(f'/api/cookbook/dish-recipes/{rid}/', payload, format='json')
         self.assertEqual(resp.status_code, 200)
         self.assertLess(float(resp.data['cost']), 0.752)
+
+    @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+    def test_image_upload_stores_file_and_returns_absolute_url(self):
+        with fake_inventory_items([]):
+            create = self.client.post(
+                '/api/cookbook/dish-recipes/', self._payload(image_data=_PNG_1PX), format='json',
+            )
+        self.assertEqual(create.status_code, 201, create.data)
+        recipe = DishRecipe.objects.get(pk=create.data['id'])
+        self.assertTrue(recipe.image.name.startswith('dish-images/'))
+        self.assertTrue(recipe.image.storage.exists(recipe.image.name))
+        # no new version just for a photo
+        self.assertEqual(DishRecipe.objects.count(), 1)
+
+        detail = self.client.get(f'/api/cookbook/dish-recipes/{recipe.id}/')
+        self.assertTrue(detail.data['image_url'].startswith('http'))
+        self.assertIn('/media/dish-images/', detail.data['image_url'])
+
+        # empty string removes it
+        with fake_inventory_items([]):
+            self.client.patch(
+                f'/api/cookbook/dish-recipes/{recipe.id}/',
+                self._payload(image_data=''), format='json',
+            )
+        recipe.refresh_from_db()
+        self.assertFalse(recipe.image)
+        self.assertEqual(recipe.image_url, '')
+
+    @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+    def test_bad_image_data_is_a_400(self):
+        with fake_inventory_items([]):
+            resp = self.client.post(
+                '/api/cookbook/dish-recipes/',
+                self._payload(image_data='data:image/tiff;base64,Zm9v'), format='json',
+            )
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('image_data', resp.data)
 
     def test_ingredient_edit_creates_a_new_version(self):
         with fake_inventory_items([]):

@@ -6,6 +6,7 @@ import { Card, CardBody, CardHeader } from '@/components/Card'
 import { Field } from '@/components/Field'
 import { Icon } from '@/components/Icon'
 import { Input, Select, Textarea } from '@/components/Input'
+import { ImagePicker } from '@/components/ImagePicker'
 import { Page } from '@/components/Page'
 import { ErrorState, Skeleton } from '@/components/States'
 import { CostPanel } from './CostPanel'
@@ -37,6 +38,8 @@ interface FormState {
   branch_ref: string
   pos_item_name: string
   image_url: string
+  /** undefined = photo untouched; '' = remove; 'data:…' = newly picked file */
+  image_data?: string
   category: string
   section: string
   service_style: string
@@ -126,6 +129,7 @@ export function DishEditorPage() {
       branch_ref: r.branch_ref ?? '',
       pos_item_name: r.pos_item_name,
       image_url: r.image_url,
+      image_data: undefined,
       category: r.category?.id ?? '',
       section: r.section?.id ?? '',
       service_style: r.service_style?.id ?? '',
@@ -177,8 +181,12 @@ export function DishEditorPage() {
   }, [fieldErrors])
 
   function buildPayload() {
+    // image_url is server-managed now (it mirrors the uploaded file's URL);
+    // only send image_data when the photo was actually touched.
+    const { image_url: _imageUrl, image_data, ...rest } = form
     return {
-      ...form,
+      ...rest,
+      ...(image_data !== undefined ? { image_data } : {}),
       category: form.category || null,
       section: form.section || null,
       service_style: form.service_style || null,
@@ -338,9 +346,14 @@ export function DishEditorPage() {
                 <Field label={t('editor.field.pos')} error={err('pos_item_name')}>
                   <Input value={form.pos_item_name} onChange={(e) => set('pos_item_name', e.target.value)} />
                 </Field>
-                <Field label={t('editor.field.image')} error={err('image_url')}>
-                  <Input type="url" placeholder="https://…" value={form.image_url} onChange={(e) => set('image_url', e.target.value)} />
-                </Field>
+                <div className="sm:col-span-2">
+                  <ImagePicker
+                    value={form.image_data ?? form.image_url}
+                    name={form.name_en || 'dish'}
+                    error={err('image_data') || err('image_url')}
+                    onChange={(v) => set('image_data', v)}
+                  />
+                </div>
               </CardBody>
             </Card>
 

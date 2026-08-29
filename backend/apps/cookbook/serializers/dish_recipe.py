@@ -1,3 +1,8 @@
+import base64
+import binascii
+import uuid
+
+from django.core.files.base import ContentFile
 from rest_framework import serializers
 
 from apps.accounts.access import ALL, access_for
@@ -14,6 +19,46 @@ from .reference import (
     ApproverSerializer, AllergenSerializer, UnitScaleSerializer,
 )
 from .mixins import HidesCostingFields
+
+
+_IMAGE_EXT = {'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png',
+              'image/webp': 'webp', 'image/gif': 'gif'}
+_MAX_IMAGE_BYTES = 5 * 1024 * 1024
+
+
+def _absolute_image_url(request, url):
+    """Uploaded photos are stored as a relative `/media/...` path; make it
+    absolute so it resolves from a phone / another host, not just the API box."""
+    if url and url.startswith('/') and request is not None:
+        return request.build_absolute_uri(url)
+    return url or ''
+
+
+def apply_image_data(recipe, image_data):
+    """`image_data` from the client is either '' (remove the photo) or a
+    `data:<mime>;base64,<payload>` URI (a newly picked file). A plain http(s)
+    URL still goes through the writable `image_url` field instead."""
+    if image_data is None:
+        return
+    if image_data == '':
+        recipe.image = None
+        recipe.image_url = ''
+        return
+    if not image_data.startswith('data:'):
+        raise serializers.ValidationError(
+            {'image_data': 'Expected a data: URI or an empty string.'})
+    try:
+        header, payload = image_data.split(',', 1)
+        mime = header.split(';')[0][5:].lower()
+        ext = _IMAGE_EXT[mime]
+        blob = base64.b64decode(payload, validate=True)
+    except (ValueError, KeyError, binascii.Error):
+        raise serializers.ValidationError(
+            {'image_data': 'Unsupported or corrupt image. Use JPEG, PNG, WebP or GIF.'})
+    if len(blob) > _MAX_IMAGE_BYTES:
+        raise serializers.ValidationError({'image_data': 'Image must be 5 MB or smaller.'})
+    recipe.image.save(f'{uuid.uuid4().hex}.{ext}', ContentFile(blob), save=False)
+    recipe.image_url = recipe.image.url
 
 
 class DishRecipeIngredientSerializer(serializers.ModelSerializer):
@@ -56,6 +101,7 @@ class DishRecipeListSerializer(HidesCostingFields, serializers.ModelSerializer):
     ingredient_count = serializers.IntegerField(source='ingredients.count', read_only=True)
     has_standard = serializers.SerializerMethodField()
     is_published = serializers.SerializerMethodField()
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model  = DishRecipe
@@ -71,6 +117,9 @@ class DishRecipeListSerializer(HidesCostingFields, serializers.ModelSerializer):
 
     def get_is_published(self, obj):
         return bool(obj.inventory_recipe_id)
+
+    def get_image_url(self, obj):
+        return _absolute_image_url(self.context.get('request'), obj.image_url)
 
 
 class DishRecipeDetailSerializer(HidesCostingFields, serializers.ModelSerializer):
@@ -88,6 +137,7 @@ class DishRecipeDetailSerializer(HidesCostingFields, serializers.ModelSerializer
     price_history = DishPriceHistorySerializer(many=True, read_only=True)
     activity_log  = DishRecipeActivityLogSerializer(many=True, read_only=True)
     publish_stale = serializers.SerializerMethodField()
+    image_url     = serializers.SerializerMethodField()
 
     class Meta:
         model  = DishRecipe
@@ -104,6 +154,9 @@ class DishRecipeDetailSerializer(HidesCostingFields, serializers.ModelSerializer
             'inventory_recipe_id', 'published_at', 'publish_error', 'publish_stale',
             'created_at', 'updated_at',
         ]
+
+    def get_image_url(self, obj):
+        return _absolute_image_url(self.context.get('request'), obj.image_url)
 
     def get_publish_stale(self, obj):
         # a > 1s gap is a real edit; sub-second is just the publish save itself
@@ -133,6 +186,10 @@ class DishRecipeWriteSerializer(serializers.ModelSerializer):
     steps       = serializers.ListField(child=serializers.DictField(), write_only=True, required=False)
     standard    = serializers.DictField(write_only=True, required=False, allow_null=True)
     allergens   = serializers.PrimaryKeyRelatedField(queryset=Allergen.objects.all(), many=True, required=False)
+    # A picked file arrives as a base64 data: URI; '' removes the photo. A plain
+    # link still goes through `image_url`. Not versioned — swapping the photo
+    # isn't a recipe revision.
+    image_data  = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model  = DishRecipe
@@ -140,7 +197,8 @@ class DishRecipeWriteSerializer(serializers.ModelSerializer):
             'name_en', 'name_ar', 'recipe_code', 'revision', 'revision_date',
             'branch', 'branch_ref', 'category', 'section', 'service_style',
             'allergens', 'pos_item_name', 'selling_price',
-            'rating', 'rating_status', 'rating_date', 'taste_profile', 'image_url',
+            'rating', 'rating_status', 'rating_date', 'taste_profile',
+            'image_url', 'image_data',
             'prep_time_minutes', 'expected_waste_pct', 'include_labor_cost',
             'approved_by', 'qa_approved_by', 'approved_at', 'notes',
             'ingredients', 'steps', 'standard',
@@ -223,9 +281,11 @@ class DishRecipeWriteSerializer(serializers.ModelSerializer):
         step_data       = validated_data.pop('steps', [])
         standard_data   = validated_data.pop('standard', None)
         allergens       = validated_data.pop('allergens', [])
+        image_data      = validated_data.pop('image_data', None)
 
         recipe = DishRecipe(**validated_data)
         apply_cost(recipe, ingredient_data)      # sets cost / labor_cost / cost_breakdown
+        apply_image_data(recipe, image_data)
         recipe.save()
         recipe.allergens.set(allergens)
         self._save_ingredients(recipe, ingredient_data)
@@ -240,6 +300,7 @@ class DishRecipeWriteSerializer(serializers.ModelSerializer):
         step_data       = validated_data.pop('steps', None)
         standard_data   = validated_data.pop('standard', None)
         allergens       = validated_data.pop('allergens', None)
+        image_data      = validated_data.pop('image_data', None)
 
         old_cost, old_price = instance.cost, instance.selling_price
 
@@ -250,6 +311,8 @@ class DishRecipeWriteSerializer(serializers.ModelSerializer):
 
         for attr, val in validated_data.items():
             setattr(instance, attr, val)
+
+        apply_image_data(instance, image_data)
 
         if ingredient_data is not None:
             instance.ingredients.all().delete()
