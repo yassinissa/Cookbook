@@ -94,7 +94,7 @@ function AttentionCard({ data, t }: { data: Dashboard; t: T }) {
           ) : undefined
         }
       />
-      <CardBody className="p-0">
+      <CardBody flush>
         {data.attention.items.length === 0 ? (
           <div className="p-5">
             <EmptyState icon="check" title={t('dash.attention.empty')} />
@@ -139,7 +139,7 @@ function OverTargetCard({ data, t }: { data: Dashboard; t: T }) {
   return (
     <Card elevated rail={data.over_target.length > 0 ? 'alert' : 'idle'}>
       <CardHeader title={t('dash.overTarget.title')} />
-      <CardBody className="p-0">
+      <CardBody flush>
         {data.over_target.length === 0 ? (
           <div className="p-5">
             <EmptyState icon="check" title={t('dash.overTarget.empty')} />
@@ -251,7 +251,7 @@ function ActivityCard({ data, t, locale }: { data: Dashboard; t: T; locale: Loca
   return (
     <Card elevated>
       <CardHeader title={t('dash.activity.title')} />
-      <CardBody className="p-0">
+      <CardBody flush>
         {data.recent_activity.length === 0 ? (
           <div className="p-5">
             <EmptyState icon="activity" title={t('dash.activity.empty')} />

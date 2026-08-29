@@ -71,8 +71,19 @@ export function CardHeader({
   )
 }
 
-export function CardBody({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn('p-4 sm:p-5', className)}>{children}</div>
+export function CardBody({
+  children,
+  className,
+  flush = false,
+}: {
+  children: ReactNode
+  className?: string
+  /** drop the default padding — for edge-to-edge tables/lists. (`cn` is plain
+   * clsx with no tailwind-merge, so a `className="p-0"` would NOT win against
+   * the base `p-4`; use this instead.) */
+  flush?: boolean
+}) {
+  return <div className={cn(!flush && 'p-4 sm:p-5', className)}>{children}</div>
 }
 
 export function SectionLabel({ children, className }: { children: ReactNode; className?: string }) {

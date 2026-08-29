@@ -159,7 +159,7 @@ export function DishDetailPage() {
         <div className="space-y-6">
           <Card elevated>
             <CardHeader title={t('editor.section.ingredients')} />
-            <CardBody className="p-0">
+            <CardBody flush>
               <table className="w-full text-sm">
                 <tbody className="divide-y divide-hairline">
                   {dish.ingredients.map((i) => (

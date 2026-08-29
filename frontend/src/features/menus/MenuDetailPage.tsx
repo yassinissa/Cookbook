@@ -254,7 +254,7 @@ export function MenuDetailPage() {
       {snapshots && snapshots.length > 0 && (
         <Card elevated className="mt-6">
           <CardHeader title={t('menus.snapshots.title')} />
-          <CardBody className="p-0">
+          <CardBody flush>
             <ul className="divide-y divide-hairline">
               {[...snapshots].reverse().map((s) => (
                 <li key={s.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
