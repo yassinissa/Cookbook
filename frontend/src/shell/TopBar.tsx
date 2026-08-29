@@ -8,7 +8,7 @@ import { Wordmark } from './Sidebar'
 import { Icon } from '@/components/Icon'
 import { useAuth } from '@/auth/AuthProvider'
 import { useDishRecipes } from '@/lib/queries'
-import { logout } from '@/lib/http'
+import { logout, USE_SEED } from '@/lib/http'
 import { useI18n } from '@/i18n'
 import { cn } from '@/lib/cn'
 
@@ -128,19 +128,25 @@ function UserMenu() {
             <p className="text-[13px] font-medium text-ink">{name}</p>
             {me?.role && <p className="text-xs text-ink-subtle">{me.role.name}</p>}
           </div>
-          <button
-            type="button"
-            role="menuitem"
-            onMouseDown={(e) => {
-              e.preventDefault()
-              logout()
-              window.location.assign('/login')
-            }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-start text-[13px] text-ink hover:bg-surface-sunken"
-          >
-            <Icon name="logout" size={15} />
-            {t('action.logout')}
-          </button>
+          {USE_SEED ? (
+            <p className="px-3 py-2 text-xs leading-relaxed text-ink-subtle">
+              {t('auth.seedBuildHint')}
+            </p>
+          ) : (
+            <button
+              type="button"
+              role="menuitem"
+              onMouseDown={(e) => {
+                e.preventDefault()
+                logout()
+                window.location.assign('/login')
+              }}
+              className="flex w-full items-center gap-2 px-3 py-2 text-start text-[13px] text-ink hover:bg-surface-sunken"
+            >
+              <Icon name="logout" size={15} />
+              {t('action.logout')}
+            </button>
+          )}
         </div>
       )}
     </div>

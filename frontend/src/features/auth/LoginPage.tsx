@@ -7,7 +7,7 @@ import { Input } from '@/components/Input'
 import { Icon } from '@/components/Icon'
 import { LocaleToggle } from '@/shell/LocaleToggle'
 import { ThemeToggle } from '@/shell/ThemeToggle'
-import { getToken, login } from '@/lib/http'
+import { getToken, login, USE_SEED } from '@/lib/http'
 import { useI18n } from '@/i18n'
 
 export function LoginPage() {
@@ -19,7 +19,9 @@ export function LoginPage() {
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    if (getToken()) navigate('/', { replace: true })
+    // Seed builds have no auth backend — there is nothing to sign into. Anyone
+    // who lands here (e.g. a stale /login bookmark) goes straight back in.
+    if (USE_SEED || getToken()) navigate('/', { replace: true })
   }, [navigate])
 
   async function onSubmit(e: FormEvent) {

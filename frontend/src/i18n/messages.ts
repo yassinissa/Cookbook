@@ -50,6 +50,7 @@ export const en = {
   'action.editStandard': 'Edit standard',
   'action.createStandard': 'Create standard',
   'action.logout': 'Log out',
+  'auth.seedBuildHint': 'Demo build — sign-out is disabled. Use the identity switcher to change roles.',
 
   'state.loading': 'Loading…',
   'state.errorGeneric': 'Something went wrong.',
@@ -476,6 +477,7 @@ export const ar: Record<MessageKey, string> = {
   'action.editStandard': 'تعديل المعيار',
   'action.createStandard': 'إنشاء معيار',
   'action.logout': 'تسجيل الخروج',
+  'auth.seedBuildHint': 'نسخة عرض توضيحي — تسجيل الخروج معطّل. استخدم مبدّل الهوية لتغيير الأدوار.',
 
   'state.loading': 'جارٍ التحميل…',
   'state.errorGeneric': 'حدث خطأ ما.',
