@@ -544,11 +544,165 @@ export const DISHES: SeedDish[] = [
   },
 ]
 
-export const SEED_INVENTORY_SKUS = Array.from(
-  new Map(
-    DISHES.flatMap((d) => d.ingredients).map((i) => [
-      i.sku,
-      { sku: i.sku, name_en: i.name, name_ar: i.name_ar ?? '', unit_cost: '0.000' },
-    ]),
-  ).values(),
-)
+/* ── Inventory item catalogue ───────────────────────────────────────────
+ * Derived from every ingredient line across the dishes, then fleshed out
+ * with the fields inventory-platform's Item master actually carries
+ * (type, unit, cost, barcode, origin, supplier, shelf life, …) so the
+ * Inventory screen shows a real item definition, not just name + cost.
+ * All values are deterministic from the SKU — the demo is reproducible. */
+
+const ORIGINS = ['Kuwait', 'Lebanon', 'Turkey', 'Egypt', 'India', 'France', 'Italy', 'Jordan']
+const SUPPLIERS = [
+  { id: 'sup-levant', name_en: 'Levant Fresh Trading', name_ar: 'المشرق للتجارة', country: 'Lebanon' },
+  { id: 'sup-gulfdry', name_en: 'Gulf Dry Goods Co.', name_ar: 'الخليج للمواد الجافة', country: 'Kuwait' },
+  { id: 'sup-almarai', name_en: 'Al Marai Distribution', name_ar: 'المراعي للتوزيع', country: 'Kuwait' },
+  { id: 'sup-anatolia', name_en: 'Anatolia Imports', name_ar: 'الأناضول للاستيراد', country: 'Turkey' },
+  { id: 'sup-nilevalley', name_en: 'Nile Valley Produce', name_ar: 'وادي النيل للخضار', country: 'Egypt' },
+]
+const SHELF_LIFE: Record<string, [number, 'D' | 'M' | 'Y']> = {
+  produce: [4, 'D'], dairy: [10, 'D'], meat: [3, 'D'], poultry: [3, 'D'], seafood: [2, 'D'],
+  bakery: [3, 'D'], sauce: [6, 'M'], oil: [12, 'M'], dry: [12, 'M'], other: [6, 'M'],
+}
+const LOCATIONS: Record<string, string> = {
+  produce: 'Produce Walk-in', dairy: 'Cold Room 2', meat: 'Meat Chiller', poultry: 'Meat Chiller',
+  seafood: 'Seafood Chiller', bakery: 'Bakery Store', sauce: 'Central Dry Store',
+  oil: 'Central Dry Store', dry: 'Central Dry Store', other: 'Central Dry Store',
+}
+const PERISHABLE = new Set(['produce', 'dairy', 'meat', 'poultry', 'seafood', 'bakery'])
+
+const hash = (s: string) => {
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0
+  return Math.abs(h)
+}
+const titleCase = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+
+function categoryFor(name: string): string {
+  const n = name.toLowerCase()
+  if (/lamb|beef|kofta|mince|meat|shawarma/.test(n)) return 'meat'
+  if (/chicken|poultry/.test(n)) return 'poultry'
+  if (/fish|shrimp|prawn|calamari|squid/.test(n)) return 'seafood'
+  if (/cheese|akkawi|yog[hu]rt|labneh|milk|cream|ghee|butter|kishk/.test(n)) return 'dairy'
+  if (/\boil\b/.test(n)) return 'oil'
+  if (/molasses|syrup|tahini|pomegranate|paste|sauce|dibs/.test(n)) return 'sauce'
+  if (/bread|pita|dough|khubz/.test(n)) return 'bakery'
+  // dry spices & staples win over "pepper"/"leaf" which also read as produce
+  if (
+    /burghul|rice|flour|breadcrumb|sugar|\bsalt\b|spice|sumac|cumin|paprika|cinnamon|cardamom|nutmeg|chickpea|chick pea|lentil|pine nut|walnut|pistachio|almond|sesame|kadaif|kadayif|vermicelli|pastry|semolina|za.?atar|aleppo|chilli|chili|baharat/.test(
+      n,
+    )
+  )
+    return 'dry'
+  if (
+    /parsley|mint|tomato|onion|lettuce|cucumber|bell pepper|red pepper|green pepper|capsicum|garlic|lemon|lime|eggplant|aubergine|potato|coriander|rocket|radish|spring onion|\bcos\b|purslane/.test(
+      n,
+    )
+  )
+    return 'produce'
+  return 'other'
+}
+
+function unitFor(unitIds: Set<string>): { code: string; name_en: string } {
+  if ([...unitIds].some((u) => u === U.ml || u === U.tbs || u === U.ts))
+    return { code: 'Ltr', name_en: 'Litre' }
+  if (unitIds.has(U.pc)) return { code: 'Pc', name_en: 'Piece' }
+  return { code: 'Kg', name_en: 'Kilogram' }
+}
+
+interface Agg {
+  name_en: string
+  name_ar: string
+  units: Set<string>
+  costPerBase: number[] // KWD per Kg / Ltr / Pc
+}
+
+const _agg = new Map<string, Agg>()
+for (const line of DISHES.flatMap((d) => d.ingredients)) {
+  const a =
+    _agg.get(line.sku) ??
+    { name_en: line.name, name_ar: line.name_ar ?? '', units: new Set<string>(), costPerBase: [] }
+  a.units.add(line.unit)
+  const qty = Number(line.qty)
+  const amt = Number(line.amount)
+  if (qty > 0 && amt > 0) {
+    const perUnit = amt / qty
+    a.costPerBase.push(line.unit === U.pc ? perUnit : perUnit * 1000)
+  }
+  _agg.set(line.sku, a)
+}
+
+export interface SeedInventoryItem {
+  id: string
+  sku: string
+  name_en: string
+  name_ar: string
+  item_type: string
+  item_type_display: string
+  category: string
+  category_display: string
+  unit_code: string
+  unit_name: string
+  unit_detail: { code: string; name_en: string }
+  unit_cost: string
+  selling_price: string | null
+  reorder_level: string
+  shelf_life_value: number
+  shelf_life_unit: string
+  expiry_tracking: boolean
+  expiry_alert_days: number
+  origin_country: string
+  barcode: string
+  suppliers_info: { id: string; name_en: string; name_ar: string; country: string }[]
+  default_location_name: string
+  notes: string
+  image_url: string | null
+  is_active: boolean
+}
+
+export const SEED_INVENTORY_SKUS: SeedInventoryItem[] = [..._agg.entries()]
+  .map(([sku, a]) => {
+    const h = hash(sku)
+    const category = categoryFor(a.name_en)
+    const unit = unitFor(a.units)
+    const prepared = /syrup|roasted|toasted|de-?salted|soaked|stock|confit/i.test(a.name_en)
+    const avgCost = a.costPerBase.length
+      ? a.costPerBase.reduce((s, n) => s + n, 0) / a.costPerBase.length
+      : 1 + (h % 900) / 100
+    const [slValue, slUnit] = SHELF_LIFE[category] ?? SHELF_LIFE.other
+    const supplierCount = h % 5 === 0 ? 2 : 1
+    const suppliers = Array.from(
+      { length: supplierCount },
+      (_, k) => SUPPLIERS[(h + k * 7) % SUPPLIERS.length],
+    )
+    return {
+      id: sku,
+      sku,
+      name_en: a.name_en,
+      name_ar: a.name_ar,
+      item_type: prepared ? 'prepared_product' : 'raw_material',
+      item_type_display: prepared ? 'Prepared Product' : 'Raw Material',
+      category,
+      category_display: titleCase(category),
+      unit_code: unit.code,
+      unit_name: unit.name_en,
+      unit_detail: unit,
+      unit_cost: avgCost.toFixed(3),
+      selling_price: category === 'dry' && h % 3 === 0 ? (avgCost * 1.35).toFixed(3) : null,
+      reorder_level: (2 + (h % 18)).toFixed(3),
+      shelf_life_value: slValue,
+      shelf_life_unit: slUnit,
+      expiry_tracking: PERISHABLE.has(category),
+      expiry_alert_days: PERISHABLE.has(category) ? 2 : 7,
+      origin_country: ORIGINS[h % ORIGINS.length],
+      barcode: '628' + String(1000000000 + (h % 8999999999)).slice(0, 10),
+      suppliers_info: suppliers,
+      default_location_name: LOCATIONS[category] ?? LOCATIONS.other,
+      notes:
+        h % 6 === 0
+          ? 'Received against the weekly standing order; QC checks weight and temperature on arrival.'
+          : '',
+      image_url: null,
+      is_active: h % 19 !== 0,
+    }
+  })
+  .sort((x, y) => x.name_en.localeCompare(y.name_en))

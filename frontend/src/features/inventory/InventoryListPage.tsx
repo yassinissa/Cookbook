@@ -214,6 +214,14 @@ function ItemDrawer({ id, onClose }: { id: string | null; onClose: () => void })
       )}
       {data && (
         <div className="space-y-5">
+          {data.image_url && (
+            <img
+              src={data.image_url}
+              alt={data.name_en}
+              className="h-40 w-full rounded-card border border-hairline object-cover"
+            />
+          )}
+
           <div>
             <p className="font-display text-xl font-medium text-ink">{data.name_en}</p>
             {data.name_ar && (
@@ -221,15 +229,28 @@ function ItemDrawer({ id, onClose }: { id: string | null; onClose: () => void })
                 {data.name_ar}
               </p>
             )}
-            <p className="tnum mt-1 font-mono text-xs text-ink-subtle">{data.sku}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {data.item_type_display && <Pill tone="neutral">{data.item_type_display}</Pill>}
+              {data.category_display && (
+                <Pill tone="neutral" className="capitalize">
+                  {data.category_display}
+                </Pill>
+              )}
+              <Pill tone={data.is_active === false ? 'neutral' : 'success'}>
+                {data.is_active === false ? t('inv.inactive') : t('inv.active')}
+              </Pill>
+            </div>
           </div>
 
           <dl className="divide-y divide-hairline rounded-card border border-hairline">
+            <Row label={t('inv.detail.sku')} value={data.sku} mono />
+            <Row label={t('inv.detail.barcode')} value={data.barcode} mono />
             <Row
               label={t('inv.col.category')}
               value={data.category_display ?? data.category?.replace(/_/g, ' ')}
             />
             <Row label={t('inv.detail.type')} value={data.item_type_display} />
+            <Row label={t('inv.detail.origin')} value={data.origin_country} />
             <Row
               label={t('inv.col.unit')}
               value={
@@ -277,10 +298,6 @@ function ItemDrawer({ id, onClose }: { id: string | null; onClose: () => void })
               }
             />
             <Row label={t('inv.detail.notes')} value={data.notes} />
-            <Row
-              label={t('inv.detail.status')}
-              value={data.is_active === false ? t('inv.inactive') : t('inv.active')}
-            />
           </dl>
 
           <p className="text-xs text-ink-subtle">{t('inv.source')}</p>
