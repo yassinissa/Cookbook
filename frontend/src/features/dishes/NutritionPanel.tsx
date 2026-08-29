@@ -60,7 +60,7 @@ export function NutritionPanel({
           ) : undefined
         }
       />
-      <CardBody>
+      <CardBody flush={!!n}>
         {!n ? (
           <p className="text-sm text-ink-subtle">{t('nutrition.empty')}</p>
         ) : (
@@ -68,10 +68,10 @@ export function NutritionPanel({
             <tbody className="divide-y divide-hairline">
               {ROWS.map(([key, en, ar, unit]) => (
                 <tr key={key}>
-                  <td className="py-1.5 text-ink-muted">
+                  <td className="py-1.5 pe-3 ps-4 text-ink-muted sm:ps-5">
                     {en} <span dir="rtl" className="text-xs text-ink-subtle">{ar}</span>
                   </td>
-                  <td className="tnum py-1.5 text-end text-ink">
+                  <td className="tnum py-1.5 pe-4 ps-3 text-end text-ink sm:pe-5">
                     {fmt(n[key] as string | undefined)}{' '}
                     <span className="text-xs text-ink-subtle">{unit}</span>
                   </td>

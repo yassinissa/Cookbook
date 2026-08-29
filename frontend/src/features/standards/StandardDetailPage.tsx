@@ -76,7 +76,7 @@ export function StandardDetailPage() {
   return (
     <>
     <Page stagger className="print:hidden">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <Button
           variant="ghost"
           size="sm"
@@ -85,7 +85,7 @@ export function StandardDetailPage() {
         >
           {t('standards.detail.back')}
         </Button>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {std && (
             <Button
               variant="secondary"

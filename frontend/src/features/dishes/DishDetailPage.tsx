@@ -104,11 +104,11 @@ export function DishDetailPage() {
 
   return (
     <Page stagger>
-      <div className="mb-4 flex items-center justify-between no-print">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 no-print">
         <Button variant="ghost" size="sm" icon="arrowLeft" onClick={() => navigate('/recipes/dishes')}>
           {t('dishes.title')}
         </Button>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {can('recipe.history') && (
             <Button variant="secondary" size="sm" icon="history" onClick={() => setVersionsOpen(true)}>
               {t('action.versionHistory')}
