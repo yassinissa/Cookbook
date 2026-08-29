@@ -29,6 +29,11 @@ before calling anything done — not just "the happy path returns 200."
   string, not a local FK. Recipe versions share a `lineage_key` UUID (on
   `RecipeCardFields`); `dish-recipes/<id>/versions/` + `/diff/` and
   `cookbook/dashboard/` are the read-only aggregates on top.
+  `DishRecipe.image` is an `ImageField` (Pillow) — the write serializer
+  takes a base64 `image_data` (`''` clears it, ≤5 MB), mirrors the file URL
+  into `image_url`, and the read serializers return `image_url` absolute.
+  `MEDIA_URL=/media/` is served by Django only under `DEBUG`;
+  `DATA_UPLOAD_MAX_MEMORY_SIZE` is raised for the inline payload.
   - **Standalone read/action APIs**: `cookbook/dish-standards/`
     (`views_standards.py`) — addressed by *dish id*, list is one row per
     current dish (so QA sees gaps), `PATCH` upserts the `DishStandard`
@@ -68,7 +73,11 @@ before calling anything done — not just "the happy path returns 200."
   screens built:
   - **Dashboard**; **Dish** list (thumbnails via `<DishImage>`, its
     placeholder covers photo-less dishes) / editor / detail (live cost
-    breakdown, nutrition, version-history drawer + diff).
+    breakdown, nutrition, version-history drawer + diff). The editor's photo
+    field is a file upload (`<ImagePicker>`) — reads the file to a base64
+    `image_data` on the recipe JSON; the backend `DishRecipe.image`
+    `ImageField` stores it and mirrors the URL into `image_url` (served from
+    `/media/` in DEBUG). Swapping a photo doesn't version the recipe.
   - **Production** (prep-kitchen) list / editor / detail — same shape as
     Dishes minus the plated photo, food-cost only (no labour — see below),
     yield card shows cost per output unit. `VersionDrawer` is shared
@@ -77,12 +86,18 @@ before calling anything done — not just "the happy path returns 200."
     coverage KPIs + gap list + status filters; detail renders `StandardCard`
     (`StandardView.tsx`, extracted from DishDetailPage's old local one and
     reused there); editor reuses `QaStandardFields`; inline approve dialog.
+    "Print scoresheet" renders a print-only `<ScoreSheet>` (expected value +
+    a blank to fill) for a QA assessor to score a dish as served against the
+    standard. Print CSS + shell `no-print` live in `styles/base.css`.
   - **Activity & History** (`src/features/activity`) — one URL-param-driven
     filterable feed (kind / action / actor / date / recipe / search) grouped
     by day.
   - **Menus** list / branch detail (trend charts, snapshots); **Inventory
     Items** (`src/features/inventory` — server-searched, paged table +
-    read-only detail drawer; reads through the Cookbook proxy).
+    read-only detail drawer showing the full item definition: photo,
+    type/category/status, SKU + barcode, origin, unit cost, selling price,
+    reorder level, shelf life, expiry, location, suppliers; reads through
+    the Cookbook proxy — `/items/<id>/` returns the full `ItemSerializer`).
   - `<PublishControl>` (`src/components/`) on the Dish + Production detail
     rail — publish/re-publish button + status (not published / published
     Xago / edited-since), gated `can('recipe.publish')`.
@@ -136,7 +151,7 @@ before calling anything done — not just "the happy path returns 200."
   (`RequireCapability`), nav + action buttons gated by `can(cap)`,
   `src/features/admin/` screens. Seed builds carry a TopBar **identity
   switcher** (`src/shell/IdentitySwitcher.tsx`) to demo scoped users.
-- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 92 `APITestCase`
+- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 94 `APITestCase`
   tests. The older cookbook suites use superuser clients (RBAC bypassed —
   `apps/accounts/tests/` covers enforcement broadly), but the newer ones
   (`test_{production,standards,activity,publishing}_api.py`) exercise scoped
