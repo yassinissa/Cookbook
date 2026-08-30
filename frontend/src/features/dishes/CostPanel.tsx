@@ -71,12 +71,11 @@ export function CostPanel({
         }
       />
       <CardBody className="space-y-4">
-        <div
-          className={cn(
-            'grid gap-2',
-            hideLabour ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-4',
-          )}
-        >
+        {/* Two columns always: this panel lives in a ~340px side rail, so a
+            4-across grid clipped the tile labels/values on desktop. The
+            emphasised per-serving tile spans the row when labour is hidden
+            (3 tiles) so there's no orphan cell. */}
+        <div className="grid grid-cols-2 gap-2">
           <Tile label={t('cost.tile.ingredients')} value={bd.items} />
           <Tile label={t('cost.tile.waste')} value={bd.waste} />
           {!hideLabour && <Tile label={t('cost.tile.labour')} value={bd.labor} />}
@@ -84,6 +83,7 @@ export function CostPanel({
             label={perServingLabel ?? t('cost.tile.perServing')}
             value={bd.per_serving}
             accent
+            className={hideLabour ? 'col-span-2' : undefined}
           />
         </div>
 
@@ -155,15 +155,26 @@ export function CostPanel({
   )
 }
 
-function Tile({ label, value, accent }: { label: string; value: string | null; accent?: boolean }) {
+function Tile({
+  label,
+  value,
+  accent,
+  className,
+}: {
+  label: string
+  value: string | null
+  accent?: boolean
+  className?: string
+}) {
   return (
     <div
       className={cn(
-        'rounded-lg border px-3 py-2',
+        'min-w-0 rounded-lg border px-3 py-2',
         accent ? 'border-accent/40 bg-accent-subtle' : 'border-hairline bg-surface-sunken',
+        className,
       )}
     >
-      <div className="text-2xs uppercase tracking-wide text-ink-subtle">{label}</div>
+      <div className="text-2xs uppercase leading-tight tracking-wide text-ink-subtle">{label}</div>
       <div
         className={cn(
           'tnum mt-0.5',
