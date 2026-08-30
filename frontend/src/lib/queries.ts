@@ -31,6 +31,22 @@ export function useInventoryItem(id: string | undefined) {
     staleTime: 10 * 60_000,
   })
 }
+export function useItemNutrition(sku: string | undefined) {
+  return useQuery({
+    queryKey: qk.itemNutrition(sku ?? ''),
+    queryFn: () => api.fetchItemNutrition(sku as string),
+    enabled: !!sku,
+    staleTime: 5 * 60_000,
+  })
+}
+export function useItemConversion(sku: string | undefined) {
+  return useQuery({
+    queryKey: qk.itemConversion(sku ?? ''),
+    queryFn: () => api.fetchItemConversion(sku as string),
+    enabled: !!sku,
+    staleTime: 5 * 60_000,
+  })
+}
 
 export function useDashboard() {
   return useQuery({ queryKey: qk.dashboard, queryFn: api.fetchDashboard })

@@ -24,6 +24,8 @@ import type {
   DishStandardListItem,
   InventoryItem,
   InventoryItemDetail,
+  ItemConversion,
+  ItemNutrition,
   MenuDetail,
   MenuLine,
   MenuListItem,
@@ -128,6 +130,63 @@ export async function fetchInventoryItem(id: string): Promise<InventoryItemDetai
     return base as InventoryItemDetail
   }
   const { data } = await http.get(`/inventory/items/${id}/`)
+  return data
+}
+
+/* ── per-SKU supplements (nutrition facts + allergens) ───────────────── */
+async function getOrNull<T>(path: string): Promise<T | null> {
+  try {
+    const { data } = await http.get<T>(path)
+    return data
+  } catch (err) {
+    if ((err as { response?: { status?: number } }).response?.status === 404) return null
+    throw err
+  }
+}
+
+export async function fetchItemNutrition(sku: string): Promise<ItemNutrition | null> {
+  if (USE_SEED) {
+    await delay(160)
+    return null
+  }
+  return getOrNull<ItemNutrition>(`/cookbook/item-nutrition/${encodeURIComponent(sku)}/`)
+}
+
+export async function saveItemNutrition(
+  sku: string,
+  payload: Partial<ItemNutrition>,
+  exists: boolean,
+): Promise<ItemNutrition> {
+  if (USE_SEED) {
+    await delay(300)
+    return { item_sku: sku, ...payload } as ItemNutrition
+  }
+  const { data } = exists
+    ? await http.patch(`/cookbook/item-nutrition/${encodeURIComponent(sku)}/`, payload)
+    : await http.post('/cookbook/item-nutrition/', { ...payload, item_sku: sku })
+  return data
+}
+
+export async function fetchItemConversion(sku: string): Promise<ItemConversion | null> {
+  if (USE_SEED) {
+    await delay(160)
+    return null
+  }
+  return getOrNull<ItemConversion>(`/cookbook/item-conversions/${encodeURIComponent(sku)}/`)
+}
+
+export async function saveItemAllergens(
+  sku: string,
+  allergens: string[],
+  exists: boolean,
+): Promise<ItemConversion> {
+  if (USE_SEED) {
+    await delay(300)
+    return { item_sku: sku, allergens } as ItemConversion
+  }
+  const { data } = exists
+    ? await http.patch(`/cookbook/item-conversions/${encodeURIComponent(sku)}/`, { allergens })
+    : await http.post('/cookbook/item-conversions/', { item_sku: sku, allergens })
   return data
 }
 

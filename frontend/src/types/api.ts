@@ -130,6 +130,51 @@ export interface AllergenRollup {
   dish: string[]
 }
 
+/* Per-SKU Cookbook-local supplements — the source the dish roll-ups above
+ * are computed from. Edited on the Inventory Items screen. */
+export const NUTRIENT_KEYS = [
+  'calories',
+  'fat_g',
+  'saturated_fat_g',
+  'trans_fat_g',
+  'cholesterol_mg',
+  'sodium_mg',
+  'carbs_g',
+  'fibers_g',
+  'sugars_g',
+  'added_sugars_g',
+  'protein_g',
+] as const
+export type NutrientKey = (typeof NUTRIENT_KEYS)[number]
+
+export interface ItemNutrition {
+  id: ID
+  item_sku: string
+  unit_scale: ID
+  unit_scale_detail?: UnitScale | null
+  calories: string
+  fat_g: string
+  protein_g: string
+  saturated_fat_g: string
+  trans_fat_g: string
+  cholesterol_mg: string
+  sodium_mg: string
+  carbs_g: string
+  fibers_g: string
+  sugars_g: string
+  added_sugars_g: string
+  verification_notes: string
+  updated_at: string
+}
+
+export interface ItemConversion {
+  id: ID
+  item_sku: string
+  allergens: ID[]
+  allergens_detail?: Allergen[]
+  updated_at: string
+}
+
 /* ── recipes ───────────────────────────────────────────────────────── */
 export type RatingStatus = '' | 'ok' | 'attention' | 'fix'
 

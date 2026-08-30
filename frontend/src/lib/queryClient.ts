@@ -15,6 +15,8 @@ export const qk = {
   inventory: ['inventory'] as const,
   inventoryPage: (search: string, page: number) => ['inventory', 'page', search, page] as const,
   inventoryItem: (id: string) => ['inventory', id] as const,
+  itemNutrition: (sku: string) => ['inventory', 'nutrition', sku] as const,
+  itemConversion: (sku: string) => ['inventory', 'conversion', sku] as const,
   dashboard: ['dashboard'] as const,
   dishes: ['dishes'] as const,
   dish: (id: string) => ['dishes', id] as const,
