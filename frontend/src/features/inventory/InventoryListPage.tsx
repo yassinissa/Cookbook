@@ -13,6 +13,7 @@ import {
   ItemAllergenSection,
   ItemMeasuresSection,
   ItemNutritionSection,
+  ItemStorageSection,
 } from './ItemSupplementPanels'
 import { kwd, number } from '@/lib/format'
 import { useI18n } from '@/i18n'
@@ -309,6 +310,7 @@ function ItemDrawer({ id, onClose }: { id: string | null; onClose: () => void })
 
           <ItemNutritionSection sku={data.sku} />
           <ItemMeasuresSection sku={data.sku} />
+          <ItemStorageSection sku={data.sku} itemId={data.id} />
           <ItemAllergenSection sku={data.sku} />
         </div>
       )}

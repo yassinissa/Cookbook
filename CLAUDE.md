@@ -115,16 +115,24 @@ before calling anything done — not just "the happy path returns 200."
     type/category/status, SKU + barcode, origin, unit cost, selling price,
     reorder level, shelf life, expiry, location, suppliers; the inventory
     fields are read-only [reads through the Cookbook proxy — `/items/<id>/`
-    returns the full `ItemSerializer`], but the drawer also carries three
+    returns the full `ItemSerializer`], but the drawer also carries four
     editable Cookbook-local supplement panels — `ItemSupplementPanels.tsx`,
     each a view/inline-form section hitting `/cookbook/item-{nutrition,
-    conversions}/<sku>/`: **Nutrition facts**, **Measurement conversions**
+    conversions,storage}/<sku>/`: **Nutrition facts**, **Measurement conversions**
     (the source sheet's 5 per-item figures — Grams in 1 Tbs / 1 Piece,
     Pieces in 1 Pkt / 1 Kg / Box; the tbsp weight is expanded to the full
     `ItemConversionLine` tsp/cup ladder on save the way the sheet formulas
     do [`ladderLines()`], the rest map to `ItemConversion` scalars — this is
     the data the recipe-costing bridges need, so a tbsp/piece recipe line
-    stops being `no_conversion`), and **Allergens**).
+    stops being `no_conversion`), **Storage & shelf life** (`ItemStorage` —
+    band + hours-from-prep + after-opening life + handling text + a label
+    line; inventory-platform's own shelf life is receipt-based, this is the
+    prep-kitchen number), and **Allergens**).
+  - **Prep labels** (`src/features/labels/LabelSheetPage.tsx`, `/labels/:itemId`)
+    — reached from an item's Storage panel; picks count / prepped-by / batch /
+    stock (label roll vs A4 3-up), computes use-by = now + `shelf_life_hours`
+    in `Asia/Kuwait`, prints date labels via a route-scoped `@media print`
+    block that swaps `@page` size per stock. Verified 2026-08-31.
   - `<PublishControl>` (`src/components/`) on the Dish + Production detail
     rail — publish/re-publish button + status (not published / published
     Xago / edited-since), gated `can('recipe.publish')`.
@@ -178,12 +186,13 @@ before calling anything done — not just "the happy path returns 200."
   (`RequireCapability`), nav + action buttons gated by `can(cap)`,
   `src/features/admin/` screens. Seed builds carry a TopBar **identity
   switcher** (`src/shell/IdentitySwitcher.tsx`) to demo scoped users.
-- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 105 `APITestCase`
+- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 109 `APITestCase`
   tests. The older cookbook suites use superuser clients (RBAC bypassed —
   `apps/accounts/tests/` covers enforcement broadly), but the newer ones
   (`test_{production,standards,plating,activity,publishing}_api.py`) exercise
   scoped non-superusers and capability gates directly. `test_item_conversion_api.py`
-  pins the per-item conversion write path + its effect on costing.
+  / `test_item_storage_api.py` pin the per-SKU supplement write paths (and the
+  conversion one's effect on costing).
   `test_plating_api.py` pins the dish-id upsert (no recipe version bump) and
   the id-keyed photo reconcile + pin normalisation. `test_publishing.py` fakes
   `InventoryClient` — nothing in the suite hits the network. Frontend has no

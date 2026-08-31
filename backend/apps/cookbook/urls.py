@@ -24,6 +24,7 @@ router.register(r'dish-standards', views_standards.DishStandardViewSet, basename
 router.register(r'plating-guides', views_plating.PlatingGuideViewSet, basename='plating-guide')
 router.register(r'item-conversions', views.ItemConversionViewSet, basename='item-conversion')
 router.register(r'item-nutrition', views.ItemNutritionViewSet, basename='item-nutrition')
+router.register(r'item-storage', views.ItemStorageViewSet, basename='item-storage')
 router.register(r'menus', views_menu.MenuViewSet, basename='menu')
 router.register(r'menu-lines', views_menu.MenuLineViewSet, basename='menu-line')
 

@@ -26,6 +26,7 @@ import type {
   InventoryItemDetail,
   ItemConversion,
   ItemNutrition,
+  ItemStorage,
   MenuDetail,
   MenuLine,
   MenuListItem,
@@ -205,6 +206,29 @@ export async function saveItemConversion(
   const { data } = exists
     ? await http.patch(`/cookbook/item-conversions/${encodeURIComponent(sku)}/`, payload)
     : await http.post('/cookbook/item-conversions/', { ...payload, item_sku: sku })
+  return data
+}
+
+export async function fetchItemStorage(sku: string): Promise<ItemStorage | null> {
+  if (USE_SEED) {
+    await delay(160)
+    return null
+  }
+  return getOrNull<ItemStorage>(`/cookbook/item-storage/${encodeURIComponent(sku)}/`)
+}
+
+export async function saveItemStorage(
+  sku: string,
+  payload: Partial<ItemStorage>,
+  exists: boolean,
+): Promise<ItemStorage> {
+  if (USE_SEED) {
+    await delay(300)
+    return { item_sku: sku, ...payload } as ItemStorage
+  }
+  const { data } = exists
+    ? await http.patch(`/cookbook/item-storage/${encodeURIComponent(sku)}/`, payload)
+    : await http.post('/cookbook/item-storage/', { ...payload, item_sku: sku })
   return data
 }
 

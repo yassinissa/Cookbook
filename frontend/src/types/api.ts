@@ -191,6 +191,22 @@ export interface ItemConversion {
   updated_at: string
 }
 
+export type StorageBand = '' | 'dry' | 'chilled' | 'frozen'
+
+export interface ItemStorage {
+  id: ID
+  item_sku: string
+  storage_band: StorageBand
+  storage_band_display: string
+  shelf_life_hours: number | null
+  opened_shelf_life_hours: number | null
+  storage_instructions_en: string
+  storage_instructions_ar: string
+  label_notes_en: string
+  label_notes_ar: string
+  updated_at: string
+}
+
 /* ── recipes ───────────────────────────────────────────────────────── */
 export type RatingStatus = '' | 'ok' | 'attention' | 'fix'
 

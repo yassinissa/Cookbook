@@ -23,6 +23,7 @@ import { UsersPage } from '@/features/admin/UsersPage'
 import { RolesPage } from '@/features/admin/RolesPage'
 import { MorePage } from '@/features/more/MorePage'
 import { InventoryListPage } from '@/features/inventory/InventoryListPage'
+import { LabelSheetPage } from '@/features/labels/LabelSheetPage'
 import { ComingSoonPage } from '@/features/placeholder/ComingSoonPage'
 import { RouteError } from '@/app/RouteError'
 
@@ -63,6 +64,7 @@ export const router = createBrowserRouter([
           { path: '/standards/:dishId', ...cap('standard.view', <StandardDetailPage />) },
           { path: '/standards/:dishId/edit', ...cap('standard.edit', <StandardEditorPage />) },
           { path: '/inventory', ...cap('inventory.view', <InventoryListPage />) },
+          { path: '/labels/:itemId', ...cap('inventory.view', <LabelSheetPage />) },
           { path: '/activity', ...cap('activity.view', <ActivityPage />) },
           { path: '/documents', element: <ComingSoonPage titleKey="nav.documents" icon="documents" /> },
           { path: '/pos', element: <ComingSoonPage titleKey="nav.pos" icon="pos" /> },

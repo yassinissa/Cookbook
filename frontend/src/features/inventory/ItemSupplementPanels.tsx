@@ -1,23 +1,31 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { Button } from '@/components/Button'
 import { Icon } from '@/components/Icon'
-import { Input, Select } from '@/components/Input'
+import { Input, Select, Textarea } from '@/components/Input'
 import { Pill } from '@/components/Pill'
 import { useToast } from '@/components/Toast'
-import { useI18n } from '@/i18n'
+import { useI18n, type TFunc } from '@/i18n'
 import { cn } from '@/lib/cn'
 import * as api from '@/lib/api'
 import { qk } from '@/lib/queryClient'
-import { useItemConversion, useItemNutrition, useReference } from '@/lib/queries'
+import {
+  useItemConversion,
+  useItemNutrition,
+  useItemStorage,
+  useReference,
+} from '@/lib/queries'
 import { parseApiError } from '@/lib/parseApiError'
 import {
   NUTRIENT_KEYS,
   type ItemConversion,
   type ItemConversionLine,
   type ItemNutrition,
+  type ItemStorage,
   type NutrientKey,
+  type StorageBand,
 } from '@/types/api'
 
 /* nutrient key -> [EN label, AR label, unit] */
@@ -657,5 +665,254 @@ function SectionSkeleton() {
       <div className="mt-3 h-3 w-full animate-pulse rounded bg-surface-sunken" />
       <div className="mt-2 h-3 w-2/3 animate-pulse rounded bg-surface-sunken" />
     </div>
+  )
+}
+
+/* ── Storage & shelf life ────────────────────────────────────────────── */
+
+const STORAGE_BANDS: StorageBand[] = ['', 'dry', 'chilled', 'frozen']
+
+/** "72" -> "72 h · 3 days" ; "18" -> "18 h" */
+function hoursLabel(hours: number | null | undefined, t: TFunc): string | null {
+  if (hours == null || hours <= 0) return null
+  if (hours % 24 === 0 && hours >= 24) {
+    return t('inv.supp.storage.hoursDays', { h: hours, d: hours / 24 })
+  }
+  return t('inv.supp.storage.hoursOnly', { h: hours })
+}
+
+export function ItemStorageSection({ sku, itemId }: { sku: string; itemId: string }) {
+  const { t, locale } = useI18n()
+  const toast = useToast()
+  const qc = useQueryClient()
+  const navigate = useNavigate()
+  const { data, isLoading, isError, refetch } = useItemStorage(sku)
+  const [editing, setEditing] = useState(false)
+
+  const mutation = useMutation({
+    mutationFn: (payload: Partial<ItemStorage>) => api.saveItemStorage(sku, payload, !!data),
+    onSuccess: (saved) => {
+      qc.setQueryData(qk.itemStorage(sku), saved)
+      setEditing(false)
+      toast.success(t('inv.supp.storage.saved'))
+    },
+    onError: (err) =>
+      toast.error(t('inv.supp.saveFailed', { detail: parseApiError(err).message })),
+  })
+
+  if (isLoading) return <SectionSkeleton />
+  if (isError)
+    return (
+      <SectionShell title={t('inv.supp.storage.title')} subtitle={t('inv.supp.storage.subtitle')}>
+        <button
+          type="button"
+          onClick={() => refetch()}
+          className="text-[13px] text-accent-ink hover:underline"
+        >
+          {t('inv.supp.loadError')}
+        </button>
+      </SectionShell>
+    )
+
+  if (editing) {
+    return (
+      <StorageForm
+        initial={data ?? null}
+        saving={mutation.isPending}
+        onCancel={() => setEditing(false)}
+        onSave={(payload) => mutation.mutate(payload)}
+      />
+    )
+  }
+
+  const bandLabel = data?.storage_band ? data.storage_band_display : null
+  const primary = hoursLabel(data?.shelf_life_hours, t)
+  const opened = hoursLabel(data?.opened_shelf_life_hours, t)
+  const instructions =
+    locale === 'ar'
+      ? data?.storage_instructions_ar || data?.storage_instructions_en
+      : data?.storage_instructions_en || data?.storage_instructions_ar
+  const canPrint = !!data?.shelf_life_hours
+
+  return (
+    <SectionShell
+      title={t('inv.supp.storage.title')}
+      subtitle={t('inv.supp.storage.subtitle')}
+      action={
+        <Button size="sm" variant="secondary" icon="edit" onClick={() => setEditing(true)}>
+          {data ? t('inv.supp.edit') : t('inv.supp.storage.add')}
+        </Button>
+      }
+    >
+      {!data || (!bandLabel && !primary && !instructions) ? (
+        <p className="text-[13px] text-ink-subtle">{t('inv.supp.storage.empty')}</p>
+      ) : (
+        <div className="space-y-2.5 text-[13px]">
+          {bandLabel && (
+            <div>
+              <Pill tone="neutral">{bandLabel}</Pill>
+            </div>
+          )}
+          <table className="w-full">
+            <tbody className="divide-y divide-hairline">
+              {primary && (
+                <tr>
+                  <td className="py-1.5 pe-3 text-ink-muted">{t('inv.supp.storage.shelfLife')}</td>
+                  <td className="py-1.5 ps-3 text-end font-mono text-ink">{primary}</td>
+                </tr>
+              )}
+              {opened && (
+                <tr>
+                  <td className="py-1.5 pe-3 text-ink-muted">{t('inv.supp.storage.opened')}</td>
+                  <td className="py-1.5 ps-3 text-end font-mono text-ink">{opened}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+          {instructions && (
+            <p className="whitespace-pre-line leading-relaxed text-ink">{instructions}</p>
+          )}
+        </div>
+      )}
+
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <p className="text-2xs text-ink-subtle">{t('inv.supp.localNote')}</p>
+        <Button
+          size="sm"
+          variant="secondary"
+          icon="documents"
+          disabled={!canPrint}
+          onClick={() => navigate(`/labels/${itemId}`)}
+        >
+          {t('inv.supp.storage.printLabels')}
+        </Button>
+      </div>
+      {!canPrint && (
+        <p className="mt-1 text-2xs text-ink-subtle">{t('inv.supp.storage.printHint')}</p>
+      )}
+    </SectionShell>
+  )
+}
+
+function StorageForm({
+  initial,
+  saving,
+  onCancel,
+  onSave,
+}: {
+  initial: ItemStorage | null
+  saving: boolean
+  onCancel: () => void
+  onSave: (payload: Partial<ItemStorage>) => void
+}) {
+  const { t } = useI18n()
+  const [band, setBand] = useState<StorageBand>(initial?.storage_band ?? '')
+  const [shelf, setShelf] = useState(initial?.shelf_life_hours ? String(initial.shelf_life_hours) : '')
+  const [opened, setOpened] = useState(
+    initial?.opened_shelf_life_hours ? String(initial.opened_shelf_life_hours) : '',
+  )
+  const [insEn, setInsEn] = useState(initial?.storage_instructions_en ?? '')
+  const [insAr, setInsAr] = useState(initial?.storage_instructions_ar ?? '')
+  const [noteEn, setNoteEn] = useState(initial?.label_notes_en ?? '')
+  const [noteAr, setNoteAr] = useState(initial?.label_notes_ar ?? '')
+
+  function submit(e: FormEvent) {
+    e.preventDefault()
+    onSave({
+      storage_band: band,
+      shelf_life_hours: shelf.trim() === '' ? null : (Number(shelf) as unknown as number),
+      opened_shelf_life_hours: opened.trim() === '' ? null : (Number(opened) as unknown as number),
+      storage_instructions_en: insEn,
+      storage_instructions_ar: insAr,
+      label_notes_en: noteEn,
+      label_notes_ar: noteAr,
+    })
+  }
+
+  return (
+    <SectionShell title={t('inv.supp.storage.title')} subtitle={t('inv.supp.storage.subtitle')}>
+      <form onSubmit={submit} className="space-y-3">
+        <label className="flex flex-col gap-1">
+          <span className="text-[13px] font-medium text-ink-muted">{t('inv.supp.storage.band')}</span>
+          <Select value={band} onChange={(e) => setBand(e.target.value as StorageBand)}>
+            {STORAGE_BANDS.map((b) => (
+              <option key={b || 'none'} value={b}>
+                {b ? t(`inv.supp.storage.band.${b}`) : t('inv.supp.storage.band.none')}
+              </option>
+            ))}
+          </Select>
+        </label>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-ink-muted">
+              {t('inv.supp.storage.shelfLife')} ({t('inv.supp.storage.hoursUnit')})
+            </span>
+            <Input
+              type="number"
+              inputMode="numeric"
+              min="0"
+              step="1"
+              value={shelf}
+              onChange={(e) => setShelf(e.target.value)}
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-ink-muted">
+              {t('inv.supp.storage.opened')} ({t('inv.supp.storage.hoursUnit')})
+            </span>
+            <Input
+              type="number"
+              inputMode="numeric"
+              min="0"
+              step="1"
+              value={opened}
+              onChange={(e) => setOpened(e.target.value)}
+            />
+          </label>
+        </div>
+
+        <fieldset className="space-y-2">
+          <legend className="text-xs font-medium text-ink-muted">
+            {t('inv.supp.storage.instructions')}
+          </legend>
+          <Textarea
+            rows={2}
+            value={insEn}
+            onChange={(e) => setInsEn(e.target.value)}
+            placeholder={t('lang.en')}
+          />
+          <Textarea
+            rows={2}
+            dir="rtl"
+            value={insAr}
+            onChange={(e) => setInsAr(e.target.value)}
+            placeholder={t('lang.ar')}
+          />
+        </fieldset>
+
+        <fieldset className="space-y-2">
+          <legend className="text-xs font-medium text-ink-muted">
+            {t('inv.supp.storage.labelNote')}
+          </legend>
+          <Input value={noteEn} onChange={(e) => setNoteEn(e.target.value)} placeholder={t('lang.en')} />
+          <Input
+            value={noteAr}
+            dir="rtl"
+            onChange={(e) => setNoteAr(e.target.value)}
+            placeholder={t('lang.ar')}
+          />
+        </fieldset>
+
+        <div className="flex items-center justify-end gap-2 pt-1">
+          <Button type="button" size="sm" variant="ghost" onClick={onCancel} disabled={saving}>
+            {t('inv.supp.cancel')}
+          </Button>
+          <Button type="submit" size="sm" variant="primary" loading={saving}>
+            {t('inv.supp.save')}
+          </Button>
+        </div>
+      </form>
+    </SectionShell>
   )
 }

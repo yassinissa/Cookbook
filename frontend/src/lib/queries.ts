@@ -47,6 +47,14 @@ export function useItemConversion(sku: string | undefined) {
     staleTime: 5 * 60_000,
   })
 }
+export function useItemStorage(sku: string | undefined) {
+  return useQuery({
+    queryKey: qk.itemStorage(sku ?? ''),
+    queryFn: () => api.fetchItemStorage(sku as string),
+    enabled: !!sku,
+    staleTime: 5 * 60_000,
+  })
+}
 
 export function useDashboard() {
   return useQuery({ queryKey: qk.dashboard, queryFn: api.fetchDashboard })

@@ -10,7 +10,10 @@ from .recipes import (
 )
 from .standards import DishStandard
 from .plating import PlatingGuide, PlatingImage
-from .item_supplement import CostSource, ItemConversion, ItemConversionLine, ItemNutrition
+from .item_supplement import (
+    CostSource, ItemConversion, ItemConversionLine, ItemNutrition,
+    StorageBand, ItemStorage,
+)
 from .menu import Menu, MenuLine, MenuSnapshot, MenuSnapshotLine
 from .history import (
     ActivityActionType, DishPriceHistory, ProductionCostHistory,
@@ -26,6 +29,7 @@ __all__ = [
     'DishStandard',
     'PlatingGuide', 'PlatingImage',
     'CostSource', 'ItemConversion', 'ItemConversionLine', 'ItemNutrition',
+    'StorageBand', 'ItemStorage',
     'Menu', 'MenuLine', 'MenuSnapshot', 'MenuSnapshotLine',
     'ActivityActionType', 'DishPriceHistory', 'ProductionCostHistory',
     'DishRecipeActivityLog', 'ProductionRecipeActivityLog',
