@@ -94,10 +94,20 @@ before calling anything done — not just "the happy path returns 200."
     by day.
   - **Menus** list / branch detail (trend charts, snapshots); **Inventory
     Items** (`src/features/inventory` — server-searched, paged table +
-    read-only detail drawer showing the full item definition: photo,
+    detail drawer showing the full item definition: photo,
     type/category/status, SKU + barcode, origin, unit cost, selling price,
-    reorder level, shelf life, expiry, location, suppliers; reads through
-    the Cookbook proxy — `/items/<id>/` returns the full `ItemSerializer`).
+    reorder level, shelf life, expiry, location, suppliers; the inventory
+    fields are read-only [reads through the Cookbook proxy — `/items/<id>/`
+    returns the full `ItemSerializer`], but the drawer also carries three
+    editable Cookbook-local supplement panels — `ItemSupplementPanels.tsx`,
+    each a view/inline-form section hitting `/cookbook/item-{nutrition,
+    conversions}/<sku>/`: **Nutrition facts**, **Measurement conversions**
+    (the source sheet's 5 per-item figures — Grams in 1 Tbs / 1 Piece,
+    Pieces in 1 Pkt / 1 Kg / Box; the tbsp weight is expanded to the full
+    `ItemConversionLine` tsp/cup ladder on save the way the sheet formulas
+    do [`ladderLines()`], the rest map to `ItemConversion` scalars — this is
+    the data the recipe-costing bridges need, so a tbsp/piece recipe line
+    stops being `no_conversion`), and **Allergens**).
   - `<PublishControl>` (`src/components/`) on the Dish + Production detail
     rail — publish/re-publish button + status (not published / published
     Xago / edited-since), gated `can('recipe.publish')`.
@@ -151,11 +161,12 @@ before calling anything done — not just "the happy path returns 200."
   (`RequireCapability`), nav + action buttons gated by `can(cap)`,
   `src/features/admin/` screens. Seed builds carry a TopBar **identity
   switcher** (`src/shell/IdentitySwitcher.tsx`) to demo scoped users.
-- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 94 `APITestCase`
+- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 98 `APITestCase`
   tests. The older cookbook suites use superuser clients (RBAC bypassed —
   `apps/accounts/tests/` covers enforcement broadly), but the newer ones
   (`test_{production,standards,activity,publishing}_api.py`) exercise scoped
-  non-superusers and capability gates directly. `test_publishing.py` fakes
+  non-superusers and capability gates directly. `test_item_conversion_api.py`
+  pins the per-item conversion write path + its effect on costing. `test_publishing.py` fakes
   `InventoryClient` — nothing in the suite hits the network. Frontend has no
   tests yet. Grow both alongside new work.
 - **Auth**: JWT via default Django `User` (+ `accounts.UserProfile`), one

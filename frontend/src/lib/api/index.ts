@@ -190,6 +190,21 @@ export async function saveItemAllergens(
   return data
 }
 
+export async function saveItemConversion(
+  sku: string,
+  payload: Partial<ItemConversion>,
+  exists: boolean,
+): Promise<ItemConversion> {
+  if (USE_SEED) {
+    await delay(300)
+    return { item_sku: sku, ...payload } as ItemConversion
+  }
+  const { data } = exists
+    ? await http.patch(`/cookbook/item-conversions/${encodeURIComponent(sku)}/`, payload)
+    : await http.post('/cookbook/item-conversions/', { ...payload, item_sku: sku })
+  return data
+}
+
 /* ── dashboard ─────────────────────────────────────────────────────── */
 export async function fetchDashboard(): Promise<Dashboard> {
   if (USE_SEED) {

@@ -167,11 +167,27 @@ export interface ItemNutrition {
   updated_at: string
 }
 
+export interface ItemConversionLine {
+  id?: ID
+  label: string /* "1 Tbs", "1/4 Cup", "1 Piece" */
+  quantity: string /* amount of `unit` one `label` equals */
+  unit: ID /* g | ml */
+  unit_detail?: UnitScale | null
+  gram_equivalent?: string | null
+}
+
 export interface ItemConversion {
   id: ID
   item_sku: string
   allergens: ID[]
   allergens_detail?: Allergen[]
+  lines: ItemConversionLine[]
+  grams_per_piece: string | null
+  pieces_per_pack: string | null
+  pieces_per_kg: string | null
+  pieces_or_pack_per_box: string | null
+  base_unit_detail?: UnitScale | null
+  cost_per_base_unit?: string | null
   updated_at: string
 }
 
