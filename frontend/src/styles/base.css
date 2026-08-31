@@ -111,6 +111,35 @@
   .stagger > *:nth-child(8) { animation-delay: 315ms; }
   .stagger > *:nth-child(n + 9) { animation-delay: 360ms; }
 
+  /* Sign-in backdrop — a moody generated ground that any uploaded
+     public/img/login/{desktop,mobile}.jpg sits on top of (LoginPage.tsx
+     renders the photo; this is the always-present base + fallback). */
+  .login-canvas {
+    background-color: #120d0b;
+    background-image: url('/img/login/ambient.svg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  /* Sign-in form on the photo: warm charcoal inputs (not the app's cooler
+     surface), a deeper button label for contrast on the amber fill, and an
+     autofill override so Chrome's pale-blue fill doesn't clash. */
+  .login-card-form input {
+    background-color: rgba(18, 15, 13, 0.72);
+    border-color: rgba(240, 214, 175, 0.16);
+  }
+  .login-card-form input:-webkit-autofill,
+  .login-card-form input:-webkit-autofill:hover,
+  .login-card-form input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px #17120f inset;
+    -webkit-text-fill-color: #f5f1ea;
+    caret-color: #f5f1ea;
+  }
+  .login-card-form button[type='submit'] {
+    color: #1c1613;
+  }
+
   /* the spice rail — the signature motif, one gradient token (vertical / horizontal) */
   .spice-rail {
     background-image: var(--spice-rail);
