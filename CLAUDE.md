@@ -16,9 +16,9 @@ before calling anything done — not just "the happy path returns 200."
 ## Current state (keep this section updated as the project evolves)
 
 - **Backend**: `backend/apps/cookbook/` — models split into
-  `models/{reference,recipes,standards,item_supplement,history,menu}.py`,
+  `models/{reference,recipes,standards,plating,item_supplement,history,menu}.py`,
   mirrored `serializers/`, `views.py` + `views_menu.py` + `views_standards.py`
-  + `views_activity.py` + `views_dashboard.py`,
+  + `views_plating.py` + `views_activity.py` + `views_dashboard.py`,
   `services.py`/`costing.py`/`nutrition.py`/`versioning.py`/`publishing.py`.
   `apps/integrations/inventory_client.py` is the *only* place that talks
   to inventory-platform. Items/units/stores/branches are read live (never
@@ -39,6 +39,16 @@ before calling anything done — not just "the happy path returns 200."
     current dish (so QA sees gaps), `PATCH` upserts the `DishStandard`
     OneToOne *without* versioning the recipe or re-costing,
     `POST .../approve/` stamps `qa_approved_by` + `approval_date`.
+    `cookbook/plating-guides/` (`views_plating.py`) — same dish-id-addressed
+    shape as dish-standards: list is one row per current dish, `PATCH` upserts
+    the `PlatingGuide` OneToOne (plate spec / garnish / build notes /
+    `pickup_window_seconds` + common errors, all EN/AR) *without* versioning
+    the recipe. Photos are nested in the write payload and reconciled by id —
+    an entry with `id` is kept (caption / `pins` updated), one with
+    `image_data` (base64) is added, any existing image absent from the list is
+    dropped; unchanged photos never re-upload. `PlatingImage.pins` is a
+    `[{n,x,y,label_en,label_ar}]` JSON list, x/y as 0–1 fractions. Gated
+    `standard.view` / `standard.edit`; writes log `ActivityActionType.PLATING_UPDATED`.
     `cookbook/activity/` (`views_activity.py`) — merged, paginated,
     filterable audit feed over both `*ActivityLog` tables (dish
     branch-scoped, production prep-kitchen-scoped + `production.view`-gated;
@@ -89,6 +99,13 @@ before calling anything done — not just "the happy path returns 200."
     "Print scoresheet" renders a print-only `<ScoreSheet>` (expected value +
     a blank to fill) for a QA assessor to score a dish as served against the
     standard. Print CSS + shell `no-print` live in `styles/base.css`.
+  - **Plating guide** — a `<PlatingPanel>` card on `DishDetailPage` (photo(s)
+    with numbered callout pins via `<PinnedImage>` + numbered legend, plate
+    spec, garnish, formatted pickup window, common errors) and a full editor
+    at `/recipes/dishes/:id/plating` (`PlatingEditorPage.tsx`) — click a photo
+    to drop a pin, drag / arrow-nudge to move it, bilingual pin + caption
+    fields, photo reorder / delete. Gated `standard.edit`. Verified end-to-end
+    2026-08-31.
   - **Activity & History** (`src/features/activity`) — one URL-param-driven
     filterable feed (kind / action / actor / date / recipe / search) grouped
     by day.
@@ -161,12 +178,14 @@ before calling anything done — not just "the happy path returns 200."
   (`RequireCapability`), nav + action buttons gated by `can(cap)`,
   `src/features/admin/` screens. Seed builds carry a TopBar **identity
   switcher** (`src/shell/IdentitySwitcher.tsx`) to demo scoped users.
-- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 98 `APITestCase`
+- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 105 `APITestCase`
   tests. The older cookbook suites use superuser clients (RBAC bypassed —
   `apps/accounts/tests/` covers enforcement broadly), but the newer ones
-  (`test_{production,standards,activity,publishing}_api.py`) exercise scoped
-  non-superusers and capability gates directly. `test_item_conversion_api.py`
-  pins the per-item conversion write path + its effect on costing. `test_publishing.py` fakes
+  (`test_{production,standards,plating,activity,publishing}_api.py`) exercise
+  scoped non-superusers and capability gates directly. `test_item_conversion_api.py`
+  pins the per-item conversion write path + its effect on costing.
+  `test_plating_api.py` pins the dish-id upsert (no recipe version bump) and
+  the id-keyed photo reconcile + pin normalisation. `test_publishing.py` fakes
   `InventoryClient` — nothing in the suite hits the network. Frontend has no
   tests yet. Grow both alongside new work.
 - **Auth**: JWT via default Django `User` (+ `accounts.UserProfile`), one

@@ -97,6 +97,17 @@ export function useDishStandard(dishId: string | undefined) {
   })
 }
 
+export function usePlatingGuides(enabled = true) {
+  return useQuery({ queryKey: qk.plating, queryFn: api.fetchPlatingGuides, enabled })
+}
+export function usePlatingGuide(dishId: string | undefined) {
+  return useQuery({
+    queryKey: qk.platingGuide(dishId ?? ''),
+    queryFn: () => api.fetchPlatingGuide(dishId as string),
+    enabled: !!dishId,
+  })
+}
+
 export function useProductionRecipes(enabled = true) {
   return useQuery({
     queryKey: qk.production,

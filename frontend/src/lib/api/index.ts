@@ -32,6 +32,9 @@ import type {
   MenuSnapshot,
   MenuTrends,
   Paginated,
+  PlatingGuideDetail,
+  PlatingGuideInput,
+  PlatingGuideListItem,
   ProductionRecipeDetail,
   ProductionRecipeListItem,
   ReferenceData,
@@ -458,6 +461,53 @@ export async function approveDishStandard(
   const { data } = await http.post(`/cookbook/dish-standards/${dishId}/approve/`, {
     qa_approved_by: approverId,
   })
+  return data
+}
+
+/* ── plating guides ────────────────────────────────────────────────── */
+function seedPlatingDetail(dishId: string): PlatingGuideDetail {
+  const d = seed.seedDishDetail(dishId)
+  return {
+    id: d.id, name_en: d.name_en, name_ar: d.name_ar, recipe_code: d.recipe_code,
+    revision: d.revision, branch: d.branch, branch_ref: d.branch_ref,
+    category: d.category?.name ?? null, section: d.section?.name ?? null,
+    image_url: d.image_url, version: d.version, plating: null, updated_at: d.updated_at,
+  }
+}
+
+export async function fetchPlatingGuides(): Promise<PlatingGuideListItem[]> {
+  if (USE_SEED) {
+    await delay()
+    return seed.seedDishList().map((d) => ({
+      id: d.id, name_en: d.name_en, name_ar: d.name_ar, recipe_code: d.recipe_code,
+      branch: d.branch, branch_ref: null, category: d.category, category_name: d.category_name,
+      has_plating: false, image_count: 0, pin_count: 0, plate_spec: '', pickup_window_seconds: null,
+    }))
+  }
+  const { data } = await http.get<
+    Paginated<PlatingGuideListItem> | PlatingGuideListItem[]
+  >('/cookbook/plating-guides/')
+  return listData<PlatingGuideListItem>(data)
+}
+
+export async function fetchPlatingGuide(dishId: string): Promise<PlatingGuideDetail> {
+  if (USE_SEED) {
+    await delay()
+    return seedPlatingDetail(dishId)
+  }
+  const { data } = await http.get(`/cookbook/plating-guides/${dishId}/`)
+  return data
+}
+
+export async function updatePlatingGuide(
+  dishId: string,
+  payload: PlatingGuideInput,
+): Promise<PlatingGuideDetail> {
+  if (USE_SEED) {
+    await delay(400)
+    return seedPlatingDetail(dishId)
+  }
+  const { data } = await http.patch(`/cookbook/plating-guides/${dishId}/`, payload)
   return data
 }
 

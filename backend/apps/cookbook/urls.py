@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
 from . import views_menu
+from . import views_plating
 from . import views_standards
 from .views_activity import ActivityFeedView
 from .views_dashboard import DashboardView
@@ -20,6 +21,7 @@ router.register(r'reference/taste-descriptors', views.TasteDescriptorViewSet, ba
 router.register(r'dish-recipes', views.DishRecipeViewSet, basename='dish-recipe')
 router.register(r'production-recipes', views.ProductionRecipeViewSet, basename='production-recipe')
 router.register(r'dish-standards', views_standards.DishStandardViewSet, basename='dish-standard')
+router.register(r'plating-guides', views_plating.PlatingGuideViewSet, basename='plating-guide')
 router.register(r'item-conversions', views.ItemConversionViewSet, basename='item-conversion')
 router.register(r'item-nutrition', views.ItemNutritionViewSet, basename='item-nutrition')
 router.register(r'menus', views_menu.MenuViewSet, basename='menu')

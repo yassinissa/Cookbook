@@ -446,6 +446,96 @@ export interface DishStandardDetail {
   _warnings?: string[]
 }
 
+/* ── plating guide ─────────────────────────────────────────────────── */
+
+export interface PlatingPin {
+  n: number
+  /** 0–1 fraction of the image width / height */
+  x: number
+  y: number
+  label_en: string
+  label_ar: string
+}
+
+export interface PlatingImage {
+  id: ID
+  image_url: string
+  caption_en: string
+  caption_ar: string
+  sort_order: number
+  pins: PlatingPin[]
+}
+
+export interface PlatingGuide {
+  plate_spec: string
+  garnish_spec_en: string
+  garnish_spec_ar: string
+  build_notes_en: string
+  build_notes_ar: string
+  common_errors_en: string
+  common_errors_ar: string
+  pickup_window_seconds: number | null
+  updated_by: Approver | null
+  approved_by: Approver | null
+  images: PlatingImage[]
+  created_at: string
+  updated_at: string
+}
+
+export interface PlatingGuideListItem {
+  id: ID
+  name_en: string
+  name_ar: string
+  recipe_code: string
+  branch: string
+  branch_ref: ID | null
+  category: ID | null
+  category_name: string | null
+  has_plating: boolean
+  image_count: number
+  pin_count: number
+  plate_spec: string
+  pickup_window_seconds: number | null
+}
+
+export interface PlatingGuideDetail {
+  id: ID
+  name_en: string
+  name_ar: string
+  recipe_code: string
+  revision: string
+  branch: string
+  branch_ref: ID | null
+  category: string | null
+  section: string | null
+  image_url: string
+  version: number
+  plating: PlatingGuide | null
+  updated_at: string
+}
+
+/** One entry in the write payload's `images` list. */
+export interface PlatingImageInput {
+  id?: ID
+  image_data?: string
+  caption_en: string
+  caption_ar: string
+  sort_order: number
+  pins: PlatingPin[]
+}
+
+export interface PlatingGuideInput {
+  plate_spec: string
+  garnish_spec_en: string
+  garnish_spec_ar: string
+  build_notes_en: string
+  build_notes_ar: string
+  common_errors_en: string
+  common_errors_ar: string
+  pickup_window_seconds: string
+  images: PlatingImageInput[]
+}
+
 /* ── activity & history feed ────────────────────────────────────────── */
 export interface ActivityEntry {
   id: ID

@@ -9,6 +9,7 @@ import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { DishListPage } from '@/features/dishes/DishListPage'
 import { DishEditorPage } from '@/features/dishes/DishEditorPage'
 import { DishDetailPage } from '@/features/dishes/DishDetailPage'
+import { PlatingEditorPage } from '@/features/dishes/PlatingEditorPage'
 import { ProductionListPage } from '@/features/production/ProductionListPage'
 import { ProductionEditorPage } from '@/features/production/ProductionEditorPage'
 import { ProductionDetailPage } from '@/features/production/ProductionDetailPage'
@@ -44,6 +45,7 @@ export const router = createBrowserRouter([
           { path: '/recipes/dishes/new', ...cap('dish.edit', <DishEditorPage />) },
           { path: '/recipes/dishes/:id', ...cap('dish.view', <DishDetailPage />) },
           { path: '/recipes/dishes/:id/edit', ...cap('dish.edit', <DishEditorPage />) },
+          { path: '/recipes/dishes/:id/plating', ...cap('standard.edit', <PlatingEditorPage />) },
 
           { path: '/menus', ...cap('menu.view', <MenuListPage />) },
           { path: '/menus/:branchId', ...cap('menu.view', <MenuDetailPage />) },
