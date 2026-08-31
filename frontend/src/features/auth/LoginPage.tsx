@@ -164,7 +164,7 @@ export function LoginPage() {
              Sits low so the brass lamp frames it from above. */}
           <div
             data-theme="dark"
-            className="stagger w-full max-w-[23.5rem] self-center lg:flex-none lg:self-center lg:mt-[5vh]"
+            className="stagger w-full max-w-[23.5rem] self-center lg:flex-none lg:self-center lg:mt-[5vh] lg:me-16"
           >
             <div className="overflow-hidden rounded-lg2 border border-[rgba(240,214,175,0.16)] bg-[rgba(42,36,32,0.88)] shadow-[inset_0_1px_0_rgba(255,236,209,0.08),0_26px_70px_-14px_rgba(0,0,0,0.72),0_0_180px_-40px_rgba(236,176,106,0.5)]">
               <span aria-hidden className="spice-rail-h block h-1" />
