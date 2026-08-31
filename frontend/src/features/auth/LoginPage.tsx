@@ -1,10 +1,13 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 
 import { Button } from '@/components/Button'
 import { Field } from '@/components/Field'
 import { Input } from '@/components/Input'
 import { Icon } from '@/components/Icon'
+import { AUTH_QUERY_KEY } from '@/auth/AuthProvider'
+import { fetchMe } from '@/lib/api/accounts'
 import { getToken, login, USE_SEED } from '@/lib/http'
 import { useI18n } from '@/i18n'
 import { useTheme } from '@/theme/ThemeProvider'
@@ -31,6 +34,7 @@ export function LoginPage() {
   const { t, locale, toggleLocale } = useI18n()
   const { choice, cycle } = useTheme()
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
@@ -66,6 +70,10 @@ export function LoginPage() {
     setBusy(true)
     try {
       await login(username, password)
+      // AuthProvider sits above the router, so navigating here won't make it
+      // re-read the just-stored token. Prime the /me query first so the route
+      // guards see the caps immediately instead of flashing "no access".
+      await qc.prefetchQuery({ queryKey: AUTH_QUERY_KEY, queryFn: fetchMe, staleTime: 5 * 60_000 })
       navigate('/', { replace: true })
     } catch {
       setError(t('login.error'))
