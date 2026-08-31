@@ -113,9 +113,7 @@ export function LoginPage() {
 
       <main className="relative z-20 flex flex-1 flex-col px-6 pb-11 pt-9 text-white sm:px-10 lg:px-16 lg:pb-14 lg:pt-12">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-accent-on shadow-e2">
-            <Icon name="dish" size={20} />
-          </span>
+          <img src="/brand/logo-emblem.png" alt="" aria-hidden className="h-10 w-auto flex-none" />
           <div>
             <p className="font-display text-lg font-medium leading-none">{t('app.name')}</p>
             <p className="mt-1 font-mono text-[10px] font-medium uppercase text-white/55 ltr:tracking-[0.16em]">

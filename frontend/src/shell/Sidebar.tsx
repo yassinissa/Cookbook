@@ -76,9 +76,7 @@ export function Wordmark() {
   const { t } = useI18n()
   return (
     <div className="flex items-center gap-2.5">
-      <span className="flex h-7 w-7 items-center justify-center rounded-md bg-accent text-white">
-        <Icon name="dish" size={16} />
-      </span>
+      <img src="/brand/logo-emblem.png" alt="" aria-hidden className="h-7 w-auto flex-none" />
       <div className="leading-none">
         <p className="text-[13px] font-semibold text-ink">{t('app.name')}</p>
         <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.1em] text-ink-subtle">
