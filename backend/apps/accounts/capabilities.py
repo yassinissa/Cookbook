@@ -33,6 +33,7 @@ CAPABILITIES = [
     ('menu.view',           'View branch menus',                 'Menus'),
     ('menu.edit',           'Edit menu lines & build menus',     'Menus'),
     ('menu.snapshot',       'Take menu cost snapshots',          'Menus'),
+    ('menu.publish',        'Publish the public QR / print menu', 'Menus'),
 
     # QA / QC standards
     ('standard.view',       'View QA / QC dish standards',       'QA standards'),
@@ -82,7 +83,7 @@ SYSTEM_ROLES = [
         'capabilities': [
             'dashboard.view', 'dish.view', 'dish.edit', 'dish.delete', 'recipe.history',
             'production.view', 'production.edit', 'production.delete',
-            'menu.view', 'menu.edit', 'menu.snapshot',
+            'menu.view', 'menu.edit', 'menu.snapshot', 'menu.publish',
             'standard.view', 'standard.edit',
             'costing.view', 'costing.recalculate', 'inventory.view', 'nutrition.view',
             'document.export', 'activity.view', 'recipe.publish',

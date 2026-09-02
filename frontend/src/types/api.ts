@@ -22,6 +22,7 @@ export interface Branch {
   name_en: string
   name_ar: string
   code: string
+  slug: string
   sort_order: number
 }
 export interface Section {
@@ -167,11 +168,50 @@ export interface ItemNutrition {
   updated_at: string
 }
 
+export interface ItemConversionLine {
+  id?: ID
+  label: string /* "1 Tbs", "1/4 Cup", "1 Piece" */
+  quantity: string /* amount of `unit` one `label` equals */
+  unit: ID /* g | ml */
+  unit_detail?: UnitScale | null
+  gram_equivalent?: string | null
+}
+
 export interface ItemConversion {
   id: ID
   item_sku: string
   allergens: ID[]
   allergens_detail?: Allergen[]
+  lines: ItemConversionLine[]
+  grams_per_piece: string | null
+  pieces_per_pack: string | null
+  pieces_per_kg: string | null
+  pieces_or_pack_per_box: string | null
+  base_unit_detail?: UnitScale | null
+  cost_per_base_unit?: string | null
+  updated_at: string
+}
+
+export interface DigestSubscription {
+  /** true once the user can see costing figures — otherwise the digest has nothing to send */
+  enrolled: boolean
+  cadence: 'weekly' | 'off'
+  last_sent_at: string | null
+}
+
+export type StorageBand = '' | 'dry' | 'chilled' | 'frozen'
+
+export interface ItemStorage {
+  id: ID
+  item_sku: string
+  storage_band: StorageBand
+  storage_band_display: string
+  shelf_life_hours: number | null
+  opened_shelf_life_hours: number | null
+  storage_instructions_en: string
+  storage_instructions_ar: string
+  label_notes_en: string
+  label_notes_ar: string
   updated_at: string
 }
 
@@ -430,6 +470,96 @@ export interface DishStandardDetail {
   _warnings?: string[]
 }
 
+/* ── plating guide ─────────────────────────────────────────────────── */
+
+export interface PlatingPin {
+  n: number
+  /** 0–1 fraction of the image width / height */
+  x: number
+  y: number
+  label_en: string
+  label_ar: string
+}
+
+export interface PlatingImage {
+  id: ID
+  image_url: string
+  caption_en: string
+  caption_ar: string
+  sort_order: number
+  pins: PlatingPin[]
+}
+
+export interface PlatingGuide {
+  plate_spec: string
+  garnish_spec_en: string
+  garnish_spec_ar: string
+  build_notes_en: string
+  build_notes_ar: string
+  common_errors_en: string
+  common_errors_ar: string
+  pickup_window_seconds: number | null
+  updated_by: Approver | null
+  approved_by: Approver | null
+  images: PlatingImage[]
+  created_at: string
+  updated_at: string
+}
+
+export interface PlatingGuideListItem {
+  id: ID
+  name_en: string
+  name_ar: string
+  recipe_code: string
+  branch: string
+  branch_ref: ID | null
+  category: ID | null
+  category_name: string | null
+  has_plating: boolean
+  image_count: number
+  pin_count: number
+  plate_spec: string
+  pickup_window_seconds: number | null
+}
+
+export interface PlatingGuideDetail {
+  id: ID
+  name_en: string
+  name_ar: string
+  recipe_code: string
+  revision: string
+  branch: string
+  branch_ref: ID | null
+  category: string | null
+  section: string | null
+  image_url: string
+  version: number
+  plating: PlatingGuide | null
+  updated_at: string
+}
+
+/** One entry in the write payload's `images` list. */
+export interface PlatingImageInput {
+  id?: ID
+  image_data?: string
+  caption_en: string
+  caption_ar: string
+  sort_order: number
+  pins: PlatingPin[]
+}
+
+export interface PlatingGuideInput {
+  plate_spec: string
+  garnish_spec_en: string
+  garnish_spec_ar: string
+  build_notes_en: string
+  build_notes_ar: string
+  common_errors_en: string
+  common_errors_ar: string
+  pickup_window_seconds: string
+  images: PlatingImageInput[]
+}
+
 /* ── activity & history feed ────────────────────────────────────────── */
 export interface ActivityEntry {
   id: ID
@@ -580,6 +710,114 @@ export interface MenuTrendPoint {
 export interface MenuTrends {
   menu: string
   points: MenuTrendPoint[]
+}
+
+/* ── specials calendar ─────────────────────────────────────────────── */
+export type MenuPeriodKind = 'seasonal' | 'daily_special' | 'event'
+export type MenuPeriodOp = 'add' | 'remove' | 'reprice' | 'replace_photo' | 'replace_copy'
+
+export interface MenuPeriodLine {
+  id?: ID
+  dish: ID
+  dish_name?: string
+  dish_name_ar?: string
+  op: MenuPeriodOp
+  op_display?: string
+  menu_price: string | null
+  image_url: string
+  description_en: string
+  description_ar: string
+  pos_name: string
+  sort_order: number
+}
+export interface MenuPeriod {
+  id: ID
+  menu: ID
+  kind: MenuPeriodKind
+  kind_display: string
+  name_en: string
+  name_ar: string
+  starts_on: string
+  ends_on: string | null
+  /** bit 0 = Monday … bit 6 = Sunday; 127 = every day */
+  weekday_mask: number
+  is_live: boolean
+  notes: string
+  line_count: number
+  lines: MenuPeriodLine[]
+  created_at: string
+  updated_at: string
+}
+export interface EffectiveMenuLine {
+  dish_id: ID
+  name_en: string
+  name_ar: string
+  recipe_code: string
+  category: string
+  category_ar: string
+  category_order: number
+  price: string | null
+  image_url: string
+  description_en: string
+  description_ar: string
+  pos_name: string
+  is_available: boolean
+  rating: string | null
+  rating_status: RatingStatus
+  sort_order: number
+  /** which layer last touched this line: 'base' | a MenuPeriodKind */
+  source: 'base' | MenuPeriodKind
+}
+export interface EffectiveMenuCategory {
+  name: string
+  name_ar: string
+  order: number
+  items: EffectiveMenuLine[]
+}
+export interface EffectiveMenu {
+  menu_id: ID
+  branch: { id: ID; name_en: string; name_ar: string }
+  on: string
+  weekday: string
+  periods: { id: ID; kind: MenuPeriodKind; name_en: string; name_ar: string }[]
+  categories: EffectiveMenuCategory[]
+  line_count: number
+}
+
+/* ── published editions + public menu (feature 4b) ─────────────────── */
+export interface PublicMenuItem {
+  name_en: string
+  name_ar: string
+  description_en: string
+  description_ar: string
+  price: string | null
+  image_url: string
+  allergens: string[]
+  calories: number | null
+}
+export interface PublicMenuCategory {
+  name_en: string
+  name_ar: string
+  items: PublicMenuItem[]
+}
+export interface PublicMenu {
+  branch: { name_en: string; name_ar: string; slug: string }
+  effective_on: string
+  generated_at: string
+  period_names: { en: string; ar: string }[]
+  categories: PublicMenuCategory[]
+  item_count: number
+}
+export interface MenuEdition {
+  id: ID
+  version: number
+  is_current: boolean
+  effective_on: string
+  published_by: string
+  published_at: string
+  branch_slug: string
+  item_count: number
+  payload: PublicMenu
 }
 
 /* ── dashboard ─────────────────────────────────────────────────────── */

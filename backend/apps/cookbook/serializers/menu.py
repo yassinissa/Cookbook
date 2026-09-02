@@ -3,7 +3,7 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from apps.cookbook.models import (
-    Branch, DishRecipe, Menu, MenuLine, MenuSnapshot, MenuSnapshotLine,
+    Branch, DishRecipe, Menu, MenuEdition, MenuLine, MenuSnapshot, MenuSnapshotLine,
 )
 from .reference import BranchSerializer
 from .mixins import HidesCostingFields
@@ -81,3 +81,21 @@ class MenuSnapshotSerializer(serializers.ModelSerializer):
     class Meta:
         model  = MenuSnapshot
         fields = ['id', 'label', 'taken_by', 'created_at', 'lines']
+
+
+class MenuEditionSerializer(serializers.ModelSerializer):
+    """A published public-menu edition. `payload` is the frozen customer view
+    (no cost data); the rest is publishing metadata."""
+    published_at = serializers.DateTimeField(source='created_at', read_only=True)
+    item_count   = serializers.SerializerMethodField()
+    branch_slug  = serializers.CharField(source='menu.branch.slug', read_only=True)
+
+    class Meta:
+        model  = MenuEdition
+        fields = [
+            'id', 'version', 'is_current', 'effective_on',
+            'published_by', 'published_at', 'branch_slug', 'item_count', 'payload',
+        ]
+
+    def get_item_count(self, obj):
+        return (obj.payload or {}).get('item_count', 0)

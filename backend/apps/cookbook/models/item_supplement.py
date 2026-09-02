@@ -21,6 +21,10 @@ Two distinct concerns kept apart, per instruction not to merge:
     measure, kept as distinct fields rather than folded into the
     cooking-measure lines.
   - ItemNutrition: nutrition facts — a third, unrelated concern.
+  - ItemStorage: storage band + shelf life from prep, for date-labelling a
+    prepped item — a fourth. inventory-platform holds a shelf-life figure of
+    its own (days from receipt); this is the prep-kitchen handling detail it
+    doesn't, keyed the same way and reported upstream if it should stick.
 """
 from django.db import models
 from apps.core.models import BaseModel
@@ -131,3 +135,36 @@ class ItemNutrition(BaseModel):
 
     def __str__(self):
         return f'Nutrition for {self.item_sku}'
+
+
+class StorageBand(models.TextChoices):
+    DRY     = 'dry',     'Dry store'
+    CHILLED = 'chilled', 'Chilled'
+    FROZEN  = 'frozen',  'Frozen'
+
+
+class ItemStorage(BaseModel):
+    """
+    Per-SKU storage + shelf-life supplement. The prep kitchen needs a
+    "hours from prep to use-by" figure and a handling line to date-label a
+    prepared item; inventory-platform only tracks a receipt-based shelf life.
+    Cookbook-local, same "report upstream to make permanent" contract as
+    ItemConversion / ItemNutrition.
+    """
+    item_sku                = models.CharField(max_length=100, unique=True)
+    storage_band            = models.CharField(max_length=10, choices=StorageBand.choices, blank=True)
+    shelf_life_hours        = models.PositiveIntegerField(null=True, blank=True,
+                                help_text='Hours from prep / production to use-by — drives the date label.')
+    opened_shelf_life_hours = models.PositiveIntegerField(null=True, blank=True,
+                                help_text='Shorter life once opened / thawed / decanted.')
+    storage_instructions_en = models.TextField(blank=True)
+    storage_instructions_ar = models.TextField(blank=True)
+    label_notes_en          = models.CharField(max_length=255, blank=True,
+                                help_text='Extra line printed on the date label.')
+    label_notes_ar          = models.CharField(max_length=255, blank=True)
+
+    updated_by  = models.ForeignKey(Approver, on_delete=models.PROTECT, null=True, blank=True, related_name='+')
+    approved_by = models.ForeignKey(Approver, on_delete=models.PROTECT, null=True, blank=True, related_name='+')
+
+    def __str__(self):
+        return f'Storage for {self.item_sku}'

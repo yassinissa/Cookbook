@@ -2,6 +2,9 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
 from . import views_menu
+from . import views_plating
+from . import views_reporting
+from . import views_specials
 from . import views_standards
 from .views_activity import ActivityFeedView
 from .views_dashboard import DashboardView
@@ -20,13 +23,23 @@ router.register(r'reference/taste-descriptors', views.TasteDescriptorViewSet, ba
 router.register(r'dish-recipes', views.DishRecipeViewSet, basename='dish-recipe')
 router.register(r'production-recipes', views.ProductionRecipeViewSet, basename='production-recipe')
 router.register(r'dish-standards', views_standards.DishStandardViewSet, basename='dish-standard')
+router.register(r'plating-guides', views_plating.PlatingGuideViewSet, basename='plating-guide')
 router.register(r'item-conversions', views.ItemConversionViewSet, basename='item-conversion')
 router.register(r'item-nutrition', views.ItemNutritionViewSet, basename='item-nutrition')
+router.register(r'item-storage', views.ItemStorageViewSet, basename='item-storage')
 router.register(r'menus', views_menu.MenuViewSet, basename='menu')
 router.register(r'menu-lines', views_menu.MenuLineViewSet, basename='menu-line')
+router.register(r'menu-periods', views_specials.MenuPeriodViewSet, basename='menu-period')
 
 urlpatterns = [
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('activity/', ActivityFeedView.as_view(), name='activity'),
+    path('digest-subscription/', views_reporting.DigestSubscriptionView.as_view(), name='digest-subscription'),
+    path('public/digest/unsubscribe/<uuid:token>/', views_reporting.DigestUnsubscribeView.as_view(),
+         name='digest-unsubscribe'),
+    # The one public, unauthenticated data surface — the QR / print menu.
+    # The human-facing URL is the SPA route /m/<slug>; this is what it fetches.
+    path('public-menu/<slug:slug>/', views_menu.PublicMenuView.as_view(), name='public-menu'),
+    path('public-menu/<slug:slug>/qr/', views_menu.PublicMenuQrView.as_view(), name='public-menu-qr'),
     path('', include(router.urls)),
 ]

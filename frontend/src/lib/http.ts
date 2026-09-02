@@ -18,11 +18,25 @@ export const http = axios.create({ baseURL: API_BASE_URL, timeout: 45_000 })
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)
 }
+
+/* same-tab localStorage writes don't fire a `storage` event, so notify
+   subscribers (AuthProvider) explicitly whenever the token appears or clears. */
+const tokenListeners = new Set<() => void>()
+export function onTokenChange(cb: () => void): () => void {
+  tokenListeners.add(cb)
+  return () => tokenListeners.delete(cb)
+}
+function emitTokenChange() {
+  tokenListeners.forEach((cb) => cb())
+}
+
 function setToken(token: string) {
   localStorage.setItem(TOKEN_KEY, token)
+  emitTokenChange()
 }
 export function clearToken() {
   localStorage.removeItem(TOKEN_KEY)
+  emitTokenChange()
 }
 
 export async function login(username: string, password: string) {

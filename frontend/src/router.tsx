@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react'
+import { lazy, Suspense, type ReactElement } from 'react'
 import { Navigate, createBrowserRouter } from 'react-router-dom'
 
 import { RequireAuth, RequireCapability } from '@/auth/guards'
@@ -9,6 +9,7 @@ import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { DishListPage } from '@/features/dishes/DishListPage'
 import { DishEditorPage } from '@/features/dishes/DishEditorPage'
 import { DishDetailPage } from '@/features/dishes/DishDetailPage'
+import { PlatingEditorPage } from '@/features/dishes/PlatingEditorPage'
 import { ProductionListPage } from '@/features/production/ProductionListPage'
 import { ProductionEditorPage } from '@/features/production/ProductionEditorPage'
 import { ProductionDetailPage } from '@/features/production/ProductionDetailPage'
@@ -22,6 +23,8 @@ import { UsersPage } from '@/features/admin/UsersPage'
 import { RolesPage } from '@/features/admin/RolesPage'
 import { MorePage } from '@/features/more/MorePage'
 import { InventoryListPage } from '@/features/inventory/InventoryListPage'
+import { LabelSheetPage } from '@/features/labels/LabelSheetPage'
+import { SettingsPage } from '@/features/settings/SettingsPage'
 import { ComingSoonPage } from '@/features/placeholder/ComingSoonPage'
 import { RouteError } from '@/app/RouteError'
 
@@ -29,8 +32,22 @@ const cap = (c: CapabilityCode, element: ReactElement) => ({
   element: <RequireCapability cap={c}>{element}</RequireCapability>,
 })
 
+// The public QR / print menu — no auth, no app shell. Split out so a customer
+// never downloads the authoring bundle.
+const PublicMenuPage = lazy(() =>
+  import('@/features/menus/PublicMenuPage').then((m) => ({ default: m.PublicMenuPage })),
+)
+
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
+  {
+    path: '/m/:slug',
+    element: (
+      <Suspense fallback={null}>
+        <PublicMenuPage />
+      </Suspense>
+    ),
+  },
   {
     element: <RequireAuth />,
     errorElement: <RouteError />,
@@ -44,6 +61,7 @@ export const router = createBrowserRouter([
           { path: '/recipes/dishes/new', ...cap('dish.edit', <DishEditorPage />) },
           { path: '/recipes/dishes/:id', ...cap('dish.view', <DishDetailPage />) },
           { path: '/recipes/dishes/:id/edit', ...cap('dish.edit', <DishEditorPage />) },
+          { path: '/recipes/dishes/:id/plating', ...cap('standard.edit', <PlatingEditorPage />) },
 
           { path: '/menus', ...cap('menu.view', <MenuListPage />) },
           { path: '/menus/:branchId', ...cap('menu.view', <MenuDetailPage />) },
@@ -52,6 +70,7 @@ export const router = createBrowserRouter([
           { path: '/admin/roles', ...cap('admin.roles', <RolesPage />) },
 
           { path: '/more', element: <MorePage /> },
+          { path: '/settings', element: <SettingsPage /> },
 
           { path: '/recipes/production', ...cap('production.view', <ProductionListPage />) },
           { path: '/recipes/production/new', ...cap('production.edit', <ProductionEditorPage />) },
@@ -61,6 +80,7 @@ export const router = createBrowserRouter([
           { path: '/standards/:dishId', ...cap('standard.view', <StandardDetailPage />) },
           { path: '/standards/:dishId/edit', ...cap('standard.edit', <StandardEditorPage />) },
           { path: '/inventory', ...cap('inventory.view', <InventoryListPage />) },
+          { path: '/labels/:itemId', ...cap('inventory.view', <LabelSheetPage />) },
           { path: '/activity', ...cap('activity.view', <ActivityPage />) },
           { path: '/documents', element: <ComingSoonPage titleKey="nav.documents" icon="documents" /> },
           { path: '/pos', element: <ComingSoonPage titleKey="nav.pos" icon="pos" /> },

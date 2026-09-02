@@ -12,6 +12,7 @@ import { ErrorState, Skeleton } from '@/components/States'
 import { PublishControl } from '@/components/PublishControl'
 import { StandardCard } from '@/features/standards/StandardView'
 import { CostPanel } from './CostPanel'
+import { PlatingPanel } from './PlatingPanel'
 import { AllergenPanel, NutritionPanel } from './NutritionPanel'
 import { VersionDrawer } from './VersionDrawer'
 import * as api from '@/lib/api'
@@ -195,6 +196,8 @@ export function DishDetailPage() {
           </Card>
 
           {std && <StandardCard std={std} t={t} />}
+
+          {id && <PlatingPanel dishId={id} canEdit={can('standard.edit')} />}
         </div>
 
         <div className="space-y-6">

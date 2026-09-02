@@ -1,7 +1,9 @@
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
-from apps.cookbook.models import Allergen, ItemConversion, ItemConversionLine, ItemNutrition
+from apps.cookbook.models import (
+    Allergen, ItemConversion, ItemConversionLine, ItemNutrition, ItemStorage,
+)
 from apps.cookbook.models.item_supplement import CostSource
 from .reference import UnitScaleSerializer, ApproverSerializer, AllergenSerializer
 
@@ -99,3 +101,31 @@ class ItemNutritionSerializer(serializers.ModelSerializer):
             'updated_by', 'updated_by_detail', 'approved_by', 'approved_by_detail',
             'created_at', 'updated_at',
         ]
+
+
+class ItemStorageSerializer(serializers.ModelSerializer):
+    """Read + write the per-SKU storage supplement. Empty strings on the
+    nullable hour / FK fields are coerced to NULL, same as the QA standard."""
+    storage_band_display = serializers.CharField(source='get_storage_band_display', read_only=True)
+    updated_by_detail    = ApproverSerializer(source='updated_by', read_only=True)
+    approved_by_detail   = ApproverSerializer(source='approved_by', read_only=True)
+
+    class Meta:
+        model  = ItemStorage
+        fields = [
+            'id', 'item_sku', 'storage_band', 'storage_band_display',
+            'shelf_life_hours', 'opened_shelf_life_hours',
+            'storage_instructions_en', 'storage_instructions_ar',
+            'label_notes_en', 'label_notes_ar',
+            'updated_by', 'updated_by_detail', 'approved_by', 'approved_by_detail',
+            'created_at', 'updated_at',
+        ]
+
+    _NULLABLE = {'shelf_life_hours', 'opened_shelf_life_hours', 'updated_by', 'approved_by'}
+
+    def to_internal_value(self, data):
+        cleaned = {
+            k: (None if (k in self._NULLABLE and v in ('', None)) else v)
+            for k, v in data.items()
+        }
+        return super().to_internal_value(cleaned)

@@ -11,7 +11,7 @@ from .models import (
     StandardMeasurementConversion, TasteDescriptor, DishRecipe, ProductionRecipe,
     DishPriceHistory, DishRecipeActivityLog, ProductionCostHistory,
     ProductionRecipeActivityLog, ActivityActionType,
-    ItemConversion, ItemNutrition,
+    ItemConversion, ItemNutrition, ItemStorage,
 )
 from .serializers import (
     MenuCategorySerializer, BranchSerializer, SectionSerializer, ApproverSerializer,
@@ -19,7 +19,7 @@ from .serializers import (
     StandardMeasurementConversionSerializer, TasteDescriptorSerializer,
     DishRecipeListSerializer, DishRecipeDetailSerializer, DishRecipeWriteSerializer,
     ProductionRecipeListSerializer, ProductionRecipeDetailSerializer, ProductionRecipeWriteSerializer,
-    ItemConversionSerializer, ItemNutritionSerializer,
+    ItemConversionSerializer, ItemNutritionSerializer, ItemStorageSerializer,
 )
 from .serializers.reference import PrepKitchenSerializer
 from .services import apply_cost
@@ -325,5 +325,17 @@ class ItemNutritionViewSet(
     permission_classes = [IsAuthenticated]
     queryset = ItemNutrition.objects.select_related('unit_scale', 'updated_by', 'approved_by')
     serializer_class = ItemNutritionSerializer
+    lookup_field = 'item_sku'
+    lookup_value_regex = '[^/]+'
+
+
+class ItemStorageViewSet(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,
+    mixins.UpdateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet,
+):
+    """Looked up by item_sku directly — GET/PATCH/DELETE /api/cookbook/item-storage/<SKU>/."""
+    permission_classes = [IsAuthenticated]
+    queryset = ItemStorage.objects.select_related('updated_by', 'approved_by')
+    serializer_class = ItemStorageSerializer
     lookup_field = 'item_sku'
     lookup_value_regex = '[^/]+'

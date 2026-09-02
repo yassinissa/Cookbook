@@ -16,10 +16,10 @@ before calling anything done — not just "the happy path returns 200."
 ## Current state (keep this section updated as the project evolves)
 
 - **Backend**: `backend/apps/cookbook/` — models split into
-  `models/{reference,recipes,standards,item_supplement,history,menu}.py`,
+  `models/{reference,recipes,standards,plating,item_supplement,history,menu}.py`,
   mirrored `serializers/`, `views.py` + `views_menu.py` + `views_standards.py`
-  + `views_activity.py` + `views_dashboard.py`,
-  `services.py`/`costing.py`/`nutrition.py`/`versioning.py`/`publishing.py`.
+  + `views_plating.py` + `views_specials.py` + `views_activity.py` + `views_dashboard.py`,
+  `services.py`/`costing.py`/`nutrition.py`/`versioning.py`/`publishing.py`/`specials.py`/`menu_editions.py`.
   `apps/integrations/inventory_client.py` is the *only* place that talks
   to inventory-platform. Items/units/stores/branches are read live (never
   duplicated) — `get_items()` walks every page and returns *active* items
@@ -39,6 +39,16 @@ before calling anything done — not just "the happy path returns 200."
     current dish (so QA sees gaps), `PATCH` upserts the `DishStandard`
     OneToOne *without* versioning the recipe or re-costing,
     `POST .../approve/` stamps `qa_approved_by` + `approval_date`.
+    `cookbook/plating-guides/` (`views_plating.py`) — same dish-id-addressed
+    shape as dish-standards: list is one row per current dish, `PATCH` upserts
+    the `PlatingGuide` OneToOne (plate spec / garnish / build notes /
+    `pickup_window_seconds` + common errors, all EN/AR) *without* versioning
+    the recipe. Photos are nested in the write payload and reconciled by id —
+    an entry with `id` is kept (caption / `pins` updated), one with
+    `image_data` (base64) is added, any existing image absent from the list is
+    dropped; unchanged photos never re-upload. `PlatingImage.pins` is a
+    `[{n,x,y,label_en,label_ar}]` JSON list, x/y as 0–1 fractions. Gated
+    `standard.view` / `standard.edit`; writes log `ActivityActionType.PLATING_UPDATED`.
     `cookbook/activity/` (`views_activity.py`) — merged, paginated,
     filterable audit feed over both `*ActivityLog` tables (dish
     branch-scoped, production prep-kitchen-scoped + `production.view`-gated;
@@ -89,18 +99,94 @@ before calling anything done — not just "the happy path returns 200."
     "Print scoresheet" renders a print-only `<ScoreSheet>` (expected value +
     a blank to fill) for a QA assessor to score a dish as served against the
     standard. Print CSS + shell `no-print` live in `styles/base.css`.
+  - **Plating guide** — a `<PlatingPanel>` card on `DishDetailPage` (photo(s)
+    with numbered callout pins via `<PinnedImage>` + numbered legend, plate
+    spec, garnish, formatted pickup window, common errors) and a full editor
+    at `/recipes/dishes/:id/plating` (`PlatingEditorPage.tsx`) — click a photo
+    to drop a pin, drag / arrow-nudge to move it, bilingual pin + caption
+    fields, photo reorder / delete. Gated `standard.edit`. Verified end-to-end
+    2026-08-31.
   - **Activity & History** (`src/features/activity`) — one URL-param-driven
     filterable feed (kind / action / actor / date / recipe / search) grouped
     by day.
-  - **Menus** list / branch detail (trend charts, snapshots); **Inventory
+  - **Menus** list / branch detail (trend charts, snapshots). The branch
+    detail has a **Menu / Specials calendar** tab switch. The calendar
+    (`src/features/menus/SpecialsCalendar.tsx` + `PeriodEditor.tsx`) is
+    Slice 2 feature 4a: `MenuPeriod` / `MenuPeriodLine` (models/menu.py) are
+    dated windows carrying *operations* (`add`/`remove`/`reprice`/
+    `replace_photo`/`replace_copy`) over the base menu — never a copy.
+    `apps.cookbook.specials.resolve_menu(menu, on)` applies every period
+    active on a date, low→high precedence (`event` > `daily_special` >
+    `seasonal`, then latest start), and is the one real piece of logic.
+    `MenuLine` gained `menu_description_en/_ar` (customer menu copy — not
+    `taste_profile`, not `pos_name`). API: `cookbook/menu-periods/` CRUD
+    (`views_specials.py`, branch-scoped, `menu.view`/`menu.edit`, nested
+    lines reconciled by id) + `cookbook/menus/<id>/effective/?on=YYYY-MM-DD`
+    (`MenuViewSet` action → `resolve_menu`). No recipe version bump, no
+    costing. `test_specials_api.py` pins op application, precedence, weekday
+    mask, date boundaries, the draft flag, the nested-line write + scope.
+    **Feature 4b (`EditionsPanel.tsx` on the same tab):** `menu_editions.py`
+    `publish_edition(menu, on)` resolves the effective menu, strips every cost
+    field, adds allergens + calories, freezes it into an immutable
+    `MenuEdition` (`is_current`/`version` like recipes). `Branch.slug`
+    (auto-filled from `name_en`) + a new `menu.publish` capability
+    (Administrator + Executive Chef; accounts migration `0004`). API:
+    `POST cookbook/menus/<id>/publish-edition/` (`menu.publish`) +
+    `GET .../editions/`. The public surface is
+    `GET /api/cookbook/public-menu/<slug>/` and `.../qr/` — both
+    `authentication_classes=[]` + `AllowAny` + `PublicMenuThrottle`
+    (`public_menu` scope, LocMem `CACHES`, cache busted on publish). The
+    payload is a hand-written whitelist — never a `ModelSerializer` — and
+    `test_menu_editions_api.py` asserts no cost/margin/supplier key survives
+    (recursive walk). Frontend: `src/features/menus/PublicMenuPage.tsx` at
+    `/m/:slug` — outside `RequireAuth`, `React.lazy`, its own bare shell,
+    EN⇄AR toggle, route-scoped `@media print`. Verified end-to-end 2026-09-02.
+    Not in v1: server-rendered PDF, scheduled auto-publish.
+  - **Inventory
     Items** (`src/features/inventory` — server-searched, paged table +
-    read-only detail drawer showing the full item definition: photo,
+    detail drawer showing the full item definition: photo,
     type/category/status, SKU + barcode, origin, unit cost, selling price,
-    reorder level, shelf life, expiry, location, suppliers; reads through
-    the Cookbook proxy — `/items/<id>/` returns the full `ItemSerializer`).
+    reorder level, shelf life, expiry, location, suppliers; the inventory
+    fields are read-only [reads through the Cookbook proxy — `/items/<id>/`
+    returns the full `ItemSerializer`], but the drawer also carries four
+    editable Cookbook-local supplement panels — `ItemSupplementPanels.tsx`,
+    each a view/inline-form section hitting `/cookbook/item-{nutrition,
+    conversions,storage}/<sku>/`: **Nutrition facts**, **Measurement conversions**
+    (the source sheet's 5 per-item figures — Grams in 1 Tbs / 1 Piece,
+    Pieces in 1 Pkt / 1 Kg / Box; the tbsp weight is expanded to the full
+    `ItemConversionLine` tsp/cup ladder on save the way the sheet formulas
+    do [`ladderLines()`], the rest map to `ItemConversion` scalars — this is
+    the data the recipe-costing bridges need, so a tbsp/piece recipe line
+    stops being `no_conversion`), **Storage & shelf life** (`ItemStorage` —
+    band + hours-from-prep + after-opening life + handling text + a label
+    line; inventory-platform's own shelf life is receipt-based, this is the
+    prep-kitchen number), and **Allergens**).
+  - **Prep labels** (`src/features/labels/LabelSheetPage.tsx`, `/labels/:itemId`)
+    — reached from an item's Storage panel; picks count / prepped-by / batch /
+    stock (label roll vs A4 3-up), computes use-by = now + `shelf_life_hours`
+    in `Asia/Kuwait`, prints date labels via a route-scoped `@media print`
+    block that swaps `@page` size per stock. Verified 2026-08-31.
   - `<PublishControl>` (`src/components/`) on the Dish + Production detail
     rail — publish/re-publish button + status (not published / published
     Xago / edited-since), gated `can('recipe.publish')`.
+  - **Settings** (`src/features/settings/SettingsPage.tsx`, `/settings`,
+    reached from the TopBar user menu, not `nav.ts`) — currently one card: the
+    **weekly cost-report digest** opt-out toggle (`useDigestSubscription` →
+    `GET/PATCH /cookbook/digest-subscription/`). The digest itself is
+    backend-only: `models/reporting.py` (`DigestSubscription` — opt-out,
+    `weekly`/`off`, `unsubscribe_token`), `reporting.py`
+    (`build_weekly_digest(user)` — over-target dishes, cost movers from
+    `DishPriceHistory`, `cost_breakdown.issues` gaps, branch-scoped via
+    `access_for`; returns `None` when empty so no "nothing to report" email;
+    shares `TARGET_PCT` / `dish_food_cost_pct` with `views_dashboard.py`),
+    `views_reporting.py` (the subscription view + a public, auth-less
+    `.../public/digest/unsubscribe/<token>/`), `templates/cookbook/email/`
+    (html + txt), and `manage.py send_cost_digest [--dry-run] [--user X]
+    [--force]` — opt-out enrolment (every active `costing.view` user with an
+    email), 5-day resend guard, empty-digest skip. Run weekly by the
+    `cookbook-cost-digest` Render cron in `render.yaml` (`0 4 * * 1` UTC).
+    Needs `EMAIL_*` + `FRONTEND_URL` settings; dev forces the console backend.
+    Verified end-to-end 2026-09-02.
   - **Documents / POS** routes render `ComingSoonPage` until their slice
     lands.
 
@@ -142,20 +228,29 @@ before calling anything done — not just "the happy path returns 200."
   kitchen → `ProductionRecipe.prep_kitchen_ref` → new `cookbook.PrepKitchen`).
   Serializers strip cost/price fields when the caller lacks `costing.view`
   (`serializers/mixins.py::HidesCostingFields`). `recipe.publish` (added
-  2026-08-28, Administrator + Executive Chef) gates the inventory-platform
-  push — accounts migration `0003` re-syncs role grants; add a capability
-  then bump a migration like it. `/api/auth/me/` returns the
+  2026-08-28) gates the inventory-platform push; `menu.publish` (added
+  2026-09-02) gates the public QR-menu publish — both Administrator +
+  Executive Chef, each with an accounts migration (`0003`, `0004`) that
+  re-syncs role grants. Add a capability then bump a migration like them. `/api/auth/me/` returns the
   resolved capabilities + scope; `/api/accounts/{roles,users,capabilities}/`
   is the admin API (gated on `admin.roles` / `admin.users`). Superuser
   bypasses everything. Frontend: `src/auth/AuthProvider` + `guards.tsx`
   (`RequireCapability`), nav + action buttons gated by `can(cap)`,
   `src/features/admin/` screens. Seed builds carry a TopBar **identity
   switcher** (`src/shell/IdentitySwitcher.tsx`) to demo scoped users.
-- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 94 `APITestCase`
+- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 142 `APITestCase`
   tests. The older cookbook suites use superuser clients (RBAC bypassed —
   `apps/accounts/tests/` covers enforcement broadly), but the newer ones
-  (`test_{production,standards,activity,publishing}_api.py`) exercise scoped
-  non-superusers and capability gates directly. `test_publishing.py` fakes
+  (`test_{production,standards,plating,activity,publishing}_api.py`) exercise
+  scoped non-superusers and capability gates directly. `test_item_conversion_api.py`
+  / `test_item_storage_api.py` pin the per-SKU supplement write paths (and the
+  conversion one's effect on costing).
+  `test_plating_api.py` pins the dish-id upsert (no recipe version bump) and
+  the id-keyed photo reconcile + pin normalisation. `test_cost_digest.py`
+  covers `build_weekly_digest` (branch scoping, over-target sort, movers, the
+  empty→`None` skip), the subscription endpoint + validation, the public
+  unsubscribe (auth-less + idempotent), and `send_cost_digest` (opt-out
+  enrolment, resend guard, dry-run). `test_publishing.py` fakes
   `InventoryClient` — nothing in the suite hits the network. Frontend has no
   tests yet. Grow both alongside new work.
 - **Auth**: JWT via default Django `User` (+ `accounts.UserProfile`), one

@@ -19,6 +19,8 @@ instruction not to merge distinct concerns:
     flour != 1 cup of sugar in grams). Do not merge those two.
 """
 from django.db import models
+from django.utils.text import slugify
+
 from apps.core.models import BaseModel
 
 
@@ -50,6 +52,9 @@ class Branch(BaseModel):
     name_ar    = models.CharField(max_length=100, blank=True)
     code       = models.CharField(max_length=20, blank=True)
     sort_order = models.PositiveIntegerField(default=0)
+    # Public-menu URL segment — /m/<slug>. Auto-filled from name_en on first
+    # save if left blank; a published MenuEdition is served from this.
+    slug       = models.SlugField(max_length=60, unique=True, blank=True)
 
     class Meta:
         ordering = ['sort_order', 'name_en']
@@ -57,6 +62,15 @@ class Branch(BaseModel):
 
     def __str__(self):
         return self.name_en
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(self.name_en) or 'branch'
+            candidate, n = base, 2
+            while Branch.objects.exclude(pk=self.pk).filter(slug=candidate).exists():
+                candidate, n = f'{base}-{n}', n + 1
+            self.slug = candidate
+        super().save(*args, **kwargs)
 
 
 class PrepKitchen(BaseModel):

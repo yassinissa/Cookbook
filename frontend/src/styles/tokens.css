@@ -9,6 +9,9 @@
  *
  * Light is the base palette on :root. Dark is a real second palette on
  * [data-theme="dark"], not an inverted flip — both are contrast-checked.
+ * The dark selector also matches a NON-root [data-theme="dark"], so a subtree
+ * (e.g. a card sitting on a dark photo) can opt into the dark palette while
+ * the app stays light. Matches the Tailwind darkMode selector.
  */
 
 :root,
@@ -87,7 +90,8 @@
   --chart-point: #ffffff;
 }
 
-:root[data-theme='dark'] {
+:root[data-theme='dark'],
+[data-theme='dark'] {
   color-scheme: dark;
 
   --canvas: #1a1613;

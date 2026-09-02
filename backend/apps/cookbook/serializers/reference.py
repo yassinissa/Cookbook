@@ -14,7 +14,7 @@ class MenuCategorySerializer(serializers.ModelSerializer):
 class BranchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Branch
-        fields = ['id', 'name_en', 'name_ar', 'code', 'sort_order']
+        fields = ['id', 'name_en', 'name_ar', 'code', 'slug', 'sort_order']
 
 
 class PrepKitchenSerializer(serializers.ModelSerializer):

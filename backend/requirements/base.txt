@@ -18,8 +18,9 @@ python-decouple>=3.8
 # Excel import (source cookbook sheet)
 openpyxl>=3.1
 
-# Image handling (dish photos — ImageField)
+# Image handling (dish photos — ImageField) + QR codes (public menu)
 Pillow>=10.0
+qrcode[pil]>=7.4
 
 # Calling the inventory-platform API
 requests>=2.31

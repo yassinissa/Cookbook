@@ -1,0 +1,22 @@
+COOKBOOK — WEEKLY COST REPORT
+{{ generated_at }}
+{% if digest.branches == 'all' %}All branches{% else %}Branches: {{ digest.branches|join:", " }}{% endif %}
+
+{{ digest.dish_count }} current dishes{% if digest.avg_pct %} · average food cost {{ digest.avg_pct }}% (target {{ digest.target_pct }}%){% endif %}
+
+{% if digest.over_target %}
+OVER FOOD-COST TARGET ({{ digest.over_target_total }})
+{% for d in digest.over_target %}  {{ d.food_cost_pct }}%  {{ d.name_en }} — {{ d.branch }}{% if d.selling_price %}  (cost {{ d.cost }} / price {{ d.selling_price }} KWD){% endif %}
+{% endfor %}{% if digest.over_target_total > digest.over_target|length %}  … and {{ digest.over_target_total|add:"-15" }} more
+{% endif %}{% endif %}
+{% if digest.movers %}
+BIGGEST COST MOVES — last {{ digest.window_days }} days
+{% for m in digest.movers %}  {{ m.from_cost }} -> {{ m.to_cost }} KWD  ({{ m.delta_pct }}%)  {{ m.name_en }} — {{ m.branch }}
+{% endfor %}{% endif %}
+{% if digest.gaps %}
+COVERAGE GAPS — dishes with uncosted ingredient lines ({{ digest.gaps_total }})
+{% for g in digest.gaps %}  {{ g.name_en }} — {{ g.branch }}: {{ g.issues|join:", " }}
+{% endfor %}{% endif %}
+--
+Open the dashboard: {{ dashboard_url }}
+Stop these emails: {{ unsubscribe_url }}

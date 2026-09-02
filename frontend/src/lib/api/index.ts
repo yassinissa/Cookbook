@@ -18,6 +18,7 @@ import type {
   ActivityFeed,
   ActivityQuery,
   Dashboard,
+  DigestSubscription,
   DishRecipeDetail,
   DishRecipeListItem,
   DishStandardDetail,
@@ -26,12 +27,24 @@ import type {
   InventoryItemDetail,
   ItemConversion,
   ItemNutrition,
+  ItemStorage,
+  EffectiveMenu,
+  ID,
   MenuDetail,
+  MenuEdition,
   MenuLine,
   MenuListItem,
+  MenuPeriod,
+  MenuPeriodKind,
+  MenuPeriodLine,
+  MenuPeriodOp,
   MenuSnapshot,
   MenuTrends,
   Paginated,
+  PublicMenu,
+  PlatingGuideDetail,
+  PlatingGuideInput,
+  PlatingGuideListItem,
   ProductionRecipeDetail,
   ProductionRecipeListItem,
   ReferenceData,
@@ -187,6 +200,44 @@ export async function saveItemAllergens(
   const { data } = exists
     ? await http.patch(`/cookbook/item-conversions/${encodeURIComponent(sku)}/`, { allergens })
     : await http.post('/cookbook/item-conversions/', { item_sku: sku, allergens })
+  return data
+}
+
+export async function saveItemConversion(
+  sku: string,
+  payload: Partial<ItemConversion>,
+  exists: boolean,
+): Promise<ItemConversion> {
+  if (USE_SEED) {
+    await delay(300)
+    return { item_sku: sku, ...payload } as ItemConversion
+  }
+  const { data } = exists
+    ? await http.patch(`/cookbook/item-conversions/${encodeURIComponent(sku)}/`, payload)
+    : await http.post('/cookbook/item-conversions/', { ...payload, item_sku: sku })
+  return data
+}
+
+export async function fetchItemStorage(sku: string): Promise<ItemStorage | null> {
+  if (USE_SEED) {
+    await delay(160)
+    return null
+  }
+  return getOrNull<ItemStorage>(`/cookbook/item-storage/${encodeURIComponent(sku)}/`)
+}
+
+export async function saveItemStorage(
+  sku: string,
+  payload: Partial<ItemStorage>,
+  exists: boolean,
+): Promise<ItemStorage> {
+  if (USE_SEED) {
+    await delay(300)
+    return { item_sku: sku, ...payload } as ItemStorage
+  }
+  const { data } = exists
+    ? await http.patch(`/cookbook/item-storage/${encodeURIComponent(sku)}/`, payload)
+    : await http.post('/cookbook/item-storage/', { ...payload, item_sku: sku })
   return data
 }
 
@@ -446,6 +497,74 @@ export async function approveDishStandard(
   return data
 }
 
+/* ── plating guides ────────────────────────────────────────────────── */
+function seedPlatingDetail(dishId: string): PlatingGuideDetail {
+  const d = seed.seedDishDetail(dishId)
+  return {
+    id: d.id, name_en: d.name_en, name_ar: d.name_ar, recipe_code: d.recipe_code,
+    revision: d.revision, branch: d.branch, branch_ref: d.branch_ref,
+    category: d.category?.name ?? null, section: d.section?.name ?? null,
+    image_url: d.image_url, version: d.version, plating: null, updated_at: d.updated_at,
+  }
+}
+
+export async function fetchPlatingGuides(): Promise<PlatingGuideListItem[]> {
+  if (USE_SEED) {
+    await delay()
+    return seed.seedDishList().map((d) => ({
+      id: d.id, name_en: d.name_en, name_ar: d.name_ar, recipe_code: d.recipe_code,
+      branch: d.branch, branch_ref: null, category: d.category, category_name: d.category_name,
+      has_plating: false, image_count: 0, pin_count: 0, plate_spec: '', pickup_window_seconds: null,
+    }))
+  }
+  const { data } = await http.get<
+    Paginated<PlatingGuideListItem> | PlatingGuideListItem[]
+  >('/cookbook/plating-guides/')
+  return listData<PlatingGuideListItem>(data)
+}
+
+export async function fetchPlatingGuide(dishId: string): Promise<PlatingGuideDetail> {
+  if (USE_SEED) {
+    await delay()
+    return seedPlatingDetail(dishId)
+  }
+  const { data } = await http.get(`/cookbook/plating-guides/${dishId}/`)
+  return data
+}
+
+export async function updatePlatingGuide(
+  dishId: string,
+  payload: PlatingGuideInput,
+): Promise<PlatingGuideDetail> {
+  if (USE_SEED) {
+    await delay(400)
+    return seedPlatingDetail(dishId)
+  }
+  const { data } = await http.patch(`/cookbook/plating-guides/${dishId}/`, payload)
+  return data
+}
+
+/* ── weekly cost digest ────────────────────────────────────────────── */
+export async function fetchDigestSubscription(): Promise<DigestSubscription> {
+  if (USE_SEED) {
+    await delay(150)
+    return { enrolled: true, cadence: 'weekly', last_sent_at: null }
+  }
+  const { data } = await http.get('/cookbook/digest-subscription/')
+  return data
+}
+
+export async function updateDigestSubscription(
+  cadence: 'weekly' | 'off',
+): Promise<DigestSubscription> {
+  if (USE_SEED) {
+    await delay(250)
+    return { enrolled: true, cadence, last_sent_at: null }
+  }
+  const { data } = await http.patch('/cookbook/digest-subscription/', { cadence })
+  return data
+}
+
 /* ── menus ─────────────────────────────────────────────────────────── */
 export async function fetchMenus(): Promise<MenuListItem[]> {
   if (USE_SEED) {
@@ -520,4 +639,114 @@ export async function deleteMenuLine(lineId: string): Promise<void> {
     return
   }
   await http.delete(`/cookbook/menu-lines/${lineId}/`)
+}
+
+/* ── specials calendar ─────────────────────────────────────────────── */
+export async function fetchMenuPeriods(menuId: string): Promise<MenuPeriod[]> {
+  if (USE_SEED) {
+    await delay(150)
+    return []
+  }
+  const { data } = await http.get('/cookbook/menu-periods/', { params: { menu: menuId } })
+  return listData<MenuPeriod>(data)
+}
+
+export interface MenuPeriodWrite {
+  menu?: ID
+  kind: MenuPeriodKind
+  name_en: string
+  name_ar?: string
+  starts_on: string
+  ends_on?: string | null
+  weekday_mask?: number
+  is_live?: boolean
+  notes?: string
+  lines?: Array<Partial<MenuPeriodLine> & { dish: ID; op: MenuPeriodOp }>
+}
+
+export async function createMenuPeriod(menuId: string, body: MenuPeriodWrite): Promise<MenuPeriod> {
+  if (USE_SEED) {
+    await delay(300)
+    return { ...(body as unknown as MenuPeriod), id: `period-${Date.now()}`, menu: menuId, line_count: body.lines?.length ?? 0, lines: [], kind_display: body.kind, created_at: '', updated_at: '' }
+  }
+  const { data } = await http.post('/cookbook/menu-periods/', { ...body, menu: menuId })
+  return data
+}
+
+export async function updateMenuPeriod(periodId: string, body: Partial<MenuPeriodWrite>): Promise<MenuPeriod> {
+  if (USE_SEED) {
+    await delay(300)
+    return { ...(body as unknown as MenuPeriod), id: periodId }
+  }
+  const { data } = await http.patch(`/cookbook/menu-periods/${periodId}/`, body)
+  return data
+}
+
+export async function deleteMenuPeriod(periodId: string): Promise<void> {
+  if (USE_SEED) {
+    await delay(200)
+    return
+  }
+  await http.delete(`/cookbook/menu-periods/${periodId}/`)
+}
+
+export async function fetchEffectiveMenu(menuId: string, on: string): Promise<EffectiveMenu> {
+  if (USE_SEED) {
+    await delay(200)
+    const detail = seed.seedMenuDetail(menuId.replace('menu-', ''))
+    const byCat = new Map<string, EffectiveMenu['categories'][number]>()
+    for (const l of detail.lines) {
+      const key = l.category ?? 'Menu'
+      if (!byCat.has(key))
+        byCat.set(key, { name: key, name_ar: l.category_ar, order: l.category_order ?? 99, items: [] })
+      byCat.get(key)!.items.push({
+        dish_id: l.dish, name_en: l.dish_name, name_ar: l.dish_name_ar, recipe_code: l.recipe_code,
+        category: key, category_ar: l.category_ar, category_order: l.category_order ?? 99,
+        price: l.effective_price, image_url: l.image_url, description_en: '', description_ar: '',
+        pos_name: l.pos_name, is_available: l.is_available, rating: l.rating,
+        rating_status: l.rating_status, sort_order: l.sort_order, source: 'base',
+      })
+    }
+    return {
+      menu_id: menuId, branch: { id: detail.branch, name_en: detail.branch_detail.name_en, name_ar: detail.branch_detail.name_ar },
+      on, weekday: new Date(on).toLocaleDateString('en', { weekday: 'long' }),
+      periods: [], categories: [...byCat.values()].sort((a, b) => a.order - b.order),
+      line_count: detail.lines.length,
+    }
+  }
+  const { data } = await http.get(`/cookbook/menus/${menuId}/effective/`, { params: { on } })
+  return data
+}
+
+export async function fetchMenuEditions(menuId: string): Promise<MenuEdition[]> {
+  if (USE_SEED) {
+    await delay(150)
+    return []
+  }
+  const { data } = await http.get(`/cookbook/menus/${menuId}/editions/`)
+  return listData<MenuEdition>(data)
+}
+
+export async function publishMenuEdition(menuId: string, effectiveOn: string): Promise<MenuEdition> {
+  if (USE_SEED) {
+    await delay(400)
+    throw new Error('Publishing is disabled in the demo build.')
+  }
+  const { data } = await http.post(`/cookbook/menus/${menuId}/publish-edition/`, {
+    effective_on: effectiveOn,
+  })
+  return data
+}
+
+/** URL of the QR image for a branch's public menu (for an <img src> — it's a
+ *  public endpoint, no auth header needed). */
+export function menuQrUrl(branchSlug: string): string {
+  const base = (http.defaults.baseURL ?? '/api').replace(/\/$/, '')
+  return `${base}/cookbook/public-menu/${branchSlug}/qr/`
+}
+
+/** The public, unauthenticated menu payload — used only by the /m/:slug page. */
+export async function fetchPublicMenu(slug: string): Promise<PublicMenu> {
+  const { data } = await http.get(`/cookbook/public-menu/${slug}/`)
+  return data
 }

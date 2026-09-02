@@ -9,12 +9,21 @@ from .recipes import (
     DishRecipe, DishRecipeIngredient, DishRecipeStep,
 )
 from .standards import DishStandard
-from .item_supplement import CostSource, ItemConversion, ItemConversionLine, ItemNutrition
-from .menu import Menu, MenuLine, MenuSnapshot, MenuSnapshotLine
+from .plating import PlatingGuide, PlatingImage
+from .item_supplement import (
+    CostSource, ItemConversion, ItemConversionLine, ItemNutrition,
+    StorageBand, ItemStorage,
+)
+from .menu import (
+    Menu, MenuLine, MenuSnapshot, MenuSnapshotLine,
+    MenuPeriod, MenuPeriodLine, MenuPeriodKind, MenuPeriodOp, WEEKDAY_ALL,
+    MenuEdition,
+)
 from .history import (
     ActivityActionType, DishPriceHistory, ProductionCostHistory,
     DishRecipeActivityLog, ProductionRecipeActivityLog,
 )
+from .reporting import DigestCadence, DigestSubscription
 
 __all__ = [
     'MenuCategory', 'Branch', 'PrepKitchen', 'Section', 'Approver', 'Allergen', 'ServiceStyle', 'UnitScale',
@@ -23,8 +32,13 @@ __all__ = [
     'ProductionRecipe', 'ProductionRecipeIngredient', 'ProductionRecipeStep',
     'DishRecipe', 'DishRecipeIngredient', 'DishRecipeStep',
     'DishStandard',
+    'PlatingGuide', 'PlatingImage',
     'CostSource', 'ItemConversion', 'ItemConversionLine', 'ItemNutrition',
+    'StorageBand', 'ItemStorage',
     'Menu', 'MenuLine', 'MenuSnapshot', 'MenuSnapshotLine',
+    'MenuPeriod', 'MenuPeriodLine', 'MenuPeriodKind', 'MenuPeriodOp', 'WEEKDAY_ALL',
+    'MenuEdition',
     'ActivityActionType', 'DishPriceHistory', 'ProductionCostHistory',
     'DishRecipeActivityLog', 'ProductionRecipeActivityLog',
+    'DigestCadence', 'DigestSubscription',
 ]

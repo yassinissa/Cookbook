@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="base" x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0%" stop-color="#171412"/>
+      <stop offset="52%" stop-color="#100d0b"/>
+      <stop offset="100%" stop-color="#080706"/>
+    </linearGradient>
+    <radialGradient id="key" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#caa06a" stop-opacity="0.16"/>
+      <stop offset="45%" stop-color="#8a6a44" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#8a6a44" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="ember" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#b5502f" stop-opacity="0.14"/>
+      <stop offset="55%" stop-color="#b5502f" stop-opacity="0.03"/>
+      <stop offset="100%" stop-color="#b5502f" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="surface" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="70%" stop-color="#000000" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.42"/>
+    </linearGradient>
+    <radialGradient id="vignette" cx="46%" cy="40%" r="82%">
+      <stop offset="46%" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.6"/>
+    </radialGradient>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="60"/>
+    </filter>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch" result="n"/>
+      <feColorMatrix in="n" type="matrix"
+        values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.5 0"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="1000" fill="url(#base)"/>
+
+  <!-- overhead key light falling on the work surface -->
+  <ellipse cx="640" cy="470" rx="900" ry="560" fill="url(#key)"/>
+  <!-- a single warm ember low toward the leading edge -->
+  <ellipse cx="220" cy="1020" rx="620" ry="440" fill="url(#ember)"/>
+
+  <!-- the work surface: a faint edge low in the frame -->
+  <g filter="url(#soft)">
+    <rect x="-200" y="812" width="2000" height="400" fill="#000000" opacity="0.28"/>
+    <line x1="-200" y1="806" x2="1800" y2="792" stroke="#d8c3a0" stroke-opacity="0.05" stroke-width="3"/>
+  </g>
+
+  <!-- ledger rules: a kitchen run like an engineering team -->
+  <g stroke="#ffffff" stroke-opacity="0.014" stroke-width="1">
+    <line x1="0" y1="96"  x2="1600" y2="96"/>
+    <line x1="0" y1="168" x2="1600" y2="168"/>
+    <line x1="0" y1="240" x2="1600" y2="240"/>
+    <line x1="0" y1="312" x2="1600" y2="312"/>
+    <line x1="0" y1="384" x2="1600" y2="384"/>
+    <line x1="0" y1="456" x2="1600" y2="456"/>
+    <line x1="0" y1="528" x2="1600" y2="528"/>
+    <line x1="0" y1="600" x2="1600" y2="600"/>
+    <line x1="0" y1="672" x2="1600" y2="672"/>
+    <line x1="0" y1="744" x2="1600" y2="744"/>
+  </g>
+
+  <rect width="1600" height="1000" fill="url(#surface)"/>
+  <rect width="1600" height="1000" fill="url(#vignette)"/>
+  <rect width="1600" height="1000" filter="url(#grain)" opacity="0.045"/>
+</svg>

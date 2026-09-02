@@ -1,20 +1,36 @@
 """Menu / branch views — kept separate from the big recipe views.py."""
+import io
+from datetime import date
 from decimal import Decimal
 
+from django.conf import settings
+from django.core.cache import cache
 from django.db.models import Q
+from django.http import Http404, HttpResponse
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
+from rest_framework.views import APIView
 
 from apps.accounts.access import ALL, access_for
 from apps.accounts.permissions import capability_required
 
-from .models import DishRecipe, Menu, MenuLine, MenuSnapshot, MenuSnapshotLine
+from .models import (
+    Branch, DishRecipe, Menu, MenuEdition, MenuLine, MenuSnapshot, MenuSnapshotLine,
+)
+from .menu_editions import publish_edition
 from .serializers.menu import (
-    MenuDetailSerializer, MenuLineSerializer, MenuListSerializer,
+    MenuDetailSerializer, MenuEditionSerializer, MenuLineSerializer, MenuListSerializer,
     MenuSnapshotSerializer, MenuWriteSerializer,
 )
+from .specials import resolve_menu
+
+PUBLIC_MENU_CACHE_KEY = 'public-menu:{slug}'
 
 
 def _fcp(cost, price):
@@ -35,9 +51,11 @@ def _scoped_menu_qs(qs, request):
 class MenuViewSet(viewsets.ModelViewSet):
     permission_classes = [capability_required(default='menu.view', by_action={
         'list': 'menu.view', 'retrieve': 'menu.view', 'snapshots': 'menu.view', 'trends': 'menu.view',
+        'effective': 'menu.view', 'editions': 'menu.view',
         'create': 'menu.edit', 'update': 'menu.edit', 'partial_update': 'menu.edit',
         'destroy': 'menu.edit', 'build': 'menu.edit', 'lines': 'menu.edit',
         'snapshot': 'menu.snapshot',
+        'publish_edition': 'menu.publish',
     })]
     pagination_class = None          # ~one menu per branch — never enough to page
     queryset = (Menu.objects
@@ -118,6 +136,47 @@ class MenuViewSet(viewsets.ModelViewSet):
         qs = menu.snapshots.prefetch_related('lines').order_by('created_at')
         return Response(MenuSnapshotSerializer(qs, many=True).data)
 
+    # ── the effective menu for a date (base + active periods) ────────────
+    @action(detail=True, methods=['get'])
+    def effective(self, request, pk=None):
+        menu = self.get_object()
+        on_raw = request.query_params.get('on')
+        if on_raw:
+            try:
+                on = date.fromisoformat(on_raw)
+            except ValueError:
+                raise ValidationError({'on': 'Use YYYY-MM-DD.'})
+        else:
+            on = timezone.localdate()
+        return Response(resolve_menu(menu, on))
+
+    # ── publish the public edition for a date ────────────────────────────
+    @action(detail=True, methods=['post'], url_path='publish-edition')
+    def publish_edition(self, request, pk=None):
+        menu = self.get_object()
+        on_raw = request.data.get('effective_on')
+        if on_raw:
+            try:
+                on = date.fromisoformat(on_raw)
+            except (TypeError, ValueError):
+                raise ValidationError({'effective_on': 'Use YYYY-MM-DD.'})
+        else:
+            on = timezone.localdate()
+
+        edition = publish_edition(
+            menu, on,
+            published_by=getattr(request.user, 'username', '') or '',
+            base_url=request.build_absolute_uri('/').rstrip('/'),
+        )
+        cache.delete(PUBLIC_MENU_CACHE_KEY.format(slug=menu.branch.slug))
+        return Response(MenuEditionSerializer(edition).data, status=201)
+
+    @action(detail=True, methods=['get'])
+    def editions(self, request, pk=None):
+        menu = self.get_object()
+        qs = menu.editions.order_by('-version')
+        return Response(MenuEditionSerializer(qs, many=True, context={'request': request}).data)
+
     # ── time series for the charts ───────────────────────────────────────
     @action(detail=True, methods=['get'])
     def trends(self, request, pk=None):
@@ -153,3 +212,60 @@ class MenuLineViewSet(mixins.UpdateModelMixin, mixins.DestroyModelMixin, viewset
         if not access.scope.branch_ids:
             return qs.none()
         return qs.filter(menu__branch_id__in=list(access.scope.branch_ids))
+
+
+# ── Public menu (unauthenticated) ──────────────────────────────────────────
+
+class PublicMenuThrottle(AnonRateThrottle):
+    scope = 'public_menu'
+
+
+class PublicMenuView(APIView):
+    """
+    GET /api/cookbook/public-menu/<slug>/ — the current published edition's
+    frozen payload for a branch. This is what the SPA route /m/<slug> fetches
+    and what the QR code ultimately resolves to. No auth, no cost data (the
+    payload is built by apps.cookbook.menu_editions with a field whitelist).
+    Cached per slug, busted on the next publish, and rate-limited.
+    """
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    throttle_classes = [PublicMenuThrottle]
+
+    def get(self, request, slug):
+        cache_key = PUBLIC_MENU_CACHE_KEY.format(slug=slug)
+        payload = cache.get(cache_key)
+        if payload is None:
+            branch = get_object_or_404(Branch, slug=slug)
+            edition = (MenuEdition.objects
+                       .filter(menu__branch=branch, menu__is_active=True, is_current=True)
+                       .order_by('-version')
+                       .first())
+            if edition is None:
+                raise Http404('This menu is not published yet.')
+            payload = edition.payload
+            cache.set(cache_key, payload, 60 * 60)
+        resp = Response(payload)
+        resp['Cache-Control'] = 'public, max-age=300'
+        return resp
+
+
+class PublicMenuQrView(APIView):
+    """GET /api/cookbook/public-menu/<slug>/qr/ — a PNG QR code pointing at the
+    SPA route /m/<slug>. Public: it only ever encodes a URL that is itself
+    public. Throttled and long-cached."""
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    throttle_classes = [PublicMenuThrottle]
+
+    def get(self, request, slug):
+        import qrcode
+
+        get_object_or_404(Branch, slug=slug)   # 404 for an unknown branch
+        target = f'{settings.PUBLIC_MENU_BASE_URL.rstrip("/")}/m/{slug}'
+        img = qrcode.make(target, box_size=10, border=2)
+        buf = io.BytesIO()
+        img.save(buf, format='PNG')
+        resp = HttpResponse(buf.getvalue(), content_type='image/png')
+        resp['Cache-Control'] = 'public, max-age=86400'
+        return resp

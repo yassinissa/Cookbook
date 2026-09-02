@@ -47,9 +47,25 @@ export function useItemConversion(sku: string | undefined) {
     staleTime: 5 * 60_000,
   })
 }
+export function useItemStorage(sku: string | undefined) {
+  return useQuery({
+    queryKey: qk.itemStorage(sku ?? ''),
+    queryFn: () => api.fetchItemStorage(sku as string),
+    enabled: !!sku,
+    staleTime: 5 * 60_000,
+  })
+}
 
 export function useDashboard() {
   return useQuery({ queryKey: qk.dashboard, queryFn: api.fetchDashboard })
+}
+
+export function useDigestSubscription() {
+  return useQuery({
+    queryKey: qk.digestSubscription,
+    queryFn: api.fetchDigestSubscription,
+    staleTime: 5 * 60_000,
+  })
 }
 
 export function useDishRecipes(enabled = true) {
@@ -93,6 +109,17 @@ export function useDishStandard(dishId: string | undefined) {
   return useQuery({
     queryKey: qk.standard(dishId ?? ''),
     queryFn: () => api.fetchDishStandard(dishId as string),
+    enabled: !!dishId,
+  })
+}
+
+export function usePlatingGuides(enabled = true) {
+  return useQuery({ queryKey: qk.plating, queryFn: api.fetchPlatingGuides, enabled })
+}
+export function usePlatingGuide(dishId: string | undefined) {
+  return useQuery({
+    queryKey: qk.platingGuide(dishId ?? ''),
+    queryFn: () => api.fetchPlatingGuide(dishId as string),
     enabled: !!dishId,
   })
 }
@@ -153,6 +180,35 @@ export function useMenuSnapshots(menuId: string | undefined) {
     queryKey: qk.menuSnapshots(menuId ?? ''),
     queryFn: () => api.fetchMenuSnapshots(menuId as string),
     enabled: !!menuId,
+  })
+}
+export function useMenuPeriods(menuId: string | undefined) {
+  return useQuery({
+    queryKey: qk.menuPeriods(menuId ?? ''),
+    queryFn: () => api.fetchMenuPeriods(menuId as string),
+    enabled: !!menuId,
+  })
+}
+export function useEffectiveMenu(menuId: string | undefined, on: string) {
+  return useQuery({
+    queryKey: qk.effectiveMenu(menuId ?? '', on),
+    queryFn: () => api.fetchEffectiveMenu(menuId as string, on),
+    enabled: !!menuId && !!on,
+  })
+}
+export function useMenuEditions(menuId: string | undefined) {
+  return useQuery({
+    queryKey: qk.menuEditions(menuId ?? ''),
+    queryFn: () => api.fetchMenuEditions(menuId as string),
+    enabled: !!menuId,
+  })
+}
+export function usePublicMenu(slug: string | undefined) {
+  return useQuery({
+    queryKey: qk.publicMenu(slug ?? ''),
+    queryFn: () => api.fetchPublicMenu(slug as string),
+    enabled: !!slug,
+    retry: false,
   })
 }
 

@@ -9,7 +9,12 @@ import { Page, PageHeader, BiName } from '@/components/Page'
 import { Pill } from '@/components/Pill'
 import { EmptyState, ErrorState, LoadingRow, Skeleton } from '@/components/States'
 import { useInventoryItem, useInventoryItemsPage } from '@/lib/queries'
-import { ItemAllergenSection, ItemNutritionSection } from './ItemSupplementPanels'
+import {
+  ItemAllergenSection,
+  ItemMeasuresSection,
+  ItemNutritionSection,
+  ItemStorageSection,
+} from './ItemSupplementPanels'
 import { kwd, number } from '@/lib/format'
 import { useI18n } from '@/i18n'
 import type { InventoryItem } from '@/types/api'
@@ -304,6 +309,8 @@ function ItemDrawer({ id, onClose }: { id: string | null; onClose: () => void })
           <p className="text-xs text-ink-subtle">{t('inv.source')}</p>
 
           <ItemNutritionSection sku={data.sku} />
+          <ItemMeasuresSection sku={data.sku} />
+          <ItemStorageSection sku={data.sku} itemId={data.id} />
           <ItemAllergenSection sku={data.sku} />
         </div>
       )}

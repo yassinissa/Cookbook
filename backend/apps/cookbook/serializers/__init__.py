@@ -13,6 +13,11 @@ from .production_recipe import (
 )
 from .item_supplement import (
     ItemConversionLineSerializer, ItemConversionSerializer, ItemNutritionSerializer,
+    ItemStorageSerializer,
+)
+from .plating import (
+    PlatingImageSerializer, PlatingGuideSerializer,
+    PlatingGuideListSerializer, PlatingGuideDetailSerializer, PlatingGuideWriteSerializer,
 )
 
 __all__ = [
@@ -24,4 +29,7 @@ __all__ = [
     'ProductionRecipeIngredientSerializer', 'ProductionRecipeStepSerializer',
     'ProductionRecipeListSerializer', 'ProductionRecipeDetailSerializer', 'ProductionRecipeWriteSerializer',
     'ItemConversionLineSerializer', 'ItemConversionSerializer', 'ItemNutritionSerializer',
+    'ItemStorageSerializer',
+    'PlatingImageSerializer', 'PlatingGuideSerializer',
+    'PlatingGuideListSerializer', 'PlatingGuideDetailSerializer', 'PlatingGuideWriteSerializer',
 ]

@@ -1,8 +1,8 @@
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext, useSyncExternalStore, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { fetchMe } from '@/lib/api/accounts'
-import { USE_SEED, getToken } from '@/lib/http'
+import { USE_SEED, getToken, onTokenChange } from '@/lib/http'
 import type { CapabilityCode, Me } from '@/types/access'
 
 interface AuthValue {
@@ -20,7 +20,14 @@ export const AUTH_QUERY_KEY = ['auth', 'me'] as const
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const qc = useQueryClient()
-  const enabled = USE_SEED || !!getToken()
+  // re-render when the token appears / clears (login stores it after this
+  // provider — which sits above the router — has already mounted)
+  const hasToken = useSyncExternalStore(
+    onTokenChange,
+    () => !!getToken(),
+    () => false,
+  )
+  const enabled = USE_SEED || hasToken
 
   const { data, isLoading } = useQuery({
     queryKey: AUTH_QUERY_KEY,
