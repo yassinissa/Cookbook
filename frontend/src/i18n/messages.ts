@@ -262,7 +262,7 @@ export const en = {
   'publish.republish': 'Re-publish',
   'publish.publishing': 'Publishing…',
   'publish.ok': 'Recipe published to inventory-platform.',
-  'publish.warnings': 'Published — {n} ingredient line(s) could not be matched.',
+  'publish.warnings': 'Published — {n} item(s) need a look (see the panel).',
   'publish.failed': 'Publish failed.',
 
   'activity.title': 'Activity & History',
@@ -981,7 +981,7 @@ export const ar: Record<MessageKey, string> = {
   'publish.republish': 'إعادة النشر',
   'publish.publishing': 'جارٍ النشر…',
   'publish.ok': 'تم نشر الوصفة إلى inventory-platform.',
-  'publish.warnings': 'تم النشر — تعذّرت مطابقة {n} من أسطر المكوّنات.',
+  'publish.warnings': 'تم النشر — {n} عنصر يحتاج مراجعة (انظر اللوحة).',
   'publish.failed': 'فشل النشر.',
 
   'activity.title': 'السجل والنشاط',

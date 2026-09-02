@@ -161,13 +161,19 @@ before calling anything done — not just "the happy path returns 200."
     set, no recipe version bump). Frontend `src/features/pos/` — the `/pos`
     route (was ComingSoon) is `ModifiersPage` (Groups / By-dish tabs) +
     `ModifierGroupEditor` drawer + `DishModifierDrawer`; `DishModifierPanel`
-    on the dish detail rail. `test_modifier_api.py`. **3c/3d not built:**
-    publish the mappings to inventory-platform + the public-menu modifier
-    block. **inventory-platform already has the deduction pipeline**
-    (`apps/pos_integration/`: `POSImport` upload → classify BASE/TYPE/ADDON/
-    INSTRUCTION → `POSItemMapping` / `POSAddonIngredient` → deduct stock);
-    3c publishes those two tables via new `inventory_client` methods.
-    Source workbooks are gitignored (`/*.xlsm`).
+    on the dish detail rail. `test_modifier_api.py`. **3c**
+    `publishing.py::_publish_pos_modifiers` — `publish_dish_recipe` also pushes
+    a `POSItemMapping` for the base dish + each `type` option (→ its
+    `variant_recipe.inventory_recipe_id`) and a `POSAddonIngredient` for each
+    `addon` option, via `inventory_client.upsert_pos_mapping` /
+    `upsert_pos_addon` (find-by-key then POST/PATCH). Missing `pos_mods_string`,
+    an unpublished variant, or an unknown add-on SKU each become a `warning`,
+    never a hard failure; `PublishControl` renders the warning list.
+    `test_pos_publish.py` (fake client). **3d not built:** the modifier block
+    on the public QR menu. **inventory-platform already has the deduction
+    pipeline** (`apps/pos_integration/`: `POSImport` upload → classify
+    BASE/TYPE/ADDON/INSTRUCTION → `POSItemMapping` / `POSAddonIngredient` →
+    deduct stock). Source workbooks are gitignored (`/*.xlsm`).
   - **Inventory
     Items** (`src/features/inventory` — server-searched, paged table +
     detail drawer showing the full item definition: photo,
@@ -264,7 +270,7 @@ before calling anything done — not just "the happy path returns 200."
   (`RequireCapability`), nav + action buttons gated by `can(cap)`,
   `src/features/admin/` screens. Seed builds carry a TopBar **identity
   switcher** (`src/shell/IdentitySwitcher.tsx`) to demo scoped users.
-- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 158 `APITestCase`
+- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 163 `APITestCase`
   tests. The older cookbook suites use superuser clients (RBAC bypassed —
   `apps/accounts/tests/` covers enforcement broadly), but the newer ones
   (`test_{production,standards,plating,activity,publishing}_api.py`) exercise
