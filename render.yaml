@@ -1,26 +1,77 @@
-# Render Blueprint — scheduled jobs for Cookbook.
+# ─────────────────────────────────────────────────────────────────────────────
+# Render Blueprint for Cookbook — API + weekly-digest cron + frontend + Postgres.
 #
-# The API web service (greenhill-api) predates this file and is configured in
-# the Render dashboard, so it is deliberately NOT redefined here — a name
-# mismatch would make a blueprint sync create a duplicate. This file adds only
-# the cron job(s).
+# ADOPTING THIS ON AN EXISTING DEPLOY
+#   The API web service was first created by hand in the Render dashboard. Render
+#   matches blueprint services to existing ones BY NAME, so:
+#     • If your API service is named `greenhill-api`, connecting this repo as a
+#       Blueprint (Dashboard → New → Blueprint) adopts and updates it in place.
+#     • If it has a different name, either rename it in the dashboard first, or
+#       change `name:` below to match — otherwise the sync creates a duplicate.
+#   The same applies to the database and the frontend site. Values marked
+#   `sync: false` are never written by Render; set them once in the dashboard.
 #
-# To apply: Render Dashboard → New → Blueprint → pick this repo. Render creates
-# the cron service and prompts for the env vars marked `sync: false`. Set them
-# to the SAME values the web service uses (DB + SECRET_KEY), plus the SMTP
-# credentials. If the web service already draws from a shared env group, delete
-# the individual `key:` entries below and replace them with:
-#     envVars:
-#       - fromGroup: <that-group-name>
-#       - key: DJANGO_SETTINGS_MODULE
-#         value: config.settings.production
+# If you would rather keep managing services by hand, treat this file as the
+# reference for every setting the current codebase expects.
+# ─────────────────────────────────────────────────────────────────────────────
+
+databases:
+  - name: cookbook-db
+    databaseName: cookbook
+    user: cookbook
+    plan: basic-256mb          # bump as data grows; `free` also works to start
+    # region: frankfurt        # must match the web service's region
 
 services:
+  # ── Django REST API ───────────────────────────────────────────────────────
+  - type: web
+    name: greenhill-api
+    runtime: python
+    rootDir: backend
+    plan: starter
+    # region: frankfurt
+    healthCheckPath: /api/health/
+    buildCommand: >-
+      pip install -r requirements/production.txt &&
+      python manage.py collectstatic --noinput &&
+      python manage.py migrate
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: PYTHON_VERSION
+        value: "3.12.8"            # Django 4.2 does not support 3.13+
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DB_NAME
+        fromDatabase: { name: cookbook-db, property: database }
+      - key: DB_USER
+        fromDatabase: { name: cookbook-db, property: user }
+      - key: DB_PASSWORD
+        fromDatabase: { name: cookbook-db, property: password }
+      - key: DB_HOST
+        fromDatabase: { name: cookbook-db, property: host }
+      - key: DB_PORT
+        fromDatabase: { name: cookbook-db, property: port }
+      - key: ALLOWED_HOSTS
+        sync: false               # e.g. greenhill-api-sljm.onrender.com
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false               # the frontend origin(s), comma-separated
+      - key: FRONTEND_URL
+        sync: false               # https://<frontend host>  — no trailing slash
+      - key: PUBLIC_MENU_BASE_URL
+        sync: false               # host the QR code encodes; usually = FRONTEND_URL
+      - key: PUBLIC_MENU_THROTTLE
+        value: 60/min
+      - fromGroup: cookbook-shared
+
+  # ── Weekly cost-report digest (cron) ─────────────────────────────────────
   - type: cron
     name: cookbook-cost-digest
     runtime: python
     rootDir: backend
     plan: starter
+    # region: frankfurt
     # 04:00 UTC Monday = 07:00 Asia/Kuwait (UTC+3, no DST) — a Monday-morning email.
     schedule: "0 4 * * 1"
     buildCommand: pip install -r requirements/production.txt
@@ -29,23 +80,57 @@ services:
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings.production
       - key: PYTHON_VERSION
-        value: "3.12.6"
-      # ── shared with the API web service — use identical values ──
+        value: "3.12.8"
       - key: SECRET_KEY
-        sync: false
+        fromService: { name: greenhill-api, type: web, envVarKey: SECRET_KEY }
       - key: DB_NAME
-        sync: false
+        fromDatabase: { name: cookbook-db, property: database }
       - key: DB_USER
-        sync: false
+        fromDatabase: { name: cookbook-db, property: user }
       - key: DB_PASSWORD
-        sync: false
+        fromDatabase: { name: cookbook-db, property: password }
       - key: DB_HOST
-        sync: false
+        fromDatabase: { name: cookbook-db, property: host }
       - key: DB_PORT
-        sync: false
+        fromDatabase: { name: cookbook-db, property: port }
       - key: ALLOWED_HOSTS
+        value: localhost          # the cron makes no HTTP requests to itself
+      - key: FRONTEND_URL
+        fromService: { name: greenhill-api, type: web, envVarKey: FRONTEND_URL }
+      - fromGroup: cookbook-shared
+
+  # ── React / Vite frontend (static) ──────────────────────────────────────
+  - type: web
+    name: cookbook-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    # SPA fallback — every client route (incl. the public /m/<slug> menu) → index.html
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false               # https://<api host>/api
+
+# ── Secrets shared by the API and the cron ─────────────────────────────────
+envVarGroups:
+  - name: cookbook-shared
+    envVars:
+      # inventory-platform service account
+      - key: INVENTORY_API_BASE_URL
         sync: false
-      # ── SMTP for the digest (new) ──
+      - key: INVENTORY_API_EMAIL
+        sync: false
+      - key: INVENTORY_API_PASSWORD
+        sync: false
+      # SMTP for the weekly digest
       - key: EMAIL_HOST
         sync: false
       - key: EMAIL_PORT
@@ -57,8 +142,4 @@ services:
       - key: EMAIL_USE_TLS
         value: "True"
       - key: DEFAULT_FROM_EMAIL
-        sync: false
-      # Absolute base URL of the deployed frontend — used for the unsubscribe
-      # link and dish deep-links in the email. No trailing slash.
-      - key: FRONTEND_URL
-        sync: false
+        sync: false               # e.g. "Cookbook <cookbook@greenhills.example>"
