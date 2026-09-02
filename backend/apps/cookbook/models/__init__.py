@@ -14,7 +14,10 @@ from .item_supplement import (
     CostSource, ItemConversion, ItemConversionLine, ItemNutrition,
     StorageBand, ItemStorage,
 )
-from .menu import Menu, MenuLine, MenuSnapshot, MenuSnapshotLine
+from .menu import (
+    Menu, MenuLine, MenuSnapshot, MenuSnapshotLine,
+    MenuPeriod, MenuPeriodLine, MenuPeriodKind, MenuPeriodOp, WEEKDAY_ALL,
+)
 from .history import (
     ActivityActionType, DishPriceHistory, ProductionCostHistory,
     DishRecipeActivityLog, ProductionRecipeActivityLog,
@@ -32,6 +35,7 @@ __all__ = [
     'CostSource', 'ItemConversion', 'ItemConversionLine', 'ItemNutrition',
     'StorageBand', 'ItemStorage',
     'Menu', 'MenuLine', 'MenuSnapshot', 'MenuSnapshotLine',
+    'MenuPeriod', 'MenuPeriodLine', 'MenuPeriodKind', 'MenuPeriodOp', 'WEEKDAY_ALL',
     'ActivityActionType', 'DishPriceHistory', 'ProductionCostHistory',
     'DishRecipeActivityLog', 'ProductionRecipeActivityLog',
     'DigestCadence', 'DigestSubscription',

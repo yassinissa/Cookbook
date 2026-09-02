@@ -28,9 +28,15 @@ import type {
   ItemConversion,
   ItemNutrition,
   ItemStorage,
+  EffectiveMenu,
+  ID,
   MenuDetail,
   MenuLine,
   MenuListItem,
+  MenuPeriod,
+  MenuPeriodKind,
+  MenuPeriodLine,
+  MenuPeriodOp,
   MenuSnapshot,
   MenuTrends,
   Paginated,
@@ -631,4 +637,81 @@ export async function deleteMenuLine(lineId: string): Promise<void> {
     return
   }
   await http.delete(`/cookbook/menu-lines/${lineId}/`)
+}
+
+/* ── specials calendar ─────────────────────────────────────────────── */
+export async function fetchMenuPeriods(menuId: string): Promise<MenuPeriod[]> {
+  if (USE_SEED) {
+    await delay(150)
+    return []
+  }
+  const { data } = await http.get('/cookbook/menu-periods/', { params: { menu: menuId } })
+  return listData<MenuPeriod>(data)
+}
+
+export interface MenuPeriodWrite {
+  menu?: ID
+  kind: MenuPeriodKind
+  name_en: string
+  name_ar?: string
+  starts_on: string
+  ends_on?: string | null
+  weekday_mask?: number
+  is_live?: boolean
+  notes?: string
+  lines?: Array<Partial<MenuPeriodLine> & { dish: ID; op: MenuPeriodOp }>
+}
+
+export async function createMenuPeriod(menuId: string, body: MenuPeriodWrite): Promise<MenuPeriod> {
+  if (USE_SEED) {
+    await delay(300)
+    return { ...(body as unknown as MenuPeriod), id: `period-${Date.now()}`, menu: menuId, line_count: body.lines?.length ?? 0, lines: [], kind_display: body.kind, created_at: '', updated_at: '' }
+  }
+  const { data } = await http.post('/cookbook/menu-periods/', { ...body, menu: menuId })
+  return data
+}
+
+export async function updateMenuPeriod(periodId: string, body: Partial<MenuPeriodWrite>): Promise<MenuPeriod> {
+  if (USE_SEED) {
+    await delay(300)
+    return { ...(body as unknown as MenuPeriod), id: periodId }
+  }
+  const { data } = await http.patch(`/cookbook/menu-periods/${periodId}/`, body)
+  return data
+}
+
+export async function deleteMenuPeriod(periodId: string): Promise<void> {
+  if (USE_SEED) {
+    await delay(200)
+    return
+  }
+  await http.delete(`/cookbook/menu-periods/${periodId}/`)
+}
+
+export async function fetchEffectiveMenu(menuId: string, on: string): Promise<EffectiveMenu> {
+  if (USE_SEED) {
+    await delay(200)
+    const detail = seed.seedMenuDetail(menuId.replace('menu-', ''))
+    const byCat = new Map<string, EffectiveMenu['categories'][number]>()
+    for (const l of detail.lines) {
+      const key = l.category ?? 'Menu'
+      if (!byCat.has(key))
+        byCat.set(key, { name: key, name_ar: l.category_ar, order: l.category_order ?? 99, items: [] })
+      byCat.get(key)!.items.push({
+        dish_id: l.dish, name_en: l.dish_name, name_ar: l.dish_name_ar, recipe_code: l.recipe_code,
+        category: key, category_ar: l.category_ar, category_order: l.category_order ?? 99,
+        price: l.effective_price, image_url: l.image_url, description_en: '', description_ar: '',
+        pos_name: l.pos_name, is_available: l.is_available, rating: l.rating,
+        rating_status: l.rating_status, sort_order: l.sort_order, source: 'base',
+      })
+    }
+    return {
+      menu_id: menuId, branch: { id: detail.branch, name_en: detail.branch_detail.name_en, name_ar: detail.branch_detail.name_ar },
+      on, weekday: new Date(on).toLocaleDateString('en', { weekday: 'long' }),
+      periods: [], categories: [...byCat.values()].sort((a, b) => a.order - b.order),
+      line_count: detail.lines.length,
+    }
+  }
+  const { data } = await http.get(`/cookbook/menus/${menuId}/effective/`, { params: { on } })
+  return data
 }

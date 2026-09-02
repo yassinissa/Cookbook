@@ -1,10 +1,12 @@
 """Menu / branch views — kept separate from the big recipe views.py."""
+from datetime import date
 from decimal import Decimal
 
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from apps.accounts.access import ALL, access_for
@@ -15,6 +17,7 @@ from .serializers.menu import (
     MenuDetailSerializer, MenuLineSerializer, MenuListSerializer,
     MenuSnapshotSerializer, MenuWriteSerializer,
 )
+from .specials import resolve_menu
 
 
 def _fcp(cost, price):
@@ -35,6 +38,7 @@ def _scoped_menu_qs(qs, request):
 class MenuViewSet(viewsets.ModelViewSet):
     permission_classes = [capability_required(default='menu.view', by_action={
         'list': 'menu.view', 'retrieve': 'menu.view', 'snapshots': 'menu.view', 'trends': 'menu.view',
+        'effective': 'menu.view',
         'create': 'menu.edit', 'update': 'menu.edit', 'partial_update': 'menu.edit',
         'destroy': 'menu.edit', 'build': 'menu.edit', 'lines': 'menu.edit',
         'snapshot': 'menu.snapshot',
@@ -117,6 +121,20 @@ class MenuViewSet(viewsets.ModelViewSet):
         menu = self.get_object()
         qs = menu.snapshots.prefetch_related('lines').order_by('created_at')
         return Response(MenuSnapshotSerializer(qs, many=True).data)
+
+    # ── the effective menu for a date (base + active periods) ────────────
+    @action(detail=True, methods=['get'])
+    def effective(self, request, pk=None):
+        menu = self.get_object()
+        on_raw = request.query_params.get('on')
+        if on_raw:
+            try:
+                on = date.fromisoformat(on_raw)
+            except ValueError:
+                raise ValidationError({'on': 'Use YYYY-MM-DD.'})
+        else:
+            on = timezone.localdate()
+        return Response(resolve_menu(menu, on))
 
     # ── time series for the charts ───────────────────────────────────────
     @action(detail=True, methods=['get'])

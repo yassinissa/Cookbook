@@ -711,6 +711,78 @@ export interface MenuTrends {
   points: MenuTrendPoint[]
 }
 
+/* ── specials calendar ─────────────────────────────────────────────── */
+export type MenuPeriodKind = 'seasonal' | 'daily_special' | 'event'
+export type MenuPeriodOp = 'add' | 'remove' | 'reprice' | 'replace_photo' | 'replace_copy'
+
+export interface MenuPeriodLine {
+  id?: ID
+  dish: ID
+  dish_name?: string
+  dish_name_ar?: string
+  op: MenuPeriodOp
+  op_display?: string
+  menu_price: string | null
+  image_url: string
+  description_en: string
+  description_ar: string
+  pos_name: string
+  sort_order: number
+}
+export interface MenuPeriod {
+  id: ID
+  menu: ID
+  kind: MenuPeriodKind
+  kind_display: string
+  name_en: string
+  name_ar: string
+  starts_on: string
+  ends_on: string | null
+  /** bit 0 = Monday … bit 6 = Sunday; 127 = every day */
+  weekday_mask: number
+  is_live: boolean
+  notes: string
+  line_count: number
+  lines: MenuPeriodLine[]
+  created_at: string
+  updated_at: string
+}
+export interface EffectiveMenuLine {
+  dish_id: ID
+  name_en: string
+  name_ar: string
+  recipe_code: string
+  category: string
+  category_ar: string
+  category_order: number
+  price: string | null
+  image_url: string
+  description_en: string
+  description_ar: string
+  pos_name: string
+  is_available: boolean
+  rating: string | null
+  rating_status: RatingStatus
+  sort_order: number
+  /** which layer last touched this line: 'base' | a MenuPeriodKind */
+  source: 'base' | MenuPeriodKind
+}
+export interface EffectiveMenuCategory {
+  name: string
+  name_ar: string
+  order: number
+  items: EffectiveMenuLine[]
+}
+export interface EffectiveMenu {
+  menu_id: ID
+  branch: { id: ID; name_en: string; name_ar: string }
+  on: string
+  weekday: string
+  periods: { id: ID; kind: MenuPeriodKind; name_en: string; name_ar: string }[]
+  categories: EffectiveMenuCategory[]
+  line_count: number
+}
+
 /* ── dashboard ─────────────────────────────────────────────────────── */
 export interface Dashboard {
   target_pct: string

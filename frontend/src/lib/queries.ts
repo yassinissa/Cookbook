@@ -182,6 +182,20 @@ export function useMenuSnapshots(menuId: string | undefined) {
     enabled: !!menuId,
   })
 }
+export function useMenuPeriods(menuId: string | undefined) {
+  return useQuery({
+    queryKey: qk.menuPeriods(menuId ?? ''),
+    queryFn: () => api.fetchMenuPeriods(menuId as string),
+    enabled: !!menuId,
+  })
+}
+export function useEffectiveMenu(menuId: string | undefined, on: string) {
+  return useQuery({
+    queryKey: qk.effectiveMenu(menuId ?? '', on),
+    queryFn: () => api.fetchEffectiveMenu(menuId as string, on),
+    enabled: !!menuId && !!on,
+  })
+}
 
 /* ── administration ────────────────────────────────────────────────── */
 export function useCapabilityGroups() {

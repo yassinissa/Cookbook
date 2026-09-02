@@ -20,6 +20,8 @@ import { kwd, shortDate } from '@/lib/format'
 import { useAuth } from '@/auth/AuthProvider'
 import { useI18n, type TFunc } from '@/i18n'
 import type { MenuLine } from '@/types/api'
+import { SpecialsCalendar } from './SpecialsCalendar'
+import { cn } from '@/lib/cn'
 
 export function MenuDetailPage() {
   const { branchId } = useParams()
@@ -39,6 +41,7 @@ export function MenuDetailPage() {
   const updateLine = useUpdateMenuLine(branchId ?? '')
 
   const [busy, setBusy] = useState<'build' | 'snapshot' | null>(null)
+  const [tab, setTab] = useState<'menu' | 'calendar'>('menu')
 
   const groups = useMemo(() => {
     const map = new Map<string, { name: string; nameAr: string; order: number; lines: MenuLine[] }>()
@@ -128,19 +131,45 @@ export function MenuDetailPage() {
           </h1>
           <p className="text-sm text-ink-subtle">{menu.line_count} {t('menus.col.dishes')}</p>
         </div>
-        <div className="hidden items-center gap-2 sm:flex">
-          {canEdit && (
-            <Button variant="secondary" size="sm" icon="refresh" loading={busy === 'build'} onClick={() => runAction('build')}>
-              {t('action.build')}
-            </Button>
-          )}
-          {canSnapshot && (
-            <Button variant="primary" size="sm" icon="camera" loading={busy === 'snapshot'} onClick={() => runAction('snapshot')}>
-              {t('action.snapshot')}
-            </Button>
-          )}
-        </div>
+        {tab === 'menu' && (
+          <div className="hidden items-center gap-2 sm:flex">
+            {canEdit && (
+              <Button variant="secondary" size="sm" icon="refresh" loading={busy === 'build'} onClick={() => runAction('build')}>
+                {t('action.build')}
+              </Button>
+            )}
+            {canSnapshot && (
+              <Button variant="primary" size="sm" icon="camera" loading={busy === 'snapshot'} onClick={() => runAction('snapshot')}>
+                {t('action.snapshot')}
+              </Button>
+            )}
+          </div>
+        )}
       </div>
+
+      <div role="tablist" className="mb-6 flex gap-1 border-b border-hairline">
+        {(['menu', 'calendar'] as const).map((key) => (
+          <button
+            key={key}
+            role="tab"
+            aria-selected={tab === key}
+            onClick={() => setTab(key)}
+            className={cn(
+              '-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors',
+              'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]',
+              tab === key
+                ? 'border-accent text-ink'
+                : 'border-transparent text-ink-subtle hover:text-ink',
+            )}
+          >
+            {t(key === 'menu' ? 'menus.tab.menu' : 'menus.tab.calendar')}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'calendar' && <SpecialsCalendar menuId={menu.id} canEdit={canEdit} />}
+      {tab === 'menu' && (
+       <>
 
       {trendPoints.length >= 2 && (
         <div className="mb-6 grid gap-4 lg:grid-cols-2">
@@ -269,9 +298,11 @@ export function MenuDetailPage() {
           </CardBody>
         </Card>
       )}
+      </>
+      )}
 
       {/* mobile action bar */}
-      {(canEdit || canSnapshot) && (
+      {tab === 'menu' && (canEdit || canSnapshot) && (
         <div className="fixed inset-x-0 bottom-16 z-30 flex gap-2 border-t border-hairline bg-surface/95 px-4 py-2.5 backdrop-blur sm:hidden">
           {canEdit && (
             <Button variant="secondary" className="flex-1" size="sm" icon="refresh" loading={busy === 'build'} onClick={() => runAction('build')}>

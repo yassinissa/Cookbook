@@ -4,6 +4,7 @@ from . import views
 from . import views_menu
 from . import views_plating
 from . import views_reporting
+from . import views_specials
 from . import views_standards
 from .views_activity import ActivityFeedView
 from .views_dashboard import DashboardView
@@ -28,6 +29,7 @@ router.register(r'item-nutrition', views.ItemNutritionViewSet, basename='item-nu
 router.register(r'item-storage', views.ItemStorageViewSet, basename='item-storage')
 router.register(r'menus', views_menu.MenuViewSet, basename='menu')
 router.register(r'menu-lines', views_menu.MenuLineViewSet, basename='menu-line')
+router.register(r'menu-periods', views_specials.MenuPeriodViewSet, basename='menu-period')
 
 urlpatterns = [
     path('dashboard/', DashboardView.as_view(), name='dashboard'),

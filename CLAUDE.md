@@ -18,8 +18,8 @@ before calling anything done — not just "the happy path returns 200."
 - **Backend**: `backend/apps/cookbook/` — models split into
   `models/{reference,recipes,standards,plating,item_supplement,history,menu}.py`,
   mirrored `serializers/`, `views.py` + `views_menu.py` + `views_standards.py`
-  + `views_plating.py` + `views_activity.py` + `views_dashboard.py`,
-  `services.py`/`costing.py`/`nutrition.py`/`versioning.py`/`publishing.py`.
+  + `views_plating.py` + `views_specials.py` + `views_activity.py` + `views_dashboard.py`,
+  `services.py`/`costing.py`/`nutrition.py`/`versioning.py`/`publishing.py`/`specials.py`.
   `apps/integrations/inventory_client.py` is the *only* place that talks
   to inventory-platform. Items/units/stores/branches are read live (never
   duplicated) — `get_items()` walks every page and returns *active* items
@@ -109,7 +109,25 @@ before calling anything done — not just "the happy path returns 200."
   - **Activity & History** (`src/features/activity`) — one URL-param-driven
     filterable feed (kind / action / actor / date / recipe / search) grouped
     by day.
-  - **Menus** list / branch detail (trend charts, snapshots); **Inventory
+  - **Menus** list / branch detail (trend charts, snapshots). The branch
+    detail has a **Menu / Specials calendar** tab switch. The calendar
+    (`src/features/menus/SpecialsCalendar.tsx` + `PeriodEditor.tsx`) is
+    Slice 2 feature 4a: `MenuPeriod` / `MenuPeriodLine` (models/menu.py) are
+    dated windows carrying *operations* (`add`/`remove`/`reprice`/
+    `replace_photo`/`replace_copy`) over the base menu — never a copy.
+    `apps.cookbook.specials.resolve_menu(menu, on)` applies every period
+    active on a date, low→high precedence (`event` > `daily_special` >
+    `seasonal`, then latest start), and is the one real piece of logic.
+    `MenuLine` gained `menu_description_en/_ar` (customer menu copy — not
+    `taste_profile`, not `pos_name`). API: `cookbook/menu-periods/` CRUD
+    (`views_specials.py`, branch-scoped, `menu.view`/`menu.edit`, nested
+    lines reconciled by id) + `cookbook/menus/<id>/effective/?on=YYYY-MM-DD`
+    (`MenuViewSet` action → `resolve_menu`). No recipe version bump, no
+    costing. `test_specials_api.py` pins op application, precedence, weekday
+    mask, date boundaries, the draft flag, the nested-line write + scope.
+    **Feature 4b (not built):** `MenuEdition` publish + public `/m/<slug>`
+    + QR + print — see the scope artifact. Verified end-to-end 2026-09-02.
+  - **Inventory
     Items** (`src/features/inventory` — server-searched, paged table +
     detail drawer showing the full item definition: photo,
     type/category/status, SKU + barcode, origin, unit cost, selling price,
@@ -204,7 +222,7 @@ before calling anything done — not just "the happy path returns 200."
   (`RequireCapability`), nav + action buttons gated by `can(cap)`,
   `src/features/admin/` screens. Seed builds carry a TopBar **identity
   switcher** (`src/shell/IdentitySwitcher.tsx`) to demo scoped users.
-- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 120 `APITestCase`
+- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 132 `APITestCase`
   tests. The older cookbook suites use superuser clients (RBAC bypassed —
   `apps/accounts/tests/` covers enforcement broadly), but the newer ones
   (`test_{production,standards,plating,activity,publishing}_api.py`) exercise
