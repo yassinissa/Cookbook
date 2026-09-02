@@ -25,6 +25,7 @@ import { MorePage } from '@/features/more/MorePage'
 import { InventoryListPage } from '@/features/inventory/InventoryListPage'
 import { LabelSheetPage } from '@/features/labels/LabelSheetPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
+import { ModifiersPage } from '@/features/pos/ModifiersPage'
 import { ComingSoonPage } from '@/features/placeholder/ComingSoonPage'
 import { RouteError } from '@/app/RouteError'
 
@@ -83,7 +84,7 @@ export const router = createBrowserRouter([
           { path: '/labels/:itemId', ...cap('inventory.view', <LabelSheetPage />) },
           { path: '/activity', ...cap('activity.view', <ActivityPage />) },
           { path: '/documents', element: <ComingSoonPage titleKey="nav.documents" icon="documents" /> },
-          { path: '/pos', element: <ComingSoonPage titleKey="nav.pos" icon="pos" /> },
+          { path: '/pos', ...cap('pos.manage', <ModifiersPage />) },
 
           { path: '*', element: <Navigate to="/" replace /> },
         ],

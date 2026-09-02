@@ -820,6 +820,75 @@ export interface MenuEdition {
   payload: PublicMenu
 }
 
+/* ── POS modifiers (slice 3) ──────────────────────────────────────── */
+export type ModifierSelection = 'single' | 'multi'
+export type ModifierOptionKind = 'choice' | 'type' | 'addon' | 'instruction'
+export type ModifierRole = 'forced' | 'optional'
+
+export interface ModifierOption {
+  id?: ID
+  name_en: string
+  name_ar: string
+  price_delta: string
+  kind: ModifierOptionKind
+  pos_mods_string: string
+  variant_recipe: ID | null
+  variant_recipe_name?: string | null
+  item_sku: string
+  quantity: string | null
+  unit: ID | null
+  unit_code?: string | null
+  is_available: boolean
+  sort_order: number
+}
+export interface ModifierGroup {
+  id: ID
+  name_en: string
+  name_ar: string
+  selection: ModifierSelection
+  min_select: number
+  max_select: number | null
+  notes: string
+  option_count: number
+  dish_count: number
+  options: ModifierOption[]
+  created_at: string
+  updated_at: string
+}
+export interface DishModifierRow {
+  id: ID
+  name_en: string
+  name_ar: string
+  recipe_code: string
+  branch: string
+  branch_ref: ID | null
+  category: ID | null
+  category_name: string | null
+  pos_item_name: string
+  group_count: number
+  forced_count: number
+}
+export interface DishModifierGroupLink {
+  id: ID
+  group: ID
+  group_name: string
+  group_name_ar: string
+  selection: ModifierSelection
+  option_count: number
+  default_role: ModifierRole
+  sort_order: number
+}
+export interface DishModifierDetail {
+  id: ID
+  name_en: string
+  name_ar: string
+  recipe_code: string
+  pos_item_name: string
+  version: number
+  modifier_groups: DishModifierGroupLink[]
+  updated_at: string
+}
+
 /* ── dashboard ─────────────────────────────────────────────────────── */
 export interface Dashboard {
   target_pct: string

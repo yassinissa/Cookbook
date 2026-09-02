@@ -211,6 +211,19 @@ export function usePublicMenu(slug: string | undefined) {
     retry: false,
   })
 }
+export function useModifierGroups() {
+  return useQuery({ queryKey: qk.modifierGroups, queryFn: api.fetchModifierGroups })
+}
+export function useDishModifiers() {
+  return useQuery({ queryKey: qk.dishModifiers, queryFn: api.fetchDishModifiers })
+}
+export function useDishModifier(dishId: string | undefined) {
+  return useQuery({
+    queryKey: qk.dishModifier(dishId ?? ''),
+    queryFn: () => api.fetchDishModifier(dishId as string),
+    enabled: !!dishId,
+  })
+}
 
 /* ── administration ────────────────────────────────────────────────── */
 export function useCapabilityGroups() {
