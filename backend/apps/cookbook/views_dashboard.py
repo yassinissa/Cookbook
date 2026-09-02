@@ -19,8 +19,7 @@ from .models import (
     Branch, DishRecipe, DishRecipeActivityLog, DishStandard, Menu, MenuSnapshot,
     ProductionRecipe, ProductionRecipeActivityLog,
 )
-
-TARGET_PCT = Decimal('30')
+from .reporting import TARGET_PCT, dish_food_cost_pct as _dish_food_cost_pct
 
 
 def _dec(value):
@@ -28,18 +27,6 @@ def _dec(value):
         return Decimal(str(value))
     except (InvalidOperation, TypeError, ValueError):
         return None
-
-
-def _dish_food_cost_pct(dish):
-    """Prefer the stored breakdown; fall back to cost / selling_price."""
-    fcp = (dish.cost_breakdown or {}).get('food_cost_pct')
-    d = _dec(fcp)
-    if d is not None:
-        return d
-    price = _dec(dish.selling_price)
-    if price and price > 0:
-        return (Decimal(dish.cost) / price * 100).quantize(Decimal('0.01'))
-    return None
 
 
 def _attention_reasons(dish):

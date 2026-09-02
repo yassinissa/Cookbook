@@ -133,3 +133,19 @@ INVENTORY_API_PASSWORD = config('INVENTORY_API_PASSWORD', default='')
 # month * prep minutes. 208 h/month is what the source cook book uses (verified
 # against its computed labour figures to 12 dp).
 COOKBOOK_WORKING_HOURS_PER_MONTH = config('COOKBOOK_WORKING_HOURS_PER_MONTH', default=208, cast=int)
+
+# ─── EMAIL ───────────────────────────────────────────────────────────────────
+# Used by the weekly cost-report digest (apps.cookbook.reporting +
+# `manage.py send_cost_digest`, run by a Render cron). development.py overrides
+# EMAIL_BACKEND to the console backend so nothing leaves the box in dev.
+EMAIL_BACKEND   = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST      = config('EMAIL_HOST', default='')
+EMAIL_PORT      = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+EMAIL_USE_TLS   = config('EMAIL_USE_TLS', default=True, cast=bool)
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='Cookbook <cookbook@greenhills.local>')
+
+# Absolute base URL of the frontend, for links in outgoing email (the digest
+# unsubscribe link, dish deep-links). No trailing slash.
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5180')

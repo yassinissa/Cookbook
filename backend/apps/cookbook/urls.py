@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from . import views
 from . import views_menu
 from . import views_plating
+from . import views_reporting
 from . import views_standards
 from .views_activity import ActivityFeedView
 from .views_dashboard import DashboardView
@@ -31,5 +32,8 @@ router.register(r'menu-lines', views_menu.MenuLineViewSet, basename='menu-line')
 urlpatterns = [
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('activity/', ActivityFeedView.as_view(), name='activity'),
+    path('digest-subscription/', views_reporting.DigestSubscriptionView.as_view(), name='digest-subscription'),
+    path('public/digest/unsubscribe/<uuid:token>/', views_reporting.DigestUnsubscribeView.as_view(),
+         name='digest-unsubscribe'),
     path('', include(router.urls)),
 ]

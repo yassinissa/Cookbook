@@ -59,3 +59,27 @@ npm run dev
 `.env` needs `INVENTORY_API_BASE_URL` pointing at a running inventory-platform
 API (local `:8000`, or the deployed `https://greenhill-api-sljm.onrender.com/api`)
 plus `INVENTORY_API_EMAIL` / `INVENTORY_API_PASSWORD` for a service account there.
+
+## Deployment (Render)
+
+The API web service is configured in the Render dashboard (predates
+`render.yaml`). Migrations run on deploy, so shipping a new model just needs a
+redeploy.
+
+### Weekly cost-report digest
+
+A Monday-morning email to everyone with `costing.view` — dishes now over their
+food-cost target, the week's biggest cost movers, and coverage gaps, scoped to
+the branches each recipient can see. Enrolment is opt-out; users toggle it (or
+one-click unsubscribe from any email) under **Settings** in the app.
+
+- Command: `python manage.py send_cost_digest` (`--dry-run` builds and prints
+  without sending; `--user <id|username>` targets one recipient and ignores the
+  5-day resend guard; `--force` ignores the guard for everyone).
+- Schedule: the `cookbook-cost-digest` cron in [`render.yaml`](render.yaml) —
+  `0 4 * * 1` (04:00 UTC = 07:00 Asia/Kuwait). Apply via **New → Blueprint**, or
+  add the same command as a cron job by hand in the dashboard.
+- Env: the cron needs the same `SECRET_KEY` + `DB_*` as the web service, plus
+  SMTP (`EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`,
+  `DEFAULT_FROM_EMAIL`) and `FRONTEND_URL` (no trailing slash — backs the email
+  links). Dev sends nothing: `development.py` forces the console email backend.

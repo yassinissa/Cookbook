@@ -60,6 +60,14 @@ export function useDashboard() {
   return useQuery({ queryKey: qk.dashboard, queryFn: api.fetchDashboard })
 }
 
+export function useDigestSubscription() {
+  return useQuery({
+    queryKey: qk.digestSubscription,
+    queryFn: api.fetchDigestSubscription,
+    staleTime: 5 * 60_000,
+  })
+}
+
 export function useDishRecipes(enabled = true) {
   return useQuery({ queryKey: qk.dishes, queryFn: api.fetchDishRecipes, enabled })
 }

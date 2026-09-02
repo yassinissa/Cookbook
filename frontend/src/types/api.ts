@@ -191,6 +191,13 @@ export interface ItemConversion {
   updated_at: string
 }
 
+export interface DigestSubscription {
+  /** true once the user can see costing figures — otherwise the digest has nothing to send */
+  enrolled: boolean
+  cadence: 'weekly' | 'off'
+  last_sent_at: string | null
+}
+
 export type StorageBand = '' | 'dry' | 'chilled' | 'frozen'
 
 export interface ItemStorage {

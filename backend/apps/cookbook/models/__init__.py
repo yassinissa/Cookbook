@@ -19,6 +19,7 @@ from .history import (
     ActivityActionType, DishPriceHistory, ProductionCostHistory,
     DishRecipeActivityLog, ProductionRecipeActivityLog,
 )
+from .reporting import DigestCadence, DigestSubscription
 
 __all__ = [
     'MenuCategory', 'Branch', 'PrepKitchen', 'Section', 'Approver', 'Allergen', 'ServiceStyle', 'UnitScale',
@@ -33,4 +34,5 @@ __all__ = [
     'Menu', 'MenuLine', 'MenuSnapshot', 'MenuSnapshotLine',
     'ActivityActionType', 'DishPriceHistory', 'ProductionCostHistory',
     'DishRecipeActivityLog', 'ProductionRecipeActivityLog',
+    'DigestCadence', 'DigestSubscription',
 ]

@@ -100,6 +100,7 @@ function initials(name: string) {
 function UserMenu() {
   const { t } = useI18n()
   const { me } = useAuth()
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const name = me?.display_name || me?.username || 'Green Hills'
   return (
@@ -128,6 +129,19 @@ function UserMenu() {
             <p className="text-[13px] font-medium text-ink">{name}</p>
             {me?.role && <p className="text-xs text-ink-subtle">{me.role.name}</p>}
           </div>
+          <button
+            type="button"
+            role="menuitem"
+            onMouseDown={(e) => {
+              e.preventDefault()
+              setOpen(false)
+              navigate('/settings')
+            }}
+            className="flex w-full items-center gap-2 px-3 py-2 text-start text-[13px] text-ink hover:bg-surface-sunken"
+          >
+            <Icon name="settings" size={15} />
+            {t('nav.settings')}
+          </button>
           {USE_SEED ? (
             <p className="px-3 py-2 text-xs leading-relaxed text-ink-subtle">
               {t('auth.seedBuildHint')}

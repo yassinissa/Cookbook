@@ -24,6 +24,7 @@ import { RolesPage } from '@/features/admin/RolesPage'
 import { MorePage } from '@/features/more/MorePage'
 import { InventoryListPage } from '@/features/inventory/InventoryListPage'
 import { LabelSheetPage } from '@/features/labels/LabelSheetPage'
+import { SettingsPage } from '@/features/settings/SettingsPage'
 import { ComingSoonPage } from '@/features/placeholder/ComingSoonPage'
 import { RouteError } from '@/app/RouteError'
 
@@ -55,6 +56,7 @@ export const router = createBrowserRouter([
           { path: '/admin/roles', ...cap('admin.roles', <RolesPage />) },
 
           { path: '/more', element: <MorePage /> },
+          { path: '/settings', element: <SettingsPage /> },
 
           { path: '/recipes/production', ...cap('production.view', <ProductionListPage />) },
           { path: '/recipes/production/new', ...cap('production.edit', <ProductionEditorPage />) },

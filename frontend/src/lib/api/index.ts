@@ -18,6 +18,7 @@ import type {
   ActivityFeed,
   ActivityQuery,
   Dashboard,
+  DigestSubscription,
   DishRecipeDetail,
   DishRecipeListItem,
   DishStandardDetail,
@@ -532,6 +533,27 @@ export async function updatePlatingGuide(
     return seedPlatingDetail(dishId)
   }
   const { data } = await http.patch(`/cookbook/plating-guides/${dishId}/`, payload)
+  return data
+}
+
+/* ── weekly cost digest ────────────────────────────────────────────── */
+export async function fetchDigestSubscription(): Promise<DigestSubscription> {
+  if (USE_SEED) {
+    await delay(150)
+    return { enrolled: true, cadence: 'weekly', last_sent_at: null }
+  }
+  const { data } = await http.get('/cookbook/digest-subscription/')
+  return data
+}
+
+export async function updateDigestSubscription(
+  cadence: 'weekly' | 'off',
+): Promise<DigestSubscription> {
+  if (USE_SEED) {
+    await delay(250)
+    return { enrolled: true, cadence, last_sent_at: null }
+  }
+  const { data } = await http.patch('/cookbook/digest-subscription/', { cadence })
   return data
 }
 

@@ -136,6 +136,24 @@ before calling anything done — not just "the happy path returns 200."
   - `<PublishControl>` (`src/components/`) on the Dish + Production detail
     rail — publish/re-publish button + status (not published / published
     Xago / edited-since), gated `can('recipe.publish')`.
+  - **Settings** (`src/features/settings/SettingsPage.tsx`, `/settings`,
+    reached from the TopBar user menu, not `nav.ts`) — currently one card: the
+    **weekly cost-report digest** opt-out toggle (`useDigestSubscription` →
+    `GET/PATCH /cookbook/digest-subscription/`). The digest itself is
+    backend-only: `models/reporting.py` (`DigestSubscription` — opt-out,
+    `weekly`/`off`, `unsubscribe_token`), `reporting.py`
+    (`build_weekly_digest(user)` — over-target dishes, cost movers from
+    `DishPriceHistory`, `cost_breakdown.issues` gaps, branch-scoped via
+    `access_for`; returns `None` when empty so no "nothing to report" email;
+    shares `TARGET_PCT` / `dish_food_cost_pct` with `views_dashboard.py`),
+    `views_reporting.py` (the subscription view + a public, auth-less
+    `.../public/digest/unsubscribe/<token>/`), `templates/cookbook/email/`
+    (html + txt), and `manage.py send_cost_digest [--dry-run] [--user X]
+    [--force]` — opt-out enrolment (every active `costing.view` user with an
+    email), 5-day resend guard, empty-digest skip. Run weekly by the
+    `cookbook-cost-digest` Render cron in `render.yaml` (`0 4 * * 1` UTC).
+    Needs `EMAIL_*` + `FRONTEND_URL` settings; dev forces the console backend.
+    Verified end-to-end 2026-09-02.
   - **Documents / POS** routes render `ComingSoonPage` until their slice
     lands.
 
@@ -186,7 +204,7 @@ before calling anything done — not just "the happy path returns 200."
   (`RequireCapability`), nav + action buttons gated by `can(cap)`,
   `src/features/admin/` screens. Seed builds carry a TopBar **identity
   switcher** (`src/shell/IdentitySwitcher.tsx`) to demo scoped users.
-- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 109 `APITestCase`
+- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 120 `APITestCase`
   tests. The older cookbook suites use superuser clients (RBAC bypassed —
   `apps/accounts/tests/` covers enforcement broadly), but the newer ones
   (`test_{production,standards,plating,activity,publishing}_api.py`) exercise
@@ -194,7 +212,11 @@ before calling anything done — not just "the happy path returns 200."
   / `test_item_storage_api.py` pin the per-SKU supplement write paths (and the
   conversion one's effect on costing).
   `test_plating_api.py` pins the dish-id upsert (no recipe version bump) and
-  the id-keyed photo reconcile + pin normalisation. `test_publishing.py` fakes
+  the id-keyed photo reconcile + pin normalisation. `test_cost_digest.py`
+  covers `build_weekly_digest` (branch scoping, over-target sort, movers, the
+  empty→`None` skip), the subscription endpoint + validation, the public
+  unsubscribe (auth-less + idempotent), and `send_cost_digest` (opt-out
+  enrolment, resend guard, dry-run). `test_publishing.py` fakes
   `InventoryClient` — nothing in the suite hits the network. Frontend has no
   tests yet. Grow both alongside new work.
 - **Auth**: JWT via default Django `User` (+ `accounts.UserProfile`), one

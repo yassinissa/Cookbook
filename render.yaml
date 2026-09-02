@@ -1,0 +1,64 @@
+# Render Blueprint — scheduled jobs for Cookbook.
+#
+# The API web service (greenhill-api) predates this file and is configured in
+# the Render dashboard, so it is deliberately NOT redefined here — a name
+# mismatch would make a blueprint sync create a duplicate. This file adds only
+# the cron job(s).
+#
+# To apply: Render Dashboard → New → Blueprint → pick this repo. Render creates
+# the cron service and prompts for the env vars marked `sync: false`. Set them
+# to the SAME values the web service uses (DB + SECRET_KEY), plus the SMTP
+# credentials. If the web service already draws from a shared env group, delete
+# the individual `key:` entries below and replace them with:
+#     envVars:
+#       - fromGroup: <that-group-name>
+#       - key: DJANGO_SETTINGS_MODULE
+#         value: config.settings.production
+
+services:
+  - type: cron
+    name: cookbook-cost-digest
+    runtime: python
+    rootDir: backend
+    plan: starter
+    # 04:00 UTC Monday = 07:00 Asia/Kuwait (UTC+3, no DST) — a Monday-morning email.
+    schedule: "0 4 * * 1"
+    buildCommand: pip install -r requirements/production.txt
+    startCommand: python manage.py send_cost_digest
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: PYTHON_VERSION
+        value: "3.12.6"
+      # ── shared with the API web service — use identical values ──
+      - key: SECRET_KEY
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: ALLOWED_HOSTS
+        sync: false
+      # ── SMTP for the digest (new) ──
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: EMAIL_USE_TLS
+        value: "True"
+      - key: DEFAULT_FROM_EMAIL
+        sync: false
+      # Absolute base URL of the deployed frontend — used for the unsubscribe
+      # link and dish deep-links in the email. No trailing slash.
+      - key: FRONTEND_URL
+        sync: false
