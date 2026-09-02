@@ -3,9 +3,10 @@ Publish a branch menu as a public edition.
 
 `build_payload(menu, on)` resolves the effective menu for a date
 (apps.cookbook.specials), then strips it to a public-safe shape: dish names,
-customer copy, the menu price, an absolute photo URL, allergens and calories —
-and NOTHING else. No cost, no margin, no supplier, no recipe code, no internal
-ids beyond the dish id.
+customer copy, the menu price, an absolute photo URL, allergens, calories, and
+per-item modifier groups (group name + each option's name and price delta) —
+and NOTHING else. No cost, no margin, no supplier, no recipe code, no SKU, no
+POS strings, no internal ids beyond the dish id.
 
 `publish_edition(...)` freezes that payload into an immutable MenuEdition,
 flips the previous current edition off and bumps the version — the same
@@ -19,7 +20,7 @@ from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
 
-from .models import DishRecipe, MenuEdition
+from .models import DishModifierGroup, DishRecipe, MenuEdition, MenuLineModifier
 from .specials import resolve_menu
 
 # keys copied straight from a resolved line
@@ -44,6 +45,47 @@ def _calories(nutrition):
         return None
 
 
+def _modifier_blocks(menu, dish_ids):
+    """{dish_id: [block, ...]} — public-safe modifier groups per dish. A block
+    is the group name (EN/AR), its role and selection rules, and each available
+    option's name + price delta. Nothing that identifies stock or the POS. A
+    per-branch MenuLineModifier overrides the dish default role / hides a group."""
+    overrides = {
+        (str(mlm.menu_line.dish_id), str(mlm.group_id)): mlm
+        for mlm in (MenuLineModifier.objects
+                    .filter(menu_line__menu=menu, menu_line__dish_id__in=dish_ids)
+                    .select_related('menu_line'))
+    }
+
+    blocks = {}
+    for dmg in (DishModifierGroup.objects
+                .filter(dish_id__in=dish_ids)
+                .select_related('group')
+                .prefetch_related('group__options')
+                .order_by('sort_order', 'id')):
+        did, gid = str(dmg.dish_id), str(dmg.group_id)
+        override = overrides.get((did, gid))
+        if override and not override.is_shown:
+            continue
+        group = dmg.group
+        options = [
+            {'name_en': o.name_en, 'name_ar': o.name_ar, 'price_delta': str(o.price_delta)}
+            for o in group.options.all() if o.is_available
+        ]
+        if not options:
+            continue
+        blocks.setdefault(did, []).append({
+            'name_en': group.name_en,
+            'name_ar': group.name_ar,
+            'role': override.role if override else dmg.default_role,
+            'selection': group.selection,
+            'min': group.min_select,
+            'max': group.max_select,
+            'options': options,
+        })
+    return blocks
+
+
 def build_payload(menu, on, *, base_url=''):
     resolved = resolve_menu(menu, on)
 
@@ -56,6 +98,7 @@ def build_payload(menu, on, *, base_url=''):
         str(d.id): d
         for d in DishRecipe.objects.filter(id__in=dish_ids).prefetch_related('allergens')
     }
+    mod_blocks = _modifier_blocks(menu, dish_ids)
 
     categories = []
     for cat in resolved['categories']:
@@ -70,6 +113,7 @@ def build_payload(menu, on, *, base_url=''):
                 'image_url': _abs(base_url, item['image_url']),
                 'allergens': sorted(a.name for a in dish.allergens.all()) if dish else [],
                 'calories': _calories(dish.nutrition) if dish else None,
+                'modifiers': mod_blocks.get(item['dish_id'], []),
             })
         if items:
             categories.append({

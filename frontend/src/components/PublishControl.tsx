@@ -14,6 +14,7 @@ export function PublishControl({
   publishedAt,
   publishStale,
   publishError,
+  warnings = [],
   inventoryRecipeId,
   canPublish,
   busy,
@@ -23,6 +24,7 @@ export function PublishControl({
   publishedAt: string | null
   publishStale: boolean
   publishError: string
+  warnings?: string[]
   inventoryRecipeId: string
   canPublish: boolean
   busy: boolean
@@ -69,6 +71,14 @@ export function PublishControl({
           <p className="rounded-lg border border-danger-subtle bg-danger-subtle p-2.5 text-xs text-danger-ink">
             {publishError}
           </p>
+        )}
+
+        {warnings.length > 0 && (
+          <ul className="space-y-1 rounded-lg border border-warning-subtle bg-warning-subtle p-2.5 text-xs text-warning-ink">
+            {warnings.map((w, i) => (
+              <li key={i}>{w}</li>
+            ))}
+          </ul>
         )}
 
         {canPublish && (

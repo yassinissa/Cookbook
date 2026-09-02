@@ -16,7 +16,7 @@ from rest_framework.test import APIClient, APITestCase
 from apps.accounts.models import Role
 from apps.cookbook.models import (
     Allergen, Branch, DishRecipe, Menu, MenuCategory, MenuEdition, MenuLine,
-    MenuPeriod, MenuPeriodLine,
+    MenuPeriod, MenuPeriodLine, ModifierGroup, ModifierOption, DishModifierGroup,
 )
 
 User = get_user_model()
@@ -26,6 +26,7 @@ FORBIDDEN_KEYS = {
     'cost', 'cost_breakdown', 'food_cost_pct', 'labor_cost', 'labour_cost',
     'selling_price', 'recipe_code', 'recipe_cost', 'supplier', 'suppliers',
     'unit_cost', 'order_cost', 'margin', 'pos_name',
+    'item_sku', 'pos_mods_string', 'variant_recipe', 'kind',
 }
 
 
@@ -96,17 +97,45 @@ class PublishFlowTests(APITestCase):
         self.assertEqual(item['calories'], 620)
 
     def test_payload_has_no_cost_fields(self):
-        # add a period reprice too, so the resolver path is exercised
+        # a period reprice + a modifier group, so both those paths are exercised
         p = MenuPeriod.objects.create(menu=self.menu, kind='event', name_en='NYE', starts_on=date(2026, 6, 1))
         MenuPeriodLine.objects.create(period=p, dish=self.tikka, op='reprice', menu_price=Decimal('2.900'))
+        self._attach_roll()
         self._publish()
         payload = MenuEdition.objects.get(menu=self.menu, version=1).payload
         leaked = FORBIDDEN_KEYS & set(walk_keys(payload))
-        self.assertEqual(leaked, set(), f'cost data leaked into the public payload: {leaked}')
-        # and no raw numbers that look like the cost
+        self.assertEqual(leaked, set(), f'internal data leaked into the public payload: {leaked}')
         blob = json.dumps(payload)
-        self.assertNotIn('1.100', blob)
+        self.assertNotIn('1.100', blob)     # the cost
         self.assertNotIn('0.400', blob)
+        self.assertNotIn('B45', blob)       # an add-on SKU
+        self.assertNotIn('(C) CHICKEN', blob)  # a pos_mods_string
+
+    def _attach_roll(self):
+        roll = ModifierGroup.objects.create(name_en='RoLL', selection='single', min_select=1, max_select=1)
+        ModifierOption.objects.create(group=roll, name_en='Chicken', name_ar='دجاج',
+                                      kind='type', price_delta=Decimal('5.450'), pos_mods_string='(C) CHICKEN')
+        ModifierOption.objects.create(group=roll, name_en='Extra Cheese', kind='addon',
+                                      price_delta=Decimal('1.000'), item_sku='B45', pos_mods_string='CHEESE')
+        ModifierOption.objects.create(group=roll, name_en='Hidden', price_delta=Decimal('0'),
+                                      is_available=False)
+        DishModifierGroup.objects.create(dish=self.tikka, group=roll, default_role='forced')
+        return roll
+
+    def test_modifier_block_in_payload(self):
+        self._attach_roll()
+        self._publish()
+        item = MenuEdition.objects.get(menu=self.menu, version=1).payload['categories'][0]['items'][0]
+        self.assertEqual(len(item['modifiers']), 1)
+        block = item['modifiers'][0]
+        self.assertEqual(block['name_en'], 'RoLL')
+        self.assertEqual((block['role'], block['selection'], block['min'], block['max']),
+                         ('forced', 'single', 1, 1))
+        opt_names = [o['name_en'] for o in block['options']]
+        self.assertEqual(opt_names, ['Chicken', 'Extra Cheese'])   # 'Hidden' is is_available=False
+        self.assertEqual(block['options'][0], {'name_en': 'Chicken', 'name_ar': 'دجاج', 'price_delta': '5.450'})
+        # no kind / sku / pos string anywhere in the block
+        self.assertEqual({'kind', 'item_sku', 'pos_mods_string'} & set(walk_keys(block)), set())
 
     def test_publish_requires_menu_publish_capability(self):
         chef = User.objects.create_user('cook', password='x')

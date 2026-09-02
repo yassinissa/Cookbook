@@ -34,7 +34,7 @@ export const NAV: NavSection[] = [
       { to: '/inventory', labelKey: 'nav.inventory', icon: 'inventory', ready: true, capability: 'inventory.view' },
       { to: '/activity', labelKey: 'nav.activity', icon: 'activity', ready: true, capability: 'activity.view' },
       { to: '/documents', labelKey: 'nav.documents', icon: 'documents', ready: false, capability: 'document.export' },
-      { to: '/pos', labelKey: 'nav.pos', icon: 'pos', ready: false, capability: 'pos.manage' },
+      { to: '/pos', labelKey: 'nav.pos', icon: 'pos', ready: true, capability: 'pos.manage' },
     ],
   },
   {

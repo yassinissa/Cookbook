@@ -13,6 +13,7 @@ import { PublishControl } from '@/components/PublishControl'
 import { StandardCard } from '@/features/standards/StandardView'
 import { CostPanel } from './CostPanel'
 import { PlatingPanel } from './PlatingPanel'
+import { DishModifierPanel } from '@/features/pos/DishModifierPanel'
 import { AllergenPanel, NutritionPanel } from './NutritionPanel'
 import { VersionDrawer } from './VersionDrawer'
 import * as api from '@/lib/api'
@@ -40,6 +41,7 @@ export function DishDetailPage() {
   const [deleting, setDeleting] = useState(false)
   const [recalculating, setRecalculating] = useState(false)
   const [publishing, setPublishing] = useState(false)
+  const [publishWarnings, setPublishWarnings] = useState<string[]>([])
 
   if (isLoading) return <DetailSkeleton />
   if (isError || !dish) {
@@ -80,6 +82,7 @@ export function DishDetailPage() {
       qc.setQueryData(qk.dish(id), r)
       qc.invalidateQueries({ queryKey: qk.dishes, exact: true })
       const warnings = r._publish?.warnings ?? []
+      setPublishWarnings(warnings)
       if (warnings.length) toast.info(t('publish.warnings', { n: warnings.length }))
       else toast.success(t('publish.ok'))
     } catch (e) {
@@ -198,6 +201,8 @@ export function DishDetailPage() {
           {std && <StandardCard std={std} t={t} />}
 
           {id && <PlatingPanel dishId={id} canEdit={can('standard.edit')} />}
+
+          {id && can('pos.manage') && <DishModifierPanel dishId={id} canEdit />}
         </div>
 
         <div className="space-y-6">
@@ -227,6 +232,7 @@ export function DishDetailPage() {
             publishedAt={dish.published_at}
             publishStale={dish.publish_stale}
             publishError={dish.publish_error}
+            warnings={publishWarnings}
             inventoryRecipeId={dish.inventory_recipe_id}
             canPublish={can('recipe.publish')}
             busy={publishing}

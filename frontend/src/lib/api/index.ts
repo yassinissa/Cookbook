@@ -28,6 +28,8 @@ import type {
   ItemConversion,
   ItemNutrition,
   ItemStorage,
+  DishModifierDetail,
+  DishModifierRow,
   EffectiveMenu,
   ID,
   MenuDetail,
@@ -40,6 +42,11 @@ import type {
   MenuPeriodOp,
   MenuSnapshot,
   MenuTrends,
+  ModifierGroup,
+  ModifierOption,
+  ModifierOptionKind,
+  ModifierRole,
+  ModifierSelection,
   Paginated,
   PublicMenu,
   PlatingGuideDetail,
@@ -748,5 +755,58 @@ export function menuQrUrl(branchSlug: string): string {
 /** The public, unauthenticated menu payload — used only by the /m/:slug page. */
 export async function fetchPublicMenu(slug: string): Promise<PublicMenu> {
   const { data } = await http.get(`/cookbook/public-menu/${slug}/`)
+  return data
+}
+
+/* ── POS modifiers ─────────────────────────────────────────────────── */
+export async function fetchModifierGroups(): Promise<ModifierGroup[]> {
+  if (USE_SEED) { await delay(150); return [] }
+  const { data } = await http.get('/cookbook/modifier-groups/')
+  return listData<ModifierGroup>(data)
+}
+
+export interface ModifierGroupWrite {
+  name_en: string
+  name_ar?: string
+  selection: ModifierSelection
+  min_select: number
+  max_select: number | null
+  notes?: string
+  options: Array<Partial<ModifierOption> & { name_en: string; kind: ModifierOptionKind }>
+}
+
+export async function saveModifierGroup(
+  id: ID | null,
+  body: ModifierGroupWrite,
+): Promise<ModifierGroup> {
+  if (USE_SEED) { await delay(300); throw new Error('Disabled in the demo build.') }
+  const { data } = id
+    ? await http.patch(`/cookbook/modifier-groups/${id}/`, body)
+    : await http.post('/cookbook/modifier-groups/', body)
+  return data
+}
+
+export async function deleteModifierGroup(id: ID): Promise<void> {
+  if (USE_SEED) { await delay(200); return }
+  await http.delete(`/cookbook/modifier-groups/${id}/`)
+}
+
+export async function fetchDishModifiers(): Promise<DishModifierRow[]> {
+  if (USE_SEED) { await delay(150); return [] }
+  const { data } = await http.get('/cookbook/dish-modifiers/')
+  return listData<DishModifierRow>(data)
+}
+
+export async function fetchDishModifier(dishId: string): Promise<DishModifierDetail> {
+  const { data } = await http.get(`/cookbook/dish-modifiers/${dishId}/`)
+  return data
+}
+
+export async function updateDishModifiers(
+  dishId: string,
+  groups: Array<{ group: ID; default_role: ModifierRole; sort_order?: number }>,
+): Promise<DishModifierDetail> {
+  if (USE_SEED) { await delay(300); throw new Error('Disabled in the demo build.') }
+  const { data } = await http.patch(`/cookbook/dish-modifiers/${dishId}/`, { groups })
   return data
 }

@@ -177,3 +177,40 @@ class InventoryClient:
                      if r.get('name_en') == name_en
                      and str(r.get('prep_kitchen')) == str(prep_kitchen_id)
                      and r.get('is_current')), None)
+
+    # ── write: POS mappings (apps.cookbook.publishing, slice 3c) ─────────
+    # inventory-platform's pos_integration deducts stock from an uploaded Lavu
+    # "Sales by Item" report; it needs a POSItemMapping per (item, modifier)
+    # and a POSAddonIngredient per paid add-on. Cookbook authors these beside
+    # the recipe and pushes them here. Both keys are unique on the platform,
+    # so these upsert: find by the key, PATCH if present else POST.
+    def upsert_pos_mapping(self, pos_item_name, pos_modifier, dish_recipe_id):
+        payload = {
+            'pos_item_name': pos_item_name,
+            'pos_modifier': pos_modifier or '',
+            'dish_recipe': dish_recipe_id,
+            'is_mapped': True,
+        }
+        existing = next(
+            (r for r in self._get_all_pages('/pos/mappings/', params={'search': pos_item_name})
+             if r.get('pos_item_name') == pos_item_name
+             and (r.get('pos_modifier') or '') == (pos_modifier or '')),
+            None)
+        if existing:
+            return self._request('PATCH', f'/pos/mappings/{existing["id"]}/', json=payload)
+        return self._request('POST', '/pos/mappings/', json=payload)
+
+    def upsert_pos_addon(self, modifier_name, item_id, quantity, unit_id=None):
+        payload = {
+            'modifier_name': modifier_name,
+            'item': item_id,
+            'quantity': str(quantity),
+            'unit': unit_id,
+        }
+        existing = next(
+            (r for r in self._get_all_pages('/pos/addons/', params={'search': modifier_name})
+             if r.get('modifier_name') == modifier_name),
+            None)
+        if existing:
+            return self._request('PATCH', f'/pos/addons/{existing["id"]}/', json=payload)
+        return self._request('POST', '/pos/addons/', json=payload)

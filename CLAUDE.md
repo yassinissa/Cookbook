@@ -142,6 +142,44 @@ before calling anything done — not just "the happy path returns 200."
     `/m/:slug` — outside `RequireAuth`, `React.lazy`, its own bare shell,
     EN⇄AR toggle, route-scoped `@media print`. Verified end-to-end 2026-09-02.
     Not in v1: server-rendered PDF, scheduled auto-publish.
+  - **POS modifiers** (Slice 3 — scope artifact `189ad7f1`).
+    `models/modifiers.py`: `ModifierGroup` (selection single/multi +
+    min/max_select) → `ModifierOption` (`price_delta`, `kind` =
+    choice/type/addon/instruction, `pos_mods_string` [the Lavu sales-report
+    match key], `variant_recipe` FK for `type`, `item_sku`+qty+unit for
+    `addon`). `DishModifierGroup` hangs a group off a base `DishRecipe`
+    (global — this is what publishes); `MenuLineModifier` is per-branch menu
+    display only. **3a** `manage.py import_pos_menu "<xlsm>" [--branch Dine]
+    [--dry-run]` parses the "040 Dine (Menu POS Applications)" workbook's
+    three POSLavu sheets — cleans EN/AR slash names + tatweel, drops marker
+    rows, guesses `kind` from the sheet + price (`_VARIANT_PRICE` = 2.0 KWD),
+    infers selection/limits, attaches groups to dishes by `pos_item_name`
+    then `name_en`, reports unmatched. Idempotent. `test_pos_import.py`.
+    **3b** `views_modifiers.py` — `cookbook/modifier-groups/` CRUD (nested
+    options reconciled by id, `pos.manage`) + `cookbook/dish-modifiers/`
+    (dish-id-addressed, branch-scoped, PATCH replaces the `DishModifierGroup`
+    set, no recipe version bump). Frontend `src/features/pos/` — the `/pos`
+    route (was ComingSoon) is `ModifiersPage` (Groups / By-dish tabs) +
+    `ModifierGroupEditor` drawer + `DishModifierDrawer`; `DishModifierPanel`
+    on the dish detail rail. `test_modifier_api.py`. **3c**
+    `publishing.py::_publish_pos_modifiers` — `publish_dish_recipe` also pushes
+    a `POSItemMapping` for the base dish + each `type` option (→ its
+    `variant_recipe.inventory_recipe_id`) and a `POSAddonIngredient` for each
+    `addon` option, via `inventory_client.upsert_pos_mapping` /
+    `upsert_pos_addon` (find-by-key then POST/PATCH). Missing `pos_mods_string`,
+    an unpublished variant, or an unknown add-on SKU each become a `warning`,
+    never a hard failure; `PublishControl` renders the warning list.
+    `test_pos_publish.py` (fake client). **3d** `menu_editions._modifier_blocks`
+    adds a per-item `modifiers` block to the public payload (Slice 2 4b) — group
+    name + role + selection + each *available* option's name and `price_delta`,
+    nothing else (`test_menu_editions_api.py`'s recursive no-leak walk covers
+    `kind`/`item_sku`/`pos_mods_string`). `PublicMenuPage` renders it as a
+    "Choose one" / "Add" line; that page now keys its own UI strings off the
+    customer's EN/AR toggle (a local `STR` map) instead of the app `t()`.
+    **inventory-platform already has the deduction pipeline**
+    (`apps/pos_integration/`: `POSImport` upload → classify BASE/TYPE/ADDON/
+    INSTRUCTION → `POSItemMapping` / `POSAddonIngredient` → deduct stock).
+    Source workbooks are gitignored (`/*.xlsm`).
   - **Inventory
     Items** (`src/features/inventory` — server-searched, paged table +
     detail drawer showing the full item definition: photo,
@@ -238,7 +276,7 @@ before calling anything done — not just "the happy path returns 200."
   (`RequireCapability`), nav + action buttons gated by `can(cap)`,
   `src/features/admin/` screens. Seed builds carry a TopBar **identity
   switcher** (`src/shell/IdentitySwitcher.tsx`) to demo scoped users.
-- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 142 `APITestCase`
+- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 164 `APITestCase`
   tests. The older cookbook suites use superuser clients (RBAC bypassed —
   `apps/accounts/tests/` covers enforcement broadly), but the newer ones
   (`test_{production,standards,plating,activity,publishing}_api.py`) exercise

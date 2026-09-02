@@ -19,6 +19,10 @@ from .menu import (
     MenuPeriod, MenuPeriodLine, MenuPeriodKind, MenuPeriodOp, WEEKDAY_ALL,
     MenuEdition,
 )
+from .modifiers import (
+    ModifierGroup, ModifierOption, DishModifierGroup, MenuLineModifier,
+    ModifierSelection, ModifierOptionKind, ModifierRole,
+)
 from .history import (
     ActivityActionType, DishPriceHistory, ProductionCostHistory,
     DishRecipeActivityLog, ProductionRecipeActivityLog,
@@ -38,6 +42,8 @@ __all__ = [
     'Menu', 'MenuLine', 'MenuSnapshot', 'MenuSnapshotLine',
     'MenuPeriod', 'MenuPeriodLine', 'MenuPeriodKind', 'MenuPeriodOp', 'WEEKDAY_ALL',
     'MenuEdition',
+    'ModifierGroup', 'ModifierOption', 'DishModifierGroup', 'MenuLineModifier',
+    'ModifierSelection', 'ModifierOptionKind', 'ModifierRole',
     'ActivityActionType', 'DishPriceHistory', 'ProductionCostHistory',
     'DishRecipeActivityLog', 'ProductionRecipeActivityLog',
     'DigestCadence', 'DigestSubscription',

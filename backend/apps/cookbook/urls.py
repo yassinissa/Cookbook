@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
 from . import views_menu
+from . import views_modifiers
 from . import views_plating
 from . import views_reporting
 from . import views_specials
@@ -30,6 +31,8 @@ router.register(r'item-storage', views.ItemStorageViewSet, basename='item-storag
 router.register(r'menus', views_menu.MenuViewSet, basename='menu')
 router.register(r'menu-lines', views_menu.MenuLineViewSet, basename='menu-line')
 router.register(r'menu-periods', views_specials.MenuPeriodViewSet, basename='menu-period')
+router.register(r'modifier-groups', views_modifiers.ModifierGroupViewSet, basename='modifier-group')
+router.register(r'dish-modifiers', views_modifiers.DishModifierViewSet, basename='dish-modifier')
 
 urlpatterns = [
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
