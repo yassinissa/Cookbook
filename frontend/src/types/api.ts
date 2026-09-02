@@ -785,6 +785,20 @@ export interface EffectiveMenu {
 }
 
 /* ── published editions + public menu (feature 4b) ─────────────────── */
+export interface PublicMenuModifierOption {
+  name_en: string
+  name_ar: string
+  price_delta: string
+}
+export interface PublicMenuModifier {
+  name_en: string
+  name_ar: string
+  role: 'forced' | 'optional'
+  selection: 'single' | 'multi'
+  min: number
+  max: number | null
+  options: PublicMenuModifierOption[]
+}
 export interface PublicMenuItem {
   name_en: string
   name_ar: string
@@ -794,6 +808,7 @@ export interface PublicMenuItem {
   image_url: string
   allergens: string[]
   calories: number | null
+  modifiers: PublicMenuModifier[]
 }
 export interface PublicMenuCategory {
   name_en: string

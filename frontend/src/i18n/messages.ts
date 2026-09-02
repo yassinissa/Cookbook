@@ -497,6 +497,8 @@ export const en = {
   'publicMenu.print': 'Print',
   'publicMenu.allergens': 'Contains',
   'publicMenu.kcal': '{n} kcal',
+  'publicMenu.chooseOne': 'Choose one',
+  'publicMenu.add': 'Add',
   'publicMenu.asOf': 'Menu for {date}',
 
   'mods.title': 'POS modifiers',
@@ -1216,6 +1218,8 @@ export const ar: Record<MessageKey, string> = {
   'publicMenu.print': 'طباعة',
   'publicMenu.allergens': 'يحتوي على',
   'publicMenu.kcal': '{n} سعرة',
+  'publicMenu.chooseOne': 'اختر واحداً',
+  'publicMenu.add': 'إضافة',
   'publicMenu.asOf': 'قائمة {date}',
 
   'mods.title': 'إضافات نقطة البيع',

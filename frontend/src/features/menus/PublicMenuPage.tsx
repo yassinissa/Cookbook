@@ -5,6 +5,33 @@ import { usePublicMenu } from '@/lib/queries'
 import { useI18n } from '@/i18n'
 import type { PublicMenuItem } from '@/types/api'
 
+// This page follows the customer's own EN/AR toggle, not the app locale, so its
+// UI strings live here rather than going through the app's `t()`.
+const STR = {
+  en: {
+    loading: 'Loading the menu…',
+    notFound: 'This menu isn’t available.',
+    notFoundHint: 'It may not be published yet. Check the link, or ask a member of staff.',
+    print: 'Print',
+    contains: 'Contains',
+    kcal: (n: number) => `${n} kcal`,
+    asOf: (d: string) => `Menu for ${d}`,
+    chooseOne: 'Choose one',
+    add: 'Add',
+  },
+  ar: {
+    loading: 'جارٍ تحميل القائمة…',
+    notFound: 'هذه القائمة غير متاحة.',
+    notFoundHint: 'قد لا تكون منشورة بعد. تحقق من الرابط أو اسأل أحد الموظفين.',
+    print: 'طباعة',
+    contains: 'يحتوي على',
+    kcal: (n: number) => `${n} سعرة`,
+    asOf: (d: string) => `قائمة ${d}`,
+    chooseOne: 'اختر واحداً',
+    add: 'إضافة',
+  },
+}
+
 /**
  * The public, unauthenticated QR / print menu at /m/:slug. Its own bare shell —
  * no app chrome, no auth. Reads only the frozen edition payload.
@@ -12,11 +39,12 @@ import type { PublicMenuItem } from '@/types/api'
 export function PublicMenuPage() {
   const { slug } = useParams()
   const { data, isLoading, isError } = usePublicMenu(slug)
-  const { t, locale: appLocale } = useI18n()
+  const { locale: appLocale } = useI18n()
 
   // the customer picks their language independently of any app setting
   const [lang, setLang] = useState<'en' | 'ar'>(appLocale === 'ar' ? 'ar' : 'en')
   const rtl = lang === 'ar'
+  const s = STR[lang]
   const pick = (en: string, ar: string) => (rtl ? ar || en : en || ar)
 
   useEffect(() => {
@@ -27,12 +55,12 @@ export function PublicMenuPage() {
     <div dir={rtl ? 'rtl' : 'ltr'} lang={lang} className="pm-root">
       <style>{CSS}</style>
 
-      {isLoading && <p className="pm-note">{t('publicMenu.loading')}</p>}
+      {isLoading && <p className="pm-note">{s.loading}</p>}
 
       {isError && (
         <div className="pm-note">
-          <h1>{t('publicMenu.notFound')}</h1>
-          <p>{t('publicMenu.notFoundHint')}</p>
+          <h1>{s.notFound}</h1>
+          <p>{s.notFoundHint}</p>
         </div>
       )}
 
@@ -50,7 +78,7 @@ export function PublicMenuPage() {
               </p>
             )}
             <button className="pm-print no-print" onClick={() => window.print()}>
-              {t('publicMenu.print')}
+              {s.print}
             </button>
           </header>
 
@@ -60,7 +88,7 @@ export function PublicMenuPage() {
                 <h2>{pick(cat.name_en, cat.name_ar)}</h2>
                 <ul>
                   {cat.items.map((item, i) => (
-                    <Item key={i} item={item} pick={pick} t={t} />
+                    <Item key={i} item={item} pick={pick} s={s} />
                   ))}
                 </ul>
               </section>
@@ -68,7 +96,7 @@ export function PublicMenuPage() {
           </main>
 
           <footer className="pm-foot">
-            {t('publicMenu.asOf', { date: new Date(data.effective_on).toLocaleDateString(lang, { day: 'numeric', month: 'long', year: 'numeric' }) })}
+            {s.asOf(new Date(data.effective_on).toLocaleDateString(lang, { day: 'numeric', month: 'long', year: 'numeric' }))}
           </footer>
         </>
       )}
@@ -79,11 +107,11 @@ export function PublicMenuPage() {
 function Item({
   item,
   pick,
-  t,
+  s,
 }: {
   item: PublicMenuItem
   pick: (en: string, ar: string) => string
-  t: ReturnType<typeof useI18n>['t']
+  s: (typeof STR)['en']
 }) {
   const name = pick(item.name_en, item.name_ar)
   const desc = pick(item.description_en, item.description_ar)
@@ -96,11 +124,25 @@ function Item({
           {item.price != null && <span className="pm-price">{item.price}</span>}
         </div>
         {desc && <p className="pm-desc">{desc}</p>}
+
+        {item.modifiers.map((m, i) => (
+          <p key={i} className="pm-mods">
+            <span className="pm-mods-label">
+              {m.role === 'forced' ? s.chooseOne : s.add}
+            </span>{' '}
+            {m.options.map((o, j) => (
+              <span key={j} className="pm-mod-opt">
+                {pick(o.name_en, o.name_ar)}
+                {Number(o.price_delta) > 0 && <span className="pm-mod-price"> +{o.price_delta}</span>}
+                {j < m.options.length - 1 && <span className="pm-mod-sep"> · </span>}
+              </span>
+            ))}
+          </p>
+        ))}
+
         <p className="pm-meta">
-          {item.calories != null && <span>{t('publicMenu.kcal', { n: item.calories })}</span>}
-          {item.allergens.length > 0 && (
-            <span>{t('publicMenu.allergens')}: {item.allergens.join(', ')}</span>
-          )}
+          {item.calories != null && <span>{s.kcal(item.calories)}</span>}
+          {item.allergens.length > 0 && <span>{s.contains}: {item.allergens.join(', ')}</span>}
         </p>
       </div>
     </li>
@@ -146,6 +188,10 @@ const CSS = `
 .pm-name { font-weight: 600; }
 .pm-price { font-variant-numeric: tabular-nums; color: var(--pm-muted); flex: none; }
 .pm-desc { margin: .2rem 0 0; font-size: .88rem; color: var(--pm-muted); line-height: 1.45; }
+.pm-mods { margin: .3rem 0 0; font-size: .78rem; color: var(--pm-muted); line-height: 1.5; }
+.pm-mods-label { font-weight: 700; color: var(--pm-ink); text-transform: uppercase; letter-spacing: .04em; font-size: .68rem; }
+.pm-mod-price { color: var(--pm-accent); font-variant-numeric: tabular-nums; }
+.pm-mod-sep { opacity: .5; }
 .pm-meta { margin: .35rem 0 0; font-size: .72rem; color: var(--pm-muted); display: flex; flex-wrap: wrap; gap: .1rem 1rem; }
 .pm-foot { margin-top: 2.5rem; text-align: center; font-size: .75rem; color: var(--pm-muted); }
 @media print {

@@ -169,11 +169,17 @@ before calling anything done — not just "the happy path returns 200."
     `upsert_pos_addon` (find-by-key then POST/PATCH). Missing `pos_mods_string`,
     an unpublished variant, or an unknown add-on SKU each become a `warning`,
     never a hard failure; `PublishControl` renders the warning list.
-    `test_pos_publish.py` (fake client). **3d not built:** the modifier block
-    on the public QR menu. **inventory-platform already has the deduction
-    pipeline** (`apps/pos_integration/`: `POSImport` upload → classify
-    BASE/TYPE/ADDON/INSTRUCTION → `POSItemMapping` / `POSAddonIngredient` →
-    deduct stock). Source workbooks are gitignored (`/*.xlsm`).
+    `test_pos_publish.py` (fake client). **3d** `menu_editions._modifier_blocks`
+    adds a per-item `modifiers` block to the public payload (Slice 2 4b) — group
+    name + role + selection + each *available* option's name and `price_delta`,
+    nothing else (`test_menu_editions_api.py`'s recursive no-leak walk covers
+    `kind`/`item_sku`/`pos_mods_string`). `PublicMenuPage` renders it as a
+    "Choose one" / "Add" line; that page now keys its own UI strings off the
+    customer's EN/AR toggle (a local `STR` map) instead of the app `t()`.
+    **inventory-platform already has the deduction pipeline**
+    (`apps/pos_integration/`: `POSImport` upload → classify BASE/TYPE/ADDON/
+    INSTRUCTION → `POSItemMapping` / `POSAddonIngredient` → deduct stock).
+    Source workbooks are gitignored (`/*.xlsm`).
   - **Inventory
     Items** (`src/features/inventory` — server-searched, paged table +
     detail drawer showing the full item definition: photo,
@@ -270,7 +276,7 @@ before calling anything done — not just "the happy path returns 200."
   (`RequireCapability`), nav + action buttons gated by `can(cap)`,
   `src/features/admin/` screens. Seed builds carry a TopBar **identity
   switcher** (`src/shell/IdentitySwitcher.tsx`) to demo scoped users.
-- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 163 `APITestCase`
+- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 164 `APITestCase`
   tests. The older cookbook suites use superuser clients (RBAC bypassed —
   `apps/accounts/tests/` covers enforcement broadly), but the newer ones
   (`test_{production,standards,plating,activity,publishing}_api.py`) exercise
