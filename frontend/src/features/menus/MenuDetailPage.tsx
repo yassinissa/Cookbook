@@ -167,7 +167,14 @@ export function MenuDetailPage() {
         ))}
       </div>
 
-      {tab === 'calendar' && <SpecialsCalendar menuId={menu.id} canEdit={canEdit} />}
+      {tab === 'calendar' && (
+        <SpecialsCalendar
+          menuId={menu.id}
+          canEdit={canEdit}
+          branchSlug={menu.branch_detail.slug}
+          canPublish={can('menu.publish')}
+        />
+      )}
       {tab === 'menu' && (
        <>
 

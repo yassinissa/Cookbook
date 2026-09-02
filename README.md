@@ -83,3 +83,17 @@ one-click unsubscribe from any email) under **Settings** in the app.
   SMTP (`EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`,
   `DEFAULT_FROM_EMAIL`) and `FRONTEND_URL` (no trailing slash — backs the email
   links). Dev sends nothing: `development.py` forces the console email backend.
+
+### Public QR / print menu
+
+`POST /api/cookbook/menus/<id>/publish-edition/` (needs `menu.publish`) freezes
+the effective menu for a date into an immutable `MenuEdition`. The public,
+unauthenticated read is `GET /api/cookbook/public-menu/<branch-slug>/` and
+`.../qr/`; the customer-facing page is the SPA route `/m/<slug>`.
+
+- Env: `PUBLIC_MENU_BASE_URL` (the host the QR encodes — defaults to
+  `FRONTEND_URL`), `PUBLIC_MENU_THROTTLE` (default `60/min`). The payload is
+  served from Django's local-memory cache; set `CACHE_BACKEND` /
+  `CACHE_LOCATION` only to move to Redis when a second web dyno appears.
+- Every `Branch` gets a `slug` (auto-filled from `name_en`); a CDN / Cloudflare
+  cache rule in front of `/api/cookbook/public-menu/` is the real load defence.

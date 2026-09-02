@@ -5,7 +5,7 @@ export type CapabilityCode =
   | 'dish.view' | 'dish.edit' | 'dish.delete' | 'recipe.history'
   | 'production.view' | 'production.edit' | 'production.delete'
   | 'recipe.publish'
-  | 'menu.view' | 'menu.edit' | 'menu.snapshot'
+  | 'menu.view' | 'menu.edit' | 'menu.snapshot' | 'menu.publish'
   | 'standard.view' | 'standard.edit'
   | 'costing.view' | 'costing.recalculate'
   | 'inventory.view' | 'nutrition.view'

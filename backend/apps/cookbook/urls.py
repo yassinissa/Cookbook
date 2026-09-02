@@ -37,5 +37,9 @@ urlpatterns = [
     path('digest-subscription/', views_reporting.DigestSubscriptionView.as_view(), name='digest-subscription'),
     path('public/digest/unsubscribe/<uuid:token>/', views_reporting.DigestUnsubscribeView.as_view(),
          name='digest-unsubscribe'),
+    # The one public, unauthenticated data surface — the QR / print menu.
+    # The human-facing URL is the SPA route /m/<slug>; this is what it fetches.
+    path('public-menu/<slug:slug>/', views_menu.PublicMenuView.as_view(), name='public-menu'),
+    path('public-menu/<slug:slug>/qr/', views_menu.PublicMenuQrView.as_view(), name='public-menu-qr'),
     path('', include(router.urls)),
 ]

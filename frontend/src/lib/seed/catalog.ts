@@ -19,14 +19,14 @@ import type {
 } from '@/types/api'
 
 export const BRANCHES: Branch[] = [
-  { id: 'br-salmiya', name_en: 'Salmiya', name_ar: 'السالمية', code: 'SLM', sort_order: 1 },
-  { id: 'br-avenues', name_en: 'The Avenues', name_ar: 'الأفنيوز', code: 'AVN', sort_order: 2 },
-  { id: 'br-kout', name_en: 'Al Kout', name_ar: 'الكوت', code: 'KUT', sort_order: 3 },
-  { id: 'br-jabriya', name_en: 'Jabriya', name_ar: 'الجابرية', code: 'JBR', sort_order: 4 },
-  { id: 'br-fintas', name_en: 'Al Fintas', name_ar: 'الفنطاس', code: 'FNT', sort_order: 5 },
-  { id: 'br-hamra', name_en: 'Al Hamra', name_ar: 'الحمرا', code: 'HMR', sort_order: 6 },
-  { id: 'br-boulevard', name_en: 'The Boulevard', name_ar: 'البوليفارد', code: 'BLV', sort_order: 7 },
-  { id: 'br-sharq', name_en: 'Sharq', name_ar: 'شرق', code: 'SRQ', sort_order: 8 },
+  { id: 'br-salmiya', name_en: 'Salmiya', name_ar: 'السالمية', code: 'SLM', slug: 'salmiya', sort_order: 1 },
+  { id: 'br-avenues', name_en: 'The Avenues', name_ar: 'الأفنيوز', code: 'AVN', slug: 'the-avenues', sort_order: 2 },
+  { id: 'br-kout', name_en: 'Al Kout', name_ar: 'الكوت', code: 'KUT', slug: 'al-kout', sort_order: 3 },
+  { id: 'br-jabriya', name_en: 'Jabriya', name_ar: 'الجابرية', code: 'JBR', slug: 'jabriya', sort_order: 4 },
+  { id: 'br-fintas', name_en: 'Al Fintas', name_ar: 'الفنطاس', code: 'FNT', slug: 'al-fintas', sort_order: 5 },
+  { id: 'br-hamra', name_en: 'Al Hamra', name_ar: 'الحمرا', code: 'HMR', slug: 'al-hamra', sort_order: 6 },
+  { id: 'br-boulevard', name_en: 'The Boulevard', name_ar: 'البوليفارد', code: 'BLV', slug: 'the-boulevard', sort_order: 7 },
+  { id: 'br-sharq', name_en: 'Sharq', name_ar: 'شرق', code: 'SRQ', slug: 'sharq', sort_order: 8 },
 ]
 
 export const CATEGORIES: MenuCategory[] = [

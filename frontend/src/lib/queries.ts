@@ -196,6 +196,21 @@ export function useEffectiveMenu(menuId: string | undefined, on: string) {
     enabled: !!menuId && !!on,
   })
 }
+export function useMenuEditions(menuId: string | undefined) {
+  return useQuery({
+    queryKey: qk.menuEditions(menuId ?? ''),
+    queryFn: () => api.fetchMenuEditions(menuId as string),
+    enabled: !!menuId,
+  })
+}
+export function usePublicMenu(slug: string | undefined) {
+  return useQuery({
+    queryKey: qk.publicMenu(slug ?? ''),
+    queryFn: () => api.fetchPublicMenu(slug as string),
+    enabled: !!slug,
+    retry: false,
+  })
+}
 
 /* ── administration ────────────────────────────────────────────────── */
 export function useCapabilityGroups() {

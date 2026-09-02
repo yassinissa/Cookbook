@@ -22,6 +22,7 @@ export interface Branch {
   name_en: string
   name_ar: string
   code: string
+  slug: string
   sort_order: number
 }
 export interface Section {
@@ -781,6 +782,42 @@ export interface EffectiveMenu {
   periods: { id: ID; kind: MenuPeriodKind; name_en: string; name_ar: string }[]
   categories: EffectiveMenuCategory[]
   line_count: number
+}
+
+/* ── published editions + public menu (feature 4b) ─────────────────── */
+export interface PublicMenuItem {
+  name_en: string
+  name_ar: string
+  description_en: string
+  description_ar: string
+  price: string | null
+  image_url: string
+  allergens: string[]
+  calories: number | null
+}
+export interface PublicMenuCategory {
+  name_en: string
+  name_ar: string
+  items: PublicMenuItem[]
+}
+export interface PublicMenu {
+  branch: { name_en: string; name_ar: string; slug: string }
+  effective_on: string
+  generated_at: string
+  period_names: { en: string; ar: string }[]
+  categories: PublicMenuCategory[]
+  item_count: number
+}
+export interface MenuEdition {
+  id: ID
+  version: number
+  is_current: boolean
+  effective_on: string
+  published_by: string
+  published_at: string
+  branch_slug: string
+  item_count: number
+  payload: PublicMenu
 }
 
 /* ── dashboard ─────────────────────────────────────────────────────── */

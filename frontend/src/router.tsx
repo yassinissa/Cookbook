@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react'
+import { lazy, Suspense, type ReactElement } from 'react'
 import { Navigate, createBrowserRouter } from 'react-router-dom'
 
 import { RequireAuth, RequireCapability } from '@/auth/guards'
@@ -32,8 +32,22 @@ const cap = (c: CapabilityCode, element: ReactElement) => ({
   element: <RequireCapability cap={c}>{element}</RequireCapability>,
 })
 
+// The public QR / print menu — no auth, no app shell. Split out so a customer
+// never downloads the authoring bundle.
+const PublicMenuPage = lazy(() =>
+  import('@/features/menus/PublicMenuPage').then((m) => ({ default: m.PublicMenuPage })),
+)
+
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
+  {
+    path: '/m/:slug',
+    element: (
+      <Suspense fallback={null}>
+        <PublicMenuPage />
+      </Suspense>
+    ),
+  },
   {
     element: <RequireAuth />,
     errorElement: <RouteError />,

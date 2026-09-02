@@ -17,6 +17,8 @@ applies every period active on a given date, in precedence order, to produce
 the effective menu. This is NOT MenuSnapshot (a cost freeze for trend charts)
 and NOT MenuCategory (a customer-facing menu section).
 """
+import uuid
+
 from django.db import models
 
 from apps.core.models import BaseModel
@@ -175,3 +177,36 @@ class MenuPeriodLine(BaseModel):
 
     def __str__(self):
         return f'{self.get_op_display()}: {self.dish.name_en}'
+
+
+# ── Published menu editions (the public QR / print menu) ────────────────────
+
+class MenuEdition(BaseModel):
+    """
+    An immutable, frozen rendering of a branch menu's effective state for a
+    date — what the public sees at /m/<branch-slug>. Built by
+    apps.cookbook.specials.publish_edition: resolve the effective menu, strip
+    every cost field, add allergens + calories, freeze into `payload`.
+
+    Versioned with the same is_current + version vocabulary as recipes. A
+    change is never an edit — it is a new edition.
+    """
+    menu         = models.ForeignKey(Menu, on_delete=models.CASCADE, related_name='editions')
+    lineage_key  = models.UUIDField(default=uuid.uuid4, db_index=True,
+                     help_text='Groups every edition of one menu (survives a menu rebuild).')
+    version      = models.PositiveIntegerField(default=1)
+    is_current   = models.BooleanField(default=True)
+    effective_on = models.DateField(help_text='The date the effective menu was resolved for.')
+    published_by = models.CharField(max_length=255, blank=True)
+    payload      = models.JSONField(default=dict,
+                     help_text='Frozen public menu. Never contains cost, margin or supplier data.')
+
+    class Meta(BaseModel.Meta):
+        ordering = ['-version']
+        constraints = [
+            models.UniqueConstraint(fields=['menu'], condition=models.Q(is_current=True),
+                                    name='one_current_edition_per_menu'),
+        ]
+
+    def __str__(self):
+        return f'{self.menu} edition v{self.version}'

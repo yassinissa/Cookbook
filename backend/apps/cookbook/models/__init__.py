@@ -17,6 +17,7 @@ from .item_supplement import (
 from .menu import (
     Menu, MenuLine, MenuSnapshot, MenuSnapshotLine,
     MenuPeriod, MenuPeriodLine, MenuPeriodKind, MenuPeriodOp, WEEKDAY_ALL,
+    MenuEdition,
 )
 from .history import (
     ActivityActionType, DishPriceHistory, ProductionCostHistory,
@@ -36,6 +37,7 @@ __all__ = [
     'StorageBand', 'ItemStorage',
     'Menu', 'MenuLine', 'MenuSnapshot', 'MenuSnapshotLine',
     'MenuPeriod', 'MenuPeriodLine', 'MenuPeriodKind', 'MenuPeriodOp', 'WEEKDAY_ALL',
+    'MenuEdition',
     'ActivityActionType', 'DishPriceHistory', 'ProductionCostHistory',
     'DishRecipeActivityLog', 'ProductionRecipeActivityLog',
     'DigestCadence', 'DigestSubscription',

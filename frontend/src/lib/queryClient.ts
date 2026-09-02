@@ -40,4 +40,6 @@ export const qk = {
   menuTrends: (menuId: string) => ['menus', menuId, 'trends'] as const,
   menuPeriods: (menuId: string) => ['menus', menuId, 'periods'] as const,
   effectiveMenu: (menuId: string, on: string) => ['menus', menuId, 'effective', on] as const,
+  menuEditions: (menuId: string) => ['menus', menuId, 'editions'] as const,
+  publicMenu: (slug: string) => ['public-menu', slug] as const,
 }

@@ -19,7 +19,7 @@ before calling anything done — not just "the happy path returns 200."
   `models/{reference,recipes,standards,plating,item_supplement,history,menu}.py`,
   mirrored `serializers/`, `views.py` + `views_menu.py` + `views_standards.py`
   + `views_plating.py` + `views_specials.py` + `views_activity.py` + `views_dashboard.py`,
-  `services.py`/`costing.py`/`nutrition.py`/`versioning.py`/`publishing.py`/`specials.py`.
+  `services.py`/`costing.py`/`nutrition.py`/`versioning.py`/`publishing.py`/`specials.py`/`menu_editions.py`.
   `apps/integrations/inventory_client.py` is the *only* place that talks
   to inventory-platform. Items/units/stores/branches are read live (never
   duplicated) — `get_items()` walks every page and returns *active* items
@@ -125,8 +125,23 @@ before calling anything done — not just "the happy path returns 200."
     (`MenuViewSet` action → `resolve_menu`). No recipe version bump, no
     costing. `test_specials_api.py` pins op application, precedence, weekday
     mask, date boundaries, the draft flag, the nested-line write + scope.
-    **Feature 4b (not built):** `MenuEdition` publish + public `/m/<slug>`
-    + QR + print — see the scope artifact. Verified end-to-end 2026-09-02.
+    **Feature 4b (`EditionsPanel.tsx` on the same tab):** `menu_editions.py`
+    `publish_edition(menu, on)` resolves the effective menu, strips every cost
+    field, adds allergens + calories, freezes it into an immutable
+    `MenuEdition` (`is_current`/`version` like recipes). `Branch.slug`
+    (auto-filled from `name_en`) + a new `menu.publish` capability
+    (Administrator + Executive Chef; accounts migration `0004`). API:
+    `POST cookbook/menus/<id>/publish-edition/` (`menu.publish`) +
+    `GET .../editions/`. The public surface is
+    `GET /api/cookbook/public-menu/<slug>/` and `.../qr/` — both
+    `authentication_classes=[]` + `AllowAny` + `PublicMenuThrottle`
+    (`public_menu` scope, LocMem `CACHES`, cache busted on publish). The
+    payload is a hand-written whitelist — never a `ModelSerializer` — and
+    `test_menu_editions_api.py` asserts no cost/margin/supplier key survives
+    (recursive walk). Frontend: `src/features/menus/PublicMenuPage.tsx` at
+    `/m/:slug` — outside `RequireAuth`, `React.lazy`, its own bare shell,
+    EN⇄AR toggle, route-scoped `@media print`. Verified end-to-end 2026-09-02.
+    Not in v1: server-rendered PDF, scheduled auto-publish.
   - **Inventory
     Items** (`src/features/inventory` — server-searched, paged table +
     detail drawer showing the full item definition: photo,
@@ -213,16 +228,17 @@ before calling anything done — not just "the happy path returns 200."
   kitchen → `ProductionRecipe.prep_kitchen_ref` → new `cookbook.PrepKitchen`).
   Serializers strip cost/price fields when the caller lacks `costing.view`
   (`serializers/mixins.py::HidesCostingFields`). `recipe.publish` (added
-  2026-08-28, Administrator + Executive Chef) gates the inventory-platform
-  push — accounts migration `0003` re-syncs role grants; add a capability
-  then bump a migration like it. `/api/auth/me/` returns the
+  2026-08-28) gates the inventory-platform push; `menu.publish` (added
+  2026-09-02) gates the public QR-menu publish — both Administrator +
+  Executive Chef, each with an accounts migration (`0003`, `0004`) that
+  re-syncs role grants. Add a capability then bump a migration like them. `/api/auth/me/` returns the
   resolved capabilities + scope; `/api/accounts/{roles,users,capabilities}/`
   is the admin API (gated on `admin.roles` / `admin.users`). Superuser
   bypasses everything. Frontend: `src/auth/AuthProvider` + `guards.tsx`
   (`RequireCapability`), nav + action buttons gated by `can(cap)`,
   `src/features/admin/` screens. Seed builds carry a TopBar **identity
   switcher** (`src/shell/IdentitySwitcher.tsx`) to demo scoped users.
-- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 132 `APITestCase`
+- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 142 `APITestCase`
   tests. The older cookbook suites use superuser clients (RBAC bypassed —
   `apps/accounts/tests/` covers enforcement broadly), but the newer ones
   (`test_{production,standards,plating,activity,publishing}_api.py`) exercise

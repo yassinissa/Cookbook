@@ -31,6 +31,7 @@ import type {
   EffectiveMenu,
   ID,
   MenuDetail,
+  MenuEdition,
   MenuLine,
   MenuListItem,
   MenuPeriod,
@@ -40,6 +41,7 @@ import type {
   MenuSnapshot,
   MenuTrends,
   Paginated,
+  PublicMenu,
   PlatingGuideDetail,
   PlatingGuideInput,
   PlatingGuideListItem,
@@ -713,5 +715,38 @@ export async function fetchEffectiveMenu(menuId: string, on: string): Promise<Ef
     }
   }
   const { data } = await http.get(`/cookbook/menus/${menuId}/effective/`, { params: { on } })
+  return data
+}
+
+export async function fetchMenuEditions(menuId: string): Promise<MenuEdition[]> {
+  if (USE_SEED) {
+    await delay(150)
+    return []
+  }
+  const { data } = await http.get(`/cookbook/menus/${menuId}/editions/`)
+  return listData<MenuEdition>(data)
+}
+
+export async function publishMenuEdition(menuId: string, effectiveOn: string): Promise<MenuEdition> {
+  if (USE_SEED) {
+    await delay(400)
+    throw new Error('Publishing is disabled in the demo build.')
+  }
+  const { data } = await http.post(`/cookbook/menus/${menuId}/publish-edition/`, {
+    effective_on: effectiveOn,
+  })
+  return data
+}
+
+/** URL of the QR image for a branch's public menu (for an <img src> — it's a
+ *  public endpoint, no auth header needed). */
+export function menuQrUrl(branchSlug: string): string {
+  const base = (http.defaults.baseURL ?? '/api').replace(/\/$/, '')
+  return `${base}/cookbook/public-menu/${branchSlug}/qr/`
+}
+
+/** The public, unauthenticated menu payload — used only by the /m/:slug page. */
+export async function fetchPublicMenu(slug: string): Promise<PublicMenu> {
+  const { data } = await http.get(`/cookbook/public-menu/${slug}/`)
   return data
 }

@@ -17,6 +17,7 @@ import { cn } from '@/lib/cn'
 import { useI18n, type TFunc } from '@/i18n'
 import type { MenuPeriod, MenuPeriodKind } from '@/types/api'
 import { PeriodEditor } from './PeriodEditor'
+import { EditionsPanel } from './EditionsPanel'
 
 const KIND_DOT: Record<MenuPeriodKind, string> = {
   event: 'bg-accent',
@@ -64,7 +65,17 @@ function weekdaySummary(mask: number, t: TFunc) {
     .join(' · ')
 }
 
-export function SpecialsCalendar({ menuId, canEdit }: { menuId: string; canEdit: boolean }) {
+export function SpecialsCalendar({
+  menuId,
+  canEdit,
+  branchSlug,
+  canPublish,
+}: {
+  menuId: string
+  canEdit: boolean
+  branchSlug: string
+  canPublish: boolean
+}) {
   const { t, locale } = useI18n()
   const { data: periods, isLoading, isError, refetch } = useMenuPeriods(menuId)
 
@@ -228,6 +239,8 @@ export function SpecialsCalendar({ menuId, canEdit }: { menuId: string; canEdit:
           ))}
         </ul>
       )}
+
+      <EditionsPanel menuId={menuId} branchSlug={branchSlug} canPublish={canPublish} />
 
       {previewDate && (
         <PreviewDrawer menuId={menuId} date={previewDate} onClose={() => setPreviewDate(null)} />
