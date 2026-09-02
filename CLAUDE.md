@@ -142,6 +142,24 @@ before calling anything done — not just "the happy path returns 200."
     `/m/:slug` — outside `RequireAuth`, `React.lazy`, its own bare shell,
     EN⇄AR toggle, route-scoped `@media print`. Verified end-to-end 2026-09-02.
     Not in v1: server-rendered PDF, scheduled auto-publish.
+  - **POS modifiers** (Slice 3, backend-only so far — scope artifact
+    `189ad7f1`). `models/modifiers.py`: `ModifierGroup` (selection
+    single/multi + min/max_select) → `ModifierOption` (`price_delta`, `kind` =
+    choice/type/addon/instruction, `pos_mods_string` [the Lavu sales-report
+    match key], `variant_recipe` FK for `type`, `item_sku`+qty+unit for
+    `addon`). `DishModifierGroup` hangs a group off a base `DishRecipe`
+    (global — this is what publishes); `MenuLineModifier` is per-branch menu
+    display only. `manage.py import_pos_menu "<xlsm>" [--branch Dine]
+    [--dry-run]` parses the "040 Dine (Menu POS Applications)" workbook's
+    three POSLavu sheets — cleans EN/AR slash names + tatweel, drops marker
+    rows, guesses `kind` from the sheet + price (`_VARIANT_PRICE` = 2.0 KWD),
+    infers selection/limits, attaches groups to dishes by `pos_item_name`
+    then `name_en`, reports unmatched. Idempotent. `test_pos_import.py`.
+    **inventory-platform already has the deduction pipeline**
+    (`apps/pos_integration/`: `POSImport` upload → classify BASE/TYPE/ADDON/
+    INSTRUCTION → `POSItemMapping` / `POSAddonIngredient` → deduct stock).
+    Slice 3c will publish those two tables from Cookbook via new
+    `inventory_client` methods. Source workbooks are gitignored (`/*.xlsm`).
   - **Inventory
     Items** (`src/features/inventory` — server-searched, paged table +
     detail drawer showing the full item definition: photo,
@@ -238,7 +256,7 @@ before calling anything done — not just "the happy path returns 200."
   (`RequireCapability`), nav + action buttons gated by `can(cap)`,
   `src/features/admin/` screens. Seed builds carry a TopBar **identity
   switcher** (`src/shell/IdentitySwitcher.tsx`) to demo scoped users.
-- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 142 `APITestCase`
+- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 150 `APITestCase`
   tests. The older cookbook suites use superuser clients (RBAC bypassed —
   `apps/accounts/tests/` covers enforcement broadly), but the newer ones
   (`test_{production,standards,plating,activity,publishing}_api.py`) exercise
