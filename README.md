@@ -62,9 +62,24 @@ plus `INVENTORY_API_EMAIL` / `INVENTORY_API_PASSWORD` for a service account ther
 
 ## Deployment (Render)
 
-The API web service is configured in the Render dashboard (predates
-`render.yaml`). Migrations run on deploy, so shipping a new model just needs a
-redeploy.
+[`render.yaml`](render.yaml) is a full Blueprint — Postgres, the Django API,
+the weekly-digest cron, and the Vite frontend as a static site. The API and
+frontend were first created by hand in the dashboard; Render matches blueprint
+services to existing ones **by name**, so connecting the repo as a Blueprint
+(Dashboard → New → Blueprint) adopts them if the names line up
+(`greenhill-api`, `cookbook-frontend`, `cookbook-db`) — otherwise rename in the
+dashboard or edit `name:` first, or just use the file as the reference for
+manual setup. Secrets (`sync: false`) are set once in the dashboard; the SMTP +
+inventory-platform credentials live in a shared `cookbook-shared` env group.
+
+- **API build**: `pip install -r requirements/production.txt && collectstatic &&
+  migrate` — migrations run every deploy, so shipping a model is just a redeploy.
+  WhiteNoise serves the API's own static assets (`production.py`); dish/plating
+  photos (`MEDIA`) still need object storage or a Render Disk — a known gap.
+- **Frontend**: `npm ci && npm run build` → `dist/`, with an SPA rewrite so
+  `/m/<slug>` and every client route resolve. Set `VITE_API_BASE_URL` to the
+  API's `…/api`.
+- **Python**: pinned to 3.12 — Django 4.2 doesn't support 3.13+.
 
 ### Weekly cost-report digest
 
@@ -76,13 +91,11 @@ one-click unsubscribe from any email) under **Settings** in the app.
 - Command: `python manage.py send_cost_digest` (`--dry-run` builds and prints
   without sending; `--user <id|username>` targets one recipient and ignores the
   5-day resend guard; `--force` ignores the guard for everyone).
-- Schedule: the `cookbook-cost-digest` cron in [`render.yaml`](render.yaml) —
-  `0 4 * * 1` (04:00 UTC = 07:00 Asia/Kuwait). Apply via **New → Blueprint**, or
-  add the same command as a cron job by hand in the dashboard.
-- Env: the cron needs the same `SECRET_KEY` + `DB_*` as the web service, plus
-  SMTP (`EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`,
-  `DEFAULT_FROM_EMAIL`) and `FRONTEND_URL` (no trailing slash — backs the email
-  links). Dev sends nothing: `development.py` forces the console email backend.
+- Schedule: the `cookbook-cost-digest` cron in `render.yaml` — `0 4 * * 1`
+  (04:00 UTC = 07:00 Asia/Kuwait). It pulls `SECRET_KEY` / `FRONTEND_URL` from
+  the API service and the DB creds from `cookbook-db`; SMTP comes from the
+  `cookbook-shared` env group. Dev sends nothing — `development.py` forces the
+  console email backend.
 
 ### Public QR / print menu
 

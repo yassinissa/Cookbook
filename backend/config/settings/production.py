@@ -5,6 +5,26 @@ DEBUG = False
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='', cast=Csv())
 
+# ─── STATIC FILES ────────────────────────────────────────────────────────────
+# WhiteNoise serves the API's own static assets (Django admin, DRF browsable
+# API) straight from the app — no separate static host needed. It must sit
+# directly after SecurityMiddleware. `whitenoise` is already in
+# requirements/production.txt.
+MIDDLEWARE = [
+    MIDDLEWARE[0],                                       # corsheaders
+    MIDDLEWARE[1],                                       # security
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    *MIDDLEWARE[2:],
+]
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
+}
+# Dish / plating photos (MEDIA) are NOT served here — WhiteNoise only serves
+# STATIC_ROOT. In production they need object storage (S3/R2) or a Render Disk
+# mounted at backend/media plus a media route. Tracked as a follow-up; the
+# recipe/menu APIs work without it, only the images 404.
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
