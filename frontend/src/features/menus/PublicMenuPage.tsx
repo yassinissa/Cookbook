@@ -125,7 +125,7 @@ function Item({
         </div>
         {desc && <p className="pm-desc">{desc}</p>}
 
-        {item.modifiers.map((m, i) => (
+        {(item.modifiers ?? []).map((m, i) => (
           <p key={i} className="pm-mods">
             <span className="pm-mods-label">
               {m.role === 'forced' ? s.chooseOne : s.add}

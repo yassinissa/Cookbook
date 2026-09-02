@@ -808,7 +808,8 @@ export interface PublicMenuItem {
   image_url: string
   allergens: string[]
   calories: number | null
-  modifiers: PublicMenuModifier[]
+  /** absent on editions frozen before slice 3d */
+  modifiers?: PublicMenuModifier[]
 }
 export interface PublicMenuCategory {
   name_en: string
