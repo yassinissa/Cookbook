@@ -17,6 +17,7 @@ import { usePlatingGuide } from '@/lib/queries'
 import { parseApiError } from '@/lib/parseApiError'
 import { cn } from '@/lib/cn'
 import { readImageFile } from '@/lib/image'
+import { localId } from '@/lib/id'
 import { useI18n, type TFunc } from '@/i18n'
 import type { PlatingGuideInput, PlatingImageInput, PlatingPin } from '@/types/api'
 
@@ -115,7 +116,7 @@ export function PlatingEditorPage() {
         setImages((list) => [
           ...list,
           {
-            key: `new-${crypto.randomUUID()}`,
+            key: `new-${localId()}`,
             image_data: dataUri,
             preview: dataUri,
             caption_en: '',

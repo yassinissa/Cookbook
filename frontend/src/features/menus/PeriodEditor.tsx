@@ -13,6 +13,7 @@ import type { MenuPeriodWrite } from '@/lib/api'
 import { qk } from '@/lib/queryClient'
 import { parseApiError } from '@/lib/parseApiError'
 import { cn } from '@/lib/cn'
+import { localId } from '@/lib/id'
 import { useI18n, type TFunc } from '@/i18n'
 import type { MenuPeriod, MenuPeriodKind, MenuPeriodOp } from '@/types/api'
 
@@ -39,12 +40,12 @@ interface DraftLine {
 }
 
 function blankLine(): DraftLine {
-  return { key: crypto.randomUUID(), dish: '', op: 'add', menu_price: '', image_url: '', description_en: '', description_ar: '' }
+  return { key: localId(), dish: '', op: 'add', menu_price: '', image_url: '', description_en: '', description_ar: '' }
 }
 
 function fromPeriod(p: MenuPeriod): DraftLine[] {
   return p.lines.map((l) => ({
-    key: l.id ?? crypto.randomUUID(),
+    key: l.id ?? localId(),
     id: l.id,
     dish: l.dish,
     op: l.op,

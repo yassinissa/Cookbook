@@ -13,6 +13,7 @@ import * as api from '@/lib/api'
 import type { ModifierGroupWrite } from '@/lib/api'
 import { qk } from '@/lib/queryClient'
 import { parseApiError } from '@/lib/parseApiError'
+import { localId } from '@/lib/id'
 import { cn } from '@/lib/cn'
 import { useI18n, type TFunc } from '@/i18n'
 import type { ModifierGroup, ModifierOption, ModifierOptionKind, ModifierSelection } from '@/types/api'
@@ -36,14 +37,14 @@ interface DraftOption {
 
 function blank(): DraftOption {
   return {
-    key: crypto.randomUUID(), name_en: '', name_ar: '', price_delta: '0', kind: 'choice',
+    key: localId(), name_en: '', name_ar: '', price_delta: '0', kind: 'choice',
     pos_mods_string: '', variant_recipe: '', item_sku: '', quantity: '', unit: '',
   }
 }
 
 function fromOption(o: ModifierOption): DraftOption {
   return {
-    key: o.id ?? crypto.randomUUID(), id: o.id,
+    key: o.id ?? localId(), id: o.id,
     name_en: o.name_en, name_ar: o.name_ar, price_delta: o.price_delta, kind: o.kind,
     pos_mods_string: o.pos_mods_string, variant_recipe: o.variant_recipe ?? '',
     item_sku: o.item_sku, quantity: o.quantity ?? '', unit: o.unit ?? '',
