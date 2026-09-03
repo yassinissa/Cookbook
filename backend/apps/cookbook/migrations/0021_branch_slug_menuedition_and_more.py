@@ -33,7 +33,12 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='branch',
             name='slug',
-            field=models.SlugField(blank=True, default='', max_length=60),
+            # db_index=False here: SlugField defaults db_index=True, which would
+            # queue a Postgres `_like` pattern-index in this step AND again in
+            # the AlterField below (same auto-generated index name) — the second
+            # CREATE INDEX collides with the first. Only the final unique=True
+            # needs an index, so skip it here.
+            field=models.SlugField(blank=True, default='', max_length=60, db_index=False),
             preserve_default=False,
         ),
         migrations.RunPython(backfill_slugs, noop),
