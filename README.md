@@ -63,14 +63,16 @@ plus `INVENTORY_API_EMAIL` / `INVENTORY_API_PASSWORD` for a service account ther
 ## Deployment (Render)
 
 [`render.yaml`](render.yaml) is a full Blueprint — Postgres, the Django API,
-the weekly-digest cron, and the Vite frontend as a static site. The API and
-frontend were first created by hand in the dashboard; Render matches blueprint
-services to existing ones **by name**, so connecting the repo as a Blueprint
-(Dashboard → New → Blueprint) adopts them if the names line up
-(`greenhill-api`, `cookbook-frontend`, `cookbook-db`) — otherwise rename in the
-dashboard or edit `name:` first, or just use the file as the reference for
-manual setup. Secrets (`sync: false`) are set once in the dashboard; the SMTP +
-inventory-platform credentials live in a shared `cookbook-shared` env group.
+the weekly-digest cron, and the Vite frontend as a static site. Cookbook
+shares its Render account with inventory-platform, so the services here are
+named `cookbook-api` / `cookbook-frontend` / `cookbook-db` — deliberately not
+`greenhill-api`, which inventory-platform's own backend already uses (Render
+matches blueprint services to existing ones **by name**, so reusing that name
+would try to adopt inventory-platform's live API instead of creating a new
+service). Connect the repo as a Blueprint (Dashboard → New → Blueprint) to
+create them, or use the file as the reference for manual setup. Secrets
+(`sync: false`) are set once in the dashboard; the SMTP + inventory-platform
+credentials live in a shared `cookbook-shared` env group.
 
 - **API build**: `pip install -r requirements/production.txt && collectstatic &&
   migrate` — migrations run every deploy, so shipping a model is just a redeploy.

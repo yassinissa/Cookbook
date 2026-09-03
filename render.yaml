@@ -1,18 +1,17 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Render Blueprint for Cookbook — API + weekly-digest cron + frontend + Postgres.
 #
-# ADOPTING THIS ON AN EXISTING DEPLOY
-#   The API web service was first created by hand in the Render dashboard. Render
-#   matches blueprint services to existing ones BY NAME, so:
-#     • If your API service is named `greenhill-api`, connecting this repo as a
-#       Blueprint (Dashboard → New → Blueprint) adopts and updates it in place.
-#     • If it has a different name, either rename it in the dashboard first, or
-#       change `name:` below to match — otherwise the sync creates a duplicate.
-#   The same applies to the database and the frontend site. Values marked
-#   `sync: false` are never written by Render; set them once in the dashboard.
+# Cookbook shares this Render account with inventory-platform, whose own
+# backend is already named `greenhill-api`. Render matches blueprint services
+# to existing ones BY NAME, so Cookbook's services below are named
+# `cookbook-*` — reusing `greenhill-api` here would make a first blueprint
+# sync try to adopt (and overwrite) inventory-platform's live API instead of
+# creating a new one. Keep it that way; don't rename these to match
+# inventory-platform's convention.
 #
-# If you would rather keep managing services by hand, treat this file as the
-# reference for every setting the current codebase expects.
+# Values marked `sync: false` are never written by Render; set them once in
+# the dashboard. If you would rather manage services by hand, treat this file
+# as the reference for every setting the current codebase expects.
 # ─────────────────────────────────────────────────────────────────────────────
 
 databases:
@@ -25,7 +24,7 @@ databases:
 services:
   # ── Django REST API ───────────────────────────────────────────────────────
   - type: web
-    name: greenhill-api
+    name: cookbook-api
     runtime: python
     rootDir: backend
     plan: starter
@@ -62,7 +61,7 @@ services:
       - key: DB_PORT
         fromDatabase: { name: cookbook-db, property: port }
       - key: ALLOWED_HOSTS
-        sync: false               # e.g. greenhill-api-sljm.onrender.com
+        sync: false               # e.g. cookbook-api-xxxx.onrender.com
       - key: CORS_ALLOWED_ORIGINS
         sync: false               # the frontend origin(s), comma-separated
       - key: FRONTEND_URL
@@ -90,7 +89,7 @@ services:
       - key: PYTHON_VERSION
         value: "3.12.8"
       - key: SECRET_KEY
-        fromService: { name: greenhill-api, type: web, envVarKey: SECRET_KEY }
+        fromService: { name: cookbook-api, type: web, envVarKey: SECRET_KEY }
       - key: DB_NAME
         fromDatabase: { name: cookbook-db, property: database }
       - key: DB_USER
@@ -104,7 +103,7 @@ services:
       - key: ALLOWED_HOSTS
         value: localhost          # the cron makes no HTTP requests to itself
       - key: FRONTEND_URL
-        fromService: { name: greenhill-api, type: web, envVarKey: FRONTEND_URL }
+        fromService: { name: cookbook-api, type: web, envVarKey: FRONTEND_URL }
       - fromGroup: cookbook-shared
 
   # ── React / Vite frontend (static) ──────────────────────────────────────
