@@ -227,6 +227,9 @@ export interface IngredientLine {
   quantity: string
   unit: ID | null
   unit_detail?: UnitScale | null
+  // Production-recipe ingredients only.
+  alt_item_sku?: string
+  alt_item_name_snapshot?: string
 }
 export interface StepLine {
   id?: ID

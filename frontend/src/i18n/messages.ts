@@ -179,6 +179,8 @@ export const en = {
   'editor.ing.unit': 'Unit',
   'editor.ing.cost': 'Cost',
   'editor.ing.none': 'No ingredients yet.',
+  'editor.ing.altItem': 'Fallback ingredient (if out of stock)',
+  'editor.ing.altItemHint': "Used automatically if the primary ingredient is out of stock when a batch is confirmed.",
   'editor.step.none': 'No steps yet.',
   'editor.savedStay': 'Saved. The cost panel is refreshed below.',
 
@@ -900,6 +902,8 @@ export const ar: Record<MessageKey, string> = {
   'editor.ing.unit': 'الوحدة',
   'editor.ing.cost': 'التكلفة',
   'editor.ing.none': 'لا توجد مكوّنات بعد.',
+  'editor.ing.altItem': 'مكوّن بديل (عند نفاد المخزون)',
+  'editor.ing.altItemHint': 'يُستخدم تلقائيًا إذا نفد المكوّن الأساسي عند تأكيد الدفعة.',
   'editor.step.none': 'لا توجد خطوات بعد.',
   'editor.savedStay': 'تم الحفظ. لوحة التكلفة محدّثة أدناه.',
 

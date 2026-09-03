@@ -53,7 +53,21 @@ def _ingredient_lines(recipe, sku_to_id, code_to_unit):
                 warnings.append(
                     f'unit "{ing.unit.code}" for {ing.item_sku} has no match on '
                     f'inventory-platform — the item default unit is used instead')
-        lines.append({'item': item_id, 'quantity': str(ing.quantity), 'unit': unit_id})
+        line = {'item': item_id, 'quantity': str(ing.quantity), 'unit': unit_id}
+        # alt_item_sku only exists on ProductionRecipeIngredient (a fallback
+        # a prep kitchen's batch confirmation uses when item_sku is out of
+        # stock) — getattr keeps this safe for DishRecipeIngredient rows too,
+        # since this function is shared by both publish paths.
+        alt_sku = getattr(ing, 'alt_item_sku', '')
+        if alt_sku:
+            alt_id = sku_to_id.get(alt_sku)
+            if alt_id is None:
+                warnings.append(
+                    f'alternate {alt_sku} ({ing.alt_item_name_snapshot or "?"}) is not an '
+                    f'inventory item — no fallback published for {ing.item_sku}')
+            else:
+                line['alt_item'] = alt_id
+        lines.append(line)
     return lines, warnings
 
 

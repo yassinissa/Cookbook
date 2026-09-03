@@ -146,6 +146,14 @@ class ProductionRecipe(RecipeCardFields):
 
 class ProductionRecipeIngredient(IngredientLine):
     recipe = models.ForeignKey(ProductionRecipe, on_delete=models.CASCADE, related_name='ingredients')
+    # A fallback SKU a prep kitchen manager's batch confirmation can fall
+    # back to when `item_sku` is out of stock — see inventory-platform's
+    # ProductionBatch.confirm action. Dish recipes have no batch concept to
+    # attach a substitution to, so this lives only here, not on the shared
+    # IngredientLine base.
+    alt_item_sku           = models.CharField(max_length=100, blank=True,
+                              help_text='Fallback SKU used if item_sku is out of stock when a batch is confirmed.')
+    alt_item_name_snapshot = models.CharField(max_length=255, blank=True)
 
 
 class ProductionRecipeStep(RecipeStepLine):

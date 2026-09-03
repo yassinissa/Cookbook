@@ -161,6 +161,8 @@ export function ProductionEditorPage() {
         quantity: ing.quantity,
         unit: ing.unit || null,
         order: i + 1,
+        alt_item_sku: ing.alt_item_sku || '',
+        alt_item_name_snapshot: ing.alt_item_name_snapshot || '',
       })),
       steps: steps.map((s, i) => ({ instruction: s.instruction, step_number: i + 1 })),
     }
@@ -435,6 +437,7 @@ export function ProductionEditorPage() {
                   items={items}
                   costLines={breakdown?.lines}
                   errors={ingredientErrors}
+                  showAlternate
                   onChange={(i, k, v) =>
                     setIngredients((rows) =>
                       rows.map((row, idx) => (idx === i ? { ...row, [k]: v } : row)),

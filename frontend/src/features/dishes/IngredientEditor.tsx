@@ -12,6 +12,11 @@ export interface EditableIngredient {
   prep_note: string
   quantity: string
   unit: string
+  // Production-recipe only (see IngredientEditor's `showAlternate` prop) — a
+  // fallback SKU a prep kitchen's batch confirmation can fall back to when
+  // item_sku is out of stock. Dish recipes never set or send this.
+  alt_item_sku?: string
+  alt_item_name_snapshot?: string
 }
 
 export function toEditable(i: IngredientLine): EditableIngredient {
@@ -21,6 +26,8 @@ export function toEditable(i: IngredientLine): EditableIngredient {
     prep_note: i.prep_note,
     quantity: String(i.quantity ?? ''),
     unit: i.unit ? String(i.unit) : '',
+    alt_item_sku: i.alt_item_sku ?? '',
+    alt_item_name_snapshot: i.alt_item_name_snapshot ?? '',
   }
 }
 
@@ -30,6 +37,8 @@ export const EMPTY_INGREDIENT: EditableIngredient = {
   prep_note: '',
   quantity: '',
   unit: '',
+  alt_item_sku: '',
+  alt_item_name_snapshot: '',
 }
 
 export function IngredientEditor({
@@ -41,6 +50,7 @@ export function IngredientEditor({
   onChange,
   onAdd,
   onRemove,
+  showAlternate,
 }: {
   ingredients: EditableIngredient[]
   units: UnitScale[]
@@ -50,6 +60,9 @@ export function IngredientEditor({
   onChange: (index: number, key: keyof EditableIngredient, value: string) => void
   onAdd: () => void
   onRemove: (index: number) => void
+  /** Production recipes only — shows a fallback-ingredient picker per row,
+   * used by a prep kitchen's batch confirmation when the primary is 86'd. */
+  showAlternate?: boolean
 }) {
   const { t } = useI18n()
   const showCosts = Array.isArray(costLines) && costLines.length > 0
@@ -133,6 +146,22 @@ export function IngredientEditor({
                 onClick={() => onRemove(i)}
               />
             </div>
+            {showAlternate && (
+              <div className="col-span-2 md:col-span-full">
+                <Combobox
+                  value={ing.alt_item_sku ?? ''}
+                  items={items}
+                  placeholder={t('editor.ing.altItem')}
+                  onSelect={(sku, item) => {
+                    onChange(i, 'alt_item_sku', sku)
+                    if (item && !ing.alt_item_name_snapshot) {
+                      onChange(i, 'alt_item_name_snapshot', item.name_en)
+                    }
+                  }}
+                />
+                <p className="mt-1 text-2xs text-ink-subtle">{t('editor.ing.altItemHint')}</p>
+              </div>
+            )}
             {errors?.[i] && (
               <p className="col-span-2 text-xs text-danger-ink md:col-span-full">{errors[i]}</p>
             )}
