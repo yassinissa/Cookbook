@@ -16,11 +16,16 @@ import { qk } from '@/lib/queryClient'
 import { usePlatingGuide } from '@/lib/queries'
 import { parseApiError } from '@/lib/parseApiError'
 import { cn } from '@/lib/cn'
+import { readImageFile } from '@/lib/image'
 import { useI18n, type TFunc } from '@/i18n'
 import type { PlatingGuideInput, PlatingImageInput, PlatingPin } from '@/types/api'
 
 const ACCEPT = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-const MAX_BYTES = 5 * 1024 * 1024
+// Raw phone-camera photos routinely exceed this before they're downscaled —
+// this is a sanity cap on the *source* file, not the payload we actually
+// send (that's checked below, after readImageFile has shrunk it).
+const MAX_SOURCE_BYTES = 20 * 1024 * 1024
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 
 const EMPTY: PlatingGuideInput = {
   plate_spec: '',
@@ -38,15 +43,6 @@ const EMPTY: PlatingGuideInput = {
 interface DraftImage extends PlatingImageInput {
   key: string
   preview: string
-}
-
-function readFile(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader()
-    r.onload = () => resolve(String(r.result))
-    r.onerror = () => reject(new Error('read failed'))
-    r.readAsDataURL(file)
-  })
 }
 
 export function PlatingEditorPage() {
@@ -106,12 +102,16 @@ export function PlatingEditorPage() {
         toast.error(t('image.badType'))
         continue
       }
-      if (file.size > MAX_BYTES) {
+      if (file.size > MAX_SOURCE_BYTES) {
         toast.error(t('image.tooBig'))
         continue
       }
       try {
-        const dataUri = await readFile(file)
+        const dataUri = await readImageFile(file)
+        if (dataUri.length > MAX_UPLOAD_BYTES) {
+          toast.error(t('image.tooBig'))
+          continue
+        }
         setImages((list) => [
           ...list,
           {

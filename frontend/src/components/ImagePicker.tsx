@@ -4,9 +4,14 @@ import { Button } from './Button'
 import { DishImage } from './DishImage'
 import { Icon } from './Icon'
 import { useI18n } from '@/i18n'
+import { readImageFile } from '@/lib/image'
 
 const ACCEPT = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-const MAX_BYTES = 5 * 1024 * 1024
+// Raw phone-camera photos routinely exceed this before they're downscaled —
+// this is a sanity cap on the *source* file, not the payload we actually
+// send (that's checked below, after readImageFile has shrunk it).
+const MAX_SOURCE_BYTES = 20 * 1024 * 1024
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 
 /**
  * Dish-photo picker. Reads the chosen file to a base64 data: URI and hands it
@@ -30,21 +35,27 @@ export function ImagePicker({
   const [localError, setLocalError] = useState('')
   const shown = error || localError
 
-  function pick(file: File | undefined) {
+  async function pick(file: File | undefined) {
     if (!file) return
     setLocalError('')
     if (!ACCEPT.includes(file.type)) {
       setLocalError(t('image.badType'))
       return
     }
-    if (file.size > MAX_BYTES) {
+    if (file.size > MAX_SOURCE_BYTES) {
       setLocalError(t('image.tooBig'))
       return
     }
-    const reader = new FileReader()
-    reader.onload = () => onChange(String(reader.result))
-    reader.onerror = () => setLocalError(t('image.readFailed'))
-    reader.readAsDataURL(file)
+    try {
+      const dataUri = await readImageFile(file)
+      if (dataUri.length > MAX_UPLOAD_BYTES) {
+        setLocalError(t('image.tooBig'))
+        return
+      }
+      onChange(dataUri)
+    } catch {
+      setLocalError(t('image.readFailed'))
+    }
   }
 
   return (

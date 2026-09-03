@@ -334,7 +334,7 @@ export const en = {
   'image.remove': 'Remove photo',
   'image.hint': 'JPEG, PNG, WebP or GIF · up to 5 MB',
   'image.badType': 'Use a JPEG, PNG, WebP or GIF image.',
-  'image.tooBig': 'That image is over 5 MB. Pick a smaller one.',
+  'image.tooBig': 'That image is too large. Pick a smaller one.',
   'image.readFailed': 'Could not read that file. Try another.',
 
   'lang.en': 'English',
@@ -1055,7 +1055,7 @@ export const ar: Record<MessageKey, string> = {
   'image.remove': 'إزالة الصورة',
   'image.hint': 'JPEG أو PNG أو WebP أو GIF · حتى ٥ ميغابايت',
   'image.badType': 'استخدم صورة بصيغة JPEG أو PNG أو WebP أو GIF.',
-  'image.tooBig': 'حجم الصورة يتجاوز ٥ ميغابايت. اختر صورة أصغر.',
+  'image.tooBig': 'حجم الصورة كبير جدًا. اختر صورة أصغر.',
   'image.readFailed': 'تعذّرت قراءة الملف. جرّب ملفًا آخر.',
 
   'lang.en': 'الإنجليزية',
