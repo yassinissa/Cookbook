@@ -66,7 +66,8 @@ class DishRecipeIngredientSerializer(serializers.ModelSerializer):
 
     class Meta:
         model  = DishRecipeIngredient
-        fields = ['id', 'order', 'item_sku', 'item_name_snapshot', 'prep_note', 'quantity', 'unit', 'unit_detail']
+        fields = ['id', 'order', 'item_sku', 'item_name_snapshot', 'prep_note', 'quantity', 'unit', 'unit_detail',
+                  'alt_item_sku', 'alt_item_name_snapshot']
 
 
 class DishRecipeStepSerializer(serializers.ModelSerializer):
@@ -236,6 +237,8 @@ class DishRecipeWriteSerializer(serializers.ModelSerializer):
                 prep_note=ing.get('prep_note', ''),
                 quantity=ing['quantity'],
                 unit_id=ing['unit'],
+                alt_item_sku=ing.get('alt_item_sku', ''),
+                alt_item_name_snapshot=ing.get('alt_item_name_snapshot', ''),
             )
 
     def _save_steps(self, recipe, step_data):

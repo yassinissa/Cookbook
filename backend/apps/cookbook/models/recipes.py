@@ -200,6 +200,14 @@ class DishRecipe(RecipeCardFields):
 
 class DishRecipeIngredient(IngredientLine):
     recipe = models.ForeignKey(DishRecipe, on_delete=models.CASCADE, related_name='ingredients')
+    # A fallback SKU the POS-sale deduction pipeline falls back to when
+    # item_sku is out of stock at the branch — see inventory-platform's
+    # apply_pos_import. Same shape as ProductionRecipeIngredient's own
+    # alt_item_sku, added separately since IngredientLine is abstract (each
+    # concrete table gets its own copy of the column — no shared coupling).
+    alt_item_sku           = models.CharField(max_length=100, blank=True,
+                              help_text='Fallback SKU used if item_sku is out of stock when a POS sale is deducted.')
+    alt_item_name_snapshot = models.CharField(max_length=255, blank=True)
 
 
 class DishRecipeStep(RecipeStepLine):

@@ -12,9 +12,9 @@ export interface EditableIngredient {
   prep_note: string
   quantity: string
   unit: string
-  // Production-recipe only (see IngredientEditor's `showAlternate` prop) — a
-  // fallback SKU a prep kitchen's batch confirmation can fall back to when
-  // item_sku is out of stock. Dish recipes never set or send this.
+  // A fallback SKU the stock-deduction pipeline falls back to when item_sku
+  // is out of stock — a POS sale for dish recipes, a batch confirmation for
+  // production recipes. See IngredientEditor's `showAlternate` prop.
   alt_item_sku?: string
   alt_item_name_snapshot?: string
 }
@@ -60,8 +60,9 @@ export function IngredientEditor({
   onChange: (index: number, key: keyof EditableIngredient, value: string) => void
   onAdd: () => void
   onRemove: (index: number) => void
-  /** Production recipes only — shows a fallback-ingredient picker per row,
-   * used by a prep kitchen's batch confirmation when the primary is 86'd. */
+  /** Shows a fallback-ingredient picker per row — used automatically when
+   * the primary is 86'd (a POS sale for dish recipes, a batch confirmation
+   * for production recipes). */
   showAlternate?: boolean
 }) {
   const { t } = useI18n()
