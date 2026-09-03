@@ -34,11 +34,11 @@ export function TopBar() {
 
   return (
     <header className="no-print sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-hairline bg-surface/95 px-4 shadow-e1 backdrop-blur sm:px-6">
-      <div className="lg:hidden">
+      <div className="shrink-0 lg:hidden">
         <Wordmark />
       </div>
 
-      <div className={cn('relative ms-auto w-full max-w-xs lg:ms-0 lg:max-w-sm', !canSearch && 'lg:hidden')}>
+      <div className={cn('relative ms-auto min-w-0 w-full max-w-xs lg:ms-0 lg:max-w-sm', !canSearch && 'lg:hidden')}>
         <span className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-ink-subtle">
           <Icon name="search" size={15} />
         </span>

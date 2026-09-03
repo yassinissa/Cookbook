@@ -183,6 +183,22 @@
   }
 }
 
+/* iOS Safari auto-zooms into any focused form field whose computed
+   font-size is under 16px. That alone would just be a momentary zoom on
+   that one field — the actual bug is that our post-login redirect
+   (navigate('/', { replace: true }) in LoginPage) is a client-side route
+   change, not a full page load, so the zoom iOS applied while the user was
+   typing their password never resets: it carries straight into the
+   dashboard, forcing the user to manually pinch back out. Root-caused to
+   the shared Input/Textarea/Select (text-sm = 14px) plus a few
+   custom-styled fields below 16px. !important is deliberate here: it has
+   to win over both Tailwind utility classes and inline styles regardless
+   of source order, and only applies below the desktop breakpoint, so
+   desktop's denser sizing is untouched. */
+@media (max-width: 1023px) {
+  input, select, textarea { font-size: 16px !important; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
