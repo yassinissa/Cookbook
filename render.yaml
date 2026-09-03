@@ -30,6 +30,13 @@ services:
     plan: starter
     region: oregon
     healthCheckPath: /api/health/
+    # MEDIA_ROOT (backend/media, i.e. BASE_DIR/media) lives on this disk — a
+    # web service's local disk is otherwise wiped on every deploy, which
+    # would silently lose every uploaded dish/plating photo.
+    disk:
+      name: cookbook-media
+      mountPath: /opt/render/project/src/backend/media
+      sizeGB: 1
     buildCommand: >-
       pip install -r requirements/production.txt &&
       python manage.py collectstatic --noinput &&

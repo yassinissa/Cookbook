@@ -21,7 +21,9 @@ urlpatterns = [
     path('api/cookbook/', include('apps.cookbook.urls')),
 ]
 
-# Uploaded dish photos. In production these are better served by the web server
-# / object storage, but for dev (and the small Render disk) Django serves them.
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Uploaded dish photos, served straight off the Render disk mounted at
+# MEDIA_ROOT. A dedicated object store / CDN would scale better, but at this
+# volume (a handful of dish + plating photos) gunicorn serving them directly
+# is fine — this single-worker service already accepts that tradeoff
+# elsewhere (see publishing.py's worker count comment).
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
