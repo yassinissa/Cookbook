@@ -2,10 +2,34 @@ import { fileURLToPath, URL } from 'node:url'
 
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
+import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      // Enable the service worker in dev mode too, so installability can be
+      // tested against the dev server (LAN IP on a phone) without a build.
+      devOptions: { enabled: true },
+      manifest: {
+        name: 'Cookbook — Green Hills',
+        short_name: 'Cookbook',
+        description: 'Recipe authoring, costing, and QA for Green Hills kitchens.',
+        theme_color: '#a8681c',
+        background_color: '#f7f5f2',
+        display: 'standalone',
+        orientation: 'portrait',
+        start_url: '/',
+        scope: '/',
+        icons: [
+          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+        ],
+      },
+    }),
+  ],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
