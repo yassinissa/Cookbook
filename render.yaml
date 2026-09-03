@@ -19,7 +19,7 @@ databases:
     databaseName: cookbook
     user: cookbook
     plan: basic-256mb          # bump as data grows; `free` also works to start
-    # region: frankfurt        # must match the web service's region
+    region: oregon             # matches inventory-platform — same-region API calls
 
 services:
   # ── Django REST API ───────────────────────────────────────────────────────
@@ -28,7 +28,7 @@ services:
     runtime: python
     rootDir: backend
     plan: starter
-    # region: frankfurt
+    region: oregon
     healthCheckPath: /api/health/
     buildCommand: >-
       pip install -r requirements/production.txt &&
@@ -78,7 +78,7 @@ services:
     runtime: python
     rootDir: backend
     plan: starter
-    # region: frankfurt
+    region: oregon
     # 04:00 UTC Monday = 07:00 Asia/Kuwait (UTC+3, no DST) — a Monday-morning email.
     schedule: "0 4 * * 1"
     buildCommand: pip install -r requirements/production.txt
