@@ -22,7 +22,7 @@ User = get_user_model()
 
 class FakeClient:
     """Stand-in for InventoryClient. Records the last recipe payload."""
-    def __init__(self, *, items=None, units=None, fail=False):
+    def __init__(self, *, items=None, units=None, fail=False, patch_404=False):
         self._items = items if items is not None else [
             {'id': 'itm-1', 'sku': 'B41'}, {'id': 'itm-2', 'sku': 'B2050'},
             {'id': 'itm-out', 'sku': 'PR-TOUM'},
@@ -31,6 +31,7 @@ class FakeClient:
             {'id': 'u-g', 'code': 'g'}, {'id': 'u-ml', 'code': 'ml'}, {'id': 'u-kg', 'code': 'Kg'},
         ]
         self.fail = fail
+        self.patch_404 = patch_404
         self.calls = []
 
     def get_items(self):
@@ -41,8 +42,12 @@ class FakeClient:
 
     def _record(self, verb, payload):
         self.calls.append((verb, payload))
+        if self.patch_404 and verb.startswith('update_'):
+            raise InventoryAPIError('PATCH /recipes/dish/x/ failed: 404 {"detail":"not found"}',
+                                    status_code=404)
         if self.fail:
-            raise InventoryAPIError('POST /recipes/dish/ failed: 400 {"name_en": ["exists"]}')
+            raise InventoryAPIError('POST /recipes/dish/ failed: 400 {"name_en": ["exists"]}',
+                                    status_code=400)
         # the platform's write serializers do not echo `id`
         return {k: payload.get(k) for k in ('name_en', 'name_ar', 'pos_item_name', 'notes')}
 
@@ -110,6 +115,37 @@ class DishPublishTests(APITestCase):
             r = self.client.post(f'/api/cookbook/dish-recipes/{self.dish.id}/publish/')
         self.assertEqual(r.status_code, 200)
         self.assertEqual(fake.calls[0][0], 'update_dish:inv-42')
+
+    def test_patch_404_falls_back_to_a_fresh_create(self):
+        # the linked recipe was deleted on inventory-platform
+        self.dish.inventory_recipe_id = 'inv-gone'
+        self.dish.save(update_fields=['inventory_recipe_id'])
+        fake = FakeClient(patch_404=True)
+        with patch_client(fake):
+            r = self.client.post(f'/api/cookbook/dish-recipes/{self.dish.id}/publish/')
+        self.assertEqual(r.status_code, 200, r.data)
+        self.assertEqual([v for v, _ in fake.calls][:2], ['update_dish:inv-gone', 'create_dish'])
+        self.dish.refresh_from_db()
+        self.assertEqual(self.dish.inventory_recipe_id, 'inv-999')   # re-linked
+        self.assertEqual(self.dish.publish_error, '')
+
+    def test_unit_codes_are_resolved_across_spelling_differences(self):
+        # Cookbook spells units Kg / Tbs / Pcs; inventory-platform kg / tbsp / pcs.
+        kg = UnitScale.objects.create(code='Kg', description='Kg', dimension='mass', factor_to_canonical=1000)
+        tbs = UnitScale.objects.create(code='Tbs', description='Tbs', dimension='volume', factor_to_canonical=15)
+        DishRecipeIngredient.objects.filter(recipe=self.dish, order=1).update(unit=kg)
+        DishRecipeIngredient.objects.filter(recipe=self.dish, order=2).update(unit=tbs)
+        fake = FakeClient(units=[
+            {'id': 'u-kg', 'code': 'kg'}, {'id': 'u-tbsp', 'code': 'tbsp'}, {'id': 'u-pcs', 'code': 'pcs'},
+        ])
+        with patch_client(fake):
+            r = self.client.post(f'/api/cookbook/dish-recipes/{self.dish.id}/publish/')
+        self.assertEqual(r.status_code, 200, r.data)
+        self.assertEqual(r.data['_publish']['warnings'], [])          # nothing fell back
+        self.assertEqual(fake.calls[0][1]['ingredients'], [
+            {'item': 'itm-1', 'quantity': '500.000', 'unit': 'u-kg'},
+            {'item': 'itm-2', 'quantity': '180.000', 'unit': 'u-tbsp'},
+        ])
 
     def test_unknown_sku_is_a_warning_not_a_failure(self):
         DishRecipeIngredient.objects.create(recipe=self.dish, order=3, item_sku='GHOST',
