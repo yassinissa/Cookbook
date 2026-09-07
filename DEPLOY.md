@@ -5,7 +5,8 @@ Tick items off and delete them as they're done — this file should only ever
 describe work that is still outstanding. Architecture and the build commands
 live in [`README.md`](README.md#deployment-render) and [`render.yaml`](render.yaml).
 
-Last reviewed: **2026-09-07**.
+Last reviewed: **2026-09-07** (modifier pipeline merged; migrations + backfill
+still to run in prod).
 
 ---
 
@@ -25,16 +26,19 @@ The blueprint is adopted (services `cookbook-api` / `cookbook-frontend` /
 ## 2. Every deploy runs automatically
 
 - **API**: `pip install -r requirements/production.txt && collectstatic && migrate`
-  — shipping a model is just a redeploy. Pending migrations at time of writing:
-  `cookbook` `0025`/`0026` (modifier consumption model).
+  — shipping a model is just a redeploy. Migrations on `main` and **not yet run
+  in prod**: `cookbook` `0025`/`0026` (modifier consumption model) — the next
+  `cookbook-api` deploy applies them.
 - **Frontend**: `npm ci && npm run build`.
-- **inventory-platform**, on its next deploy: `pos_integration` `0007`/`0008`
-  (the `POSModifierIngredient` model + data copy from `POSAddonIngredient`).
+- **inventory-platform**: `pos_integration` `0007`/`0008` (the
+  `POSModifierIngredient` model + data copy from `POSAddonIngredient`) are on its
+  `main` — the next deploy of that service applies them.
 
 ## 3. Manual, after the deploy that ships the modifier pipeline
 
-The POS-modifier → stock-deduction work (Cookbook PRs #6–#8, inventory-platform
-PR #1) needs two one-off runs once both services are deployed:
+The POS-modifier → stock-deduction work is **merged to both `main`s (2026-09-07,
+Cookbook PRs #6–#8 / inventory-platform PR #1)**. Once both services have
+deployed it, do these one-off runs:
 
 1. **Cookbook** — structural backfill of WnR's modifier catalogue:
    ```
@@ -47,9 +51,12 @@ PR #1) needs two one-off runs once both services are deployed:
    scripted loop) so the new `POSItemMapping` / `POSModifierIngredient` rows
    reach inventory-platform.
 3. A chef then fills the ~24 consumption quantities on the **POS → Readiness**
-   screen (protein grams per dish, the Diet Coke / Sprite recipes, a handful of
-   instruction / add-on options). Re-upload a Lavu report to confirm every line
-   lands on a success `deduction_note`.
+   screen. The hand-off worklist (every row, its recommended action, the dish's
+   current recipe) is at
+   <https://claude.ai/code/artifact/3a976081-64ad-42fa-a1cf-81355af17236>.
+   Most rows are just "tick No stock impact"; the open numbers are the protein
+   grams for the protein-less-base dishes and the ANGUS-Beef swaps. Re-upload a
+   Lavu report to confirm every line lands on a success `deduction_note`.
 
 ## 4. Data backfills run from the Render Shell (not deploy config)
 
