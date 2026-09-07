@@ -11,34 +11,45 @@ import { useI18n } from '@/i18n'
 import type { ModifierGroup } from '@/types/api'
 import { ModifierGroupEditor } from './ModifierGroupEditor'
 import { DishModifierDrawer } from './DishModifierDrawer'
+import { ReadinessTab } from './ReadinessTab'
+
+const TABS = ['groups', 'dishes', 'readiness'] as const
+type Tab = (typeof TABS)[number]
 
 export function ModifiersPage() {
   const { t } = useI18n()
-  const [tab, setTab] = useState<'groups' | 'dishes'>('groups')
+  const [tab, setTab] = useState<Tab>('groups')
+  const { data: groups } = useModifierGroups()
+  const needsData = (groups ?? []).reduce((n, g) => n + (g.needs_data_count ?? 0), 0)
 
   return (
     <Page stagger>
       <PageHeader title={t('mods.title')} subtitle={t('mods.subtitle')} />
 
       <div role="tablist" className="mb-6 flex gap-1 border-b border-hairline">
-        {(['groups', 'dishes'] as const).map((key) => (
+        {TABS.map((key) => (
           <button
             key={key}
             role="tab"
             aria-selected={tab === key}
             onClick={() => setTab(key)}
             className={cn(
-              '-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors',
+              '-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition-colors',
               'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]',
               tab === key ? 'border-accent text-ink' : 'border-transparent text-ink-subtle hover:text-ink',
             )}
           >
-            {t(key === 'groups' ? 'mods.tab.groups' : 'mods.tab.dishes')}
+            {t(`mods.tab.${key}`)}
+            {key === 'readiness' && needsData > 0 && (
+              <Pill tone="warning">{needsData}</Pill>
+            )}
           </button>
         ))}
       </div>
 
-      {tab === 'groups' ? <GroupsTab /> : <DishesTab />}
+      {tab === 'groups' && <GroupsTab />}
+      {tab === 'dishes' && <DishesTab />}
+      {tab === 'readiness' && <ReadinessTab />}
     </Page>
   )
 }
@@ -158,9 +169,14 @@ function DishesTab() {
                     {d.group_count === 0 ? (
                       <span className="text-ink-subtle">—</span>
                     ) : (
-                      <Pill tone="neutral">
-                        {t('mods.dish.count', { groups: d.group_count, forced: d.forced_count })}
-                      </Pill>
+                      <span className="inline-flex items-center gap-1.5">
+                        {d.needs_data_count > 0 && (
+                          <Pill tone="warning" icon="warning">{d.needs_data_count}</Pill>
+                        )}
+                        <Pill tone="neutral">
+                          {t('mods.dish.count', { groups: d.group_count, forced: d.forced_count })}
+                        </Pill>
+                      </span>
                     )}
                   </td>
                 </tr>

@@ -844,6 +844,19 @@ export type ModifierSelection = 'single' | 'multi'
 export type ModifierOptionKind = 'choice' | 'type' | 'addon' | 'instruction'
 export type ModifierRole = 'forced' | 'optional'
 
+export type ModifierDeltaDirection = 'add' | 'remove'
+export type DeductionStatus = 'ready' | 'needs_data' | 'no_impact'
+
+export interface ModifierOptionIngredient {
+  id?: ID
+  item_sku: string
+  item_name_snapshot: string
+  quantity: string
+  unit: ID | null
+  unit_code?: string | null
+  direction: ModifierDeltaDirection
+  sort_order: number
+}
 export interface ModifierOption {
   id?: ID
   name_en: string
@@ -853,6 +866,11 @@ export interface ModifierOption {
   pos_mods_string: string
   variant_recipe: ID | null
   variant_recipe_name?: string | null
+  no_consumption_impact: boolean
+  deltas: ModifierOptionIngredient[]
+  deduction_status?: DeductionStatus
+  missing?: string[]
+  /** deprecated inline add-on fields — still accepted, migrated to a delta */
   item_sku: string
   quantity: string | null
   unit: ID | null
@@ -870,9 +888,39 @@ export interface ModifierGroup {
   notes: string
   option_count: number
   dish_count: number
+  needs_data_count: number
   options: ModifierOption[]
   created_at: string
   updated_at: string
+}
+export interface ModifierReadinessRow {
+  option_id: ID
+  group_id: ID
+  group: string
+  name_en: string
+  name_ar: string
+  kind: ModifierOptionKind
+  price_delta: string
+  status: DeductionStatus
+  missing: string[]
+  has_match_key: boolean
+  pos_mods_string: string
+  delta_count: number
+  variant_recipe: ID | null
+  variant_recipe_name: string | null
+  variant_recipe_published: boolean
+  used_by: Array<{ dish_id: ID; dish: string; branch: string | null; pos_item_name: string; role: ModifierRole }>
+  unused: boolean
+}
+export interface ModifierReadiness {
+  summary: {
+    ready: number
+    needs_data: number
+    no_impact: number
+    total: number
+    needs_match_key: number
+  }
+  options: ModifierReadinessRow[]
 }
 export interface DishModifierRow {
   id: ID
@@ -886,6 +934,7 @@ export interface DishModifierRow {
   pos_item_name: string
   group_count: number
   forced_count: number
+  needs_data_count: number
 }
 export interface DishModifierGroupLink {
   id: ID
@@ -894,6 +943,7 @@ export interface DishModifierGroupLink {
   group_name_ar: string
   selection: ModifierSelection
   option_count: number
+  needs_data_count: number
   default_role: ModifierRole
   sort_order: number
 }

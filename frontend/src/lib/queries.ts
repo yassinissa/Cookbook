@@ -217,6 +217,9 @@ export function useModifierGroups() {
 export function useDishModifiers() {
   return useQuery({ queryKey: qk.dishModifiers, queryFn: api.fetchDishModifiers })
 }
+export function useModifierReadiness() {
+  return useQuery({ queryKey: qk.modifierReadiness, queryFn: api.fetchModifierReadiness })
+}
 export function useDishModifier(dishId: string | undefined) {
   return useQuery({
     queryKey: qk.dishModifier(dishId ?? ''),

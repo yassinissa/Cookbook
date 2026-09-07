@@ -43,6 +43,7 @@ export const qk = {
   menuEditions: (menuId: string) => ['menus', menuId, 'editions'] as const,
   publicMenu: (slug: string) => ['public-menu', slug] as const,
   modifierGroups: ['modifier-groups'] as const,
+  modifierReadiness: ['modifier-readiness'] as const,
   dishModifiers: ['dish-modifiers'] as const,
   dishModifier: (dishId: string) => ['dish-modifiers', dishId] as const,
 }
