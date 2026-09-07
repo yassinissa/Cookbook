@@ -56,9 +56,8 @@ deployed it, do these one-off runs:
    scripted loop) so the new `POSItemMapping` / `POSModifierIngredient` rows
    reach inventory-platform.
 3. A chef then fills the ~24 consumption quantities on the **POS → Readiness**
-   screen. The hand-off worklist (every row, its recommended action, the dish's
-   current recipe) is at
-   <https://claude.ai/code/artifact/3a976081-64ad-42fa-a1cf-81355af17236>.
+   screen. The hand-off worklist — every row, its recommended action, and the
+   dish's current recipe — is [`WNR_MODIFIER_WORKLIST.md`](WNR_MODIFIER_WORKLIST.md).
    Most rows are just "tick No stock impact"; the open numbers are the protein
    grams for the protein-less-base dishes and the ANGUS-Beef swaps. Re-upload a
    Lavu report to confirm every line lands on a success `deduction_note`.
