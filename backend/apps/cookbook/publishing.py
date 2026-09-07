@@ -168,14 +168,21 @@ def publish_dish_recipe(recipe, *, client=None):
 
 def _publish_pos_modifiers(recipe, client, sku_to_id, resolve_unit):
     """After the dish recipe is on inventory-platform, push its POS deduction
-    data: a POSItemMapping for the base dish + each `type` modifier option
-    (→ a variant recipe), and a POSAddonIngredient for each `addon` option.
-    Every failure is a warning, never a hard error — the recipe is already
-    published."""
-    from .models import ModifierOptionKind
+    data:
+      - a POSItemMapping for the base dish;
+      - a POSItemMapping for each `type` option that has a published variant
+        recipe (full-replacement variant);
+      - a POSModifierIngredient per `+`/`-` delta for every other option that
+        carries deltas (add-ons, removals, and `type`/`choice` picks modelled
+        as deltas from a protein-less base).
+    `no_consumption_impact` options publish nothing. Every gap is a warning,
+    never a hard error — the recipe is already published; the readiness
+    endpoint is where gaps get fixed."""
+    from .models import ModifierOptionKind, DeductionStatus, ModifierDeltaDirection
 
     links = list(recipe.modifier_groups.select_related('group')
-                 .prefetch_related('group__options__variant_recipe', 'group__options__unit'))
+                 .prefetch_related('group__options__variant_recipe',
+                                   'group__options__deltas__unit'))
     if not links:
         return []
 
@@ -190,32 +197,54 @@ def _publish_pos_modifiers(recipe, client, sku_to_id, resolve_unit):
 
     _push_mapping('', recipe.inventory_recipe_id, 'the base dish')
 
+    seen_options = set()
     for link in links:
         for opt in link.group.options.all():
+            if opt.id in seen_options:      # a group can hang off several dishes
+                continue
+            seen_options.add(opt.id)
             where = f'"{opt.name_en}" in {link.group.name_en}'
-            if opt.kind == ModifierOptionKind.TYPE:
-                if not opt.pos_mods_string:
-                    warnings.append(f'{where}: no POS “Mods” string — mapping skipped')
-                    continue
-                variant = opt.variant_recipe
-                if not variant or not variant.inventory_recipe_id:
-                    warnings.append(f'{where}: variant recipe not published yet — mapping skipped')
-                    continue
-                _push_mapping(opt.pos_mods_string, variant.inventory_recipe_id, where)
-            elif opt.kind == ModifierOptionKind.ADDON:
-                if not opt.pos_mods_string:
-                    warnings.append(f'{where}: no POS “Mods” string — add-on skipped')
-                    continue
-                item_id = sku_to_id.get(opt.item_sku)
+
+            if opt.no_consumption_impact:
+                continue
+            if opt.deduction_status == DeductionStatus.NEEDS_DATA:
+                warnings.append(f'{where}: {(opt.missing or ["needs data"])[0]} — not published')
+                continue
+            if not opt.pos_mods_string:
+                warnings.append(f'{where}: no POS “Mods” match key — not published')
+                continue
+
+            # full-replacement variant
+            if opt.kind == ModifierOptionKind.TYPE and opt.variant_recipe and opt.variant_recipe.inventory_recipe_id:
+                _push_mapping(opt.pos_mods_string, opt.variant_recipe.inventory_recipe_id, where)
+                # clear any stale delta rows from a previous delta-based publish
+                _prune_deltas(client, pos_name, opt.pos_mods_string, warnings, where)
+                continue
+
+            # delta-based (add-on / removal / delta-modelled pick)
+            _prune_deltas(client, pos_name, opt.pos_mods_string, warnings, where)
+            for d in opt.deltas.all():
+                item_id = sku_to_id.get(d.item_sku)
                 if item_id is None:
-                    warnings.append(f'{where}: SKU {opt.item_sku or "?"} not on inventory-platform — add-on skipped')
+                    warnings.append(
+                        f'{where}: SKU {d.item_sku or "?"} ({d.item_name_snapshot or "?"}) '
+                        f'not on inventory-platform — that delta not published')
                     continue
-                unit_id = resolve_unit(opt.unit.code) if opt.unit_id else None
+                unit_id = resolve_unit(d.unit.code) if d.unit_id else None
                 try:
-                    client.upsert_pos_addon(opt.pos_mods_string, item_id, opt.quantity or 0, unit_id)
+                    client.upsert_pos_modifier_ingredient(
+                        pos_name, opt.pos_mods_string, item_id,
+                        str(d.quantity), unit_id, d.direction)
                 except InventoryAPIError as e:
-                    warnings.append(f'POS add-on for {where} failed: {e}')
+                    warnings.append(f'POS modifier ingredient for {where} failed: {e}')
     return warnings
+
+
+def _prune_deltas(client, pos_name, pos_modifier, warnings, where):
+    try:
+        client.delete_pos_modifier_ingredients(pos_name, pos_modifier)
+    except InventoryAPIError as e:
+        warnings.append(f'could not prune old POS deltas for {where}: {e}')
 
 
 def publish_production_recipe(recipe, *, client=None):

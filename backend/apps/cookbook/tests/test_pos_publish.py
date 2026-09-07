@@ -1,10 +1,13 @@
 """
-Slice 3c — publishing a dish's POS modifier data to inventory-platform.
+Publishing a dish's POS modifier data to inventory-platform.
 
-After the recipe push, `publish_dish_recipe` pushes a POSItemMapping for the
-base dish + each `type` option's variant recipe, and a POSAddonIngredient for
-each `addon` option. Missing pos_mods_string / unpublished variant / unknown
-SKU become warnings, never hard failures. The client is faked.
+After the recipe push, `publish_dish_recipe` pushes:
+  - a POSItemMapping for the base dish,
+  - a POSItemMapping for each `type` option with a published variant recipe,
+  - a POSModifierIngredient per +/- delta for every other option that carries
+    deltas (add-ons, removals, delta-modelled picks).
+`no_consumption_impact` options push nothing. `needs_data` options / missing
+match key / unknown SKU become warnings, never hard failures. Client is faked.
 """
 from decimal import Decimal
 from unittest import mock
@@ -14,7 +17,7 @@ from rest_framework.test import APIClient, APITestCase
 
 from apps.cookbook.models import (
     Branch, DishRecipe, DishRecipeIngredient, ModifierGroup, ModifierOption,
-    DishModifierGroup, UnitScale,
+    ModifierOptionIngredient, DishModifierGroup, UnitScale,
 )
 
 User = get_user_model()
@@ -22,10 +25,14 @@ User = get_user_model()
 
 class FakeClient:
     def __init__(self):
-        self._items = [{'id': 'itm-garlic', 'sku': 'B41'}, {'id': 'itm-cheese', 'sku': 'B45'}]
+        self._items = [
+            {'id': 'itm-garlic', 'sku': 'B41'}, {'id': 'itm-cheese', 'sku': 'B45'},
+            {'id': 'itm-crab', 'sku': 'CRB'},
+        ]
         self._units = [{'id': 'u-g', 'code': 'g'}]
-        self.mappings = []   # (pos_item_name, pos_modifier, dish_recipe)
-        self.addons = []     # (modifier_name, item, quantity, unit)
+        self.mappings = []      # (pos_item_name, pos_modifier, dish_recipe_id)
+        self.deltas = []        # (pos_item_name, pos_modifier, item, qty, unit, direction)
+        self.pruned = []        # (pos_item_name, pos_modifier)
 
     def get_items(self):
         return self._items
@@ -46,9 +53,13 @@ class FakeClient:
         self.mappings.append((pos_item_name, pos_modifier or '', dish_recipe_id))
         return {'id': 'map-1'}
 
-    def upsert_pos_addon(self, modifier_name, item_id, quantity, unit_id=None):
-        self.addons.append((modifier_name, item_id, str(quantity), unit_id))
-        return {'id': 'add-1'}
+    def upsert_pos_modifier_ingredient(self, pos_item_name, pos_modifier, item_id,
+                                       quantity, unit_id=None, direction='add'):
+        self.deltas.append((pos_item_name, pos_modifier or '', item_id, str(quantity), unit_id, direction))
+        return {'id': 'delta-1'}
+
+    def delete_pos_modifier_ingredients(self, pos_item_name, pos_modifier):
+        self.pruned.append((pos_item_name, pos_modifier or ''))
 
 
 def _patch(fake):
@@ -64,7 +75,6 @@ class PosPublishTests(APITestCase):
             pos_item_name='Meat Arayes', selling_price=Decimal('3.75'), cost=Decimal('1.0'))
         DishRecipeIngredient.objects.create(recipe=self.dish, order=1, item_sku='B41',
                                             item_name_snapshot='Garlic', quantity=Decimal('20'), unit=self.g)
-        # a published variant recipe for a `type` option
         self.chicken = DishRecipe.objects.create(
             name_en='Chicken Arayes', recipe_code='ARYC', branch_ref=self.branch,
             inventory_recipe_id='inv-chicken', selling_price=Decimal('3.60'), cost=Decimal('0.9'))
@@ -75,7 +85,10 @@ class PosPublishTests(APITestCase):
             pos_mods_string='(C) CHICKEN', variant_recipe=self.chicken)
         self.opt_sauce = ModifierOption.objects.create(
             group=self.roll, name_en='Garlic Sauce', kind='addon', price_delta=Decimal('0.25'),
-            pos_mods_string='GARLIC SAUCE', item_sku='B45', quantity=Decimal('15'), unit=self.g)
+            pos_mods_string='GARLIC SAUCE')
+        ModifierOptionIngredient.objects.create(option=self.opt_sauce, item_sku='B45',
+                                                item_name_snapshot='Cheese', quantity=Decimal('15'),
+                                                unit=self.g, direction='add')
         DishModifierGroup.objects.create(dish=self.dish, group=self.roll, default_role='forced')
 
         self.admin = User.objects.create_superuser('boss', password='x', email='b@x.com')
@@ -85,37 +98,66 @@ class PosPublishTests(APITestCase):
     def _publish(self):
         return self.client.post(f'/api/cookbook/dish-recipes/{self.dish.id}/publish/')
 
-    def test_base_mapping_type_mapping_and_addon_are_pushed(self):
+    def _warnings(self, r):
+        return r.data['_publish']['warnings']
+
+    def test_base_mapping_variant_mapping_and_delta_are_pushed(self):
         fake = FakeClient()
         with _patch(fake):
             r = self._publish()
         self.assertEqual(r.status_code, 200, r.data)
         self.assertEqual(set(fake.mappings), {
-            ('Meat Arayes', '', 'inv-dish-1'),          # base
-            ('Meat Arayes', '(C) CHICKEN', 'inv-chicken'),  # the `type` variant
+            ('Meat Arayes', '', 'inv-dish-1'),
+            ('Meat Arayes', '(C) CHICKEN', 'inv-chicken'),
         })
-        self.assertEqual(fake.addons, [('GARLIC SAUCE', 'itm-cheese', '15.000', 'u-g')])
-        self.assertEqual(r.data['_publish']['warnings'], [])
+        self.assertEqual(fake.deltas, [
+            ('Meat Arayes', 'GARLIC SAUCE', 'itm-cheese', '15.000', 'u-g', 'add'),
+        ])
+        self.assertEqual(self._warnings(r), [])
+
+    def test_removal_delta_is_published_as_remove(self):
+        removal = ModifierOption.objects.create(
+            group=self.roll, name_en='No Crab', kind='instruction', pos_mods_string='NO CRAB')
+        ModifierOptionIngredient.objects.create(option=removal, item_sku='CRB',
+                                                item_name_snapshot='Crab', quantity=Decimal('40'),
+                                                unit=self.g, direction='remove')
+        fake = FakeClient()
+        with _patch(fake):
+            r = self._publish()
+        self.assertIn(('Meat Arayes', 'NO CRAB', 'itm-crab', '40.000', 'u-g', 'remove'), fake.deltas)
+        self.assertEqual(self._warnings(r), [])
+
+    def test_no_impact_option_publishes_nothing_and_does_not_warn(self):
+        ModifierOption.objects.create(
+            group=self.roll, name_en='Well Done', kind='instruction',
+            pos_mods_string='WELL DONE', no_consumption_impact=True)
+        fake = FakeClient()
+        with _patch(fake):
+            r = self._publish()
+        self.assertFalse(any('Well Done' in w for w in self._warnings(r)))
+        self.assertFalse(any(d[1] == 'WELL DONE' for d in fake.deltas))
+
+    def test_needs_data_option_is_a_warning(self):
+        ModifierOption.objects.create(
+            group=self.roll, name_en='Beef', kind='type', pos_mods_string='(B) BEEF')  # no variant, no deltas
+        fake = FakeClient()
+        with _patch(fake):
+            r = self._publish()
+        self.assertTrue(any('Beef' in w and 'not published' in w for w in self._warnings(r)))
+
+    def test_deltas_are_pruned_before_re_push(self):
+        fake = FakeClient()
+        with _patch(fake):
+            self._publish()
+        self.assertIn(('Meat Arayes', 'GARLIC SAUCE'), fake.pruned)
 
     def test_dish_with_no_modifiers_pushes_nothing(self):
         DishModifierGroup.objects.filter(dish=self.dish).delete()
         fake = FakeClient()
         with _patch(fake):
             r = self._publish()
-        self.assertEqual(r.status_code, 200)
         self.assertEqual(fake.mappings, [])
-        self.assertEqual(fake.addons, [])
-
-    def test_missing_pos_mods_string_is_a_warning(self):
-        self.opt_chicken.pos_mods_string = ''
-        self.opt_chicken.save()
-        fake = FakeClient()
-        with _patch(fake):
-            r = self._publish()
-        self.assertNotIn(('Meat Arayes', '', 'inv-dish-1'), [(*m[:2], m[2]) for m in fake.mappings if m[1]])
-        self.assertTrue(any('no POS' in w and 'Chicken' in w for w in r.data['_publish']['warnings']))
-        # the add-on still went through
-        self.assertEqual(len(fake.addons), 1)
+        self.assertEqual(fake.deltas, [])
 
     def test_unpublished_variant_is_a_warning(self):
         self.chicken.inventory_recipe_id = ''
@@ -123,14 +165,13 @@ class PosPublishTests(APITestCase):
         fake = FakeClient()
         with _patch(fake):
             r = self._publish()
-        self.assertTrue(any('variant recipe not published' in w for w in r.data['_publish']['warnings']))
-        self.assertEqual(len(fake.mappings), 1)   # only the base
+        self.assertTrue(any('not published' in w for w in self._warnings(r)))
+        self.assertEqual(len(fake.mappings), 1)   # base only
 
-    def test_unknown_addon_sku_is_a_warning(self):
-        self.opt_sauce.item_sku = 'NOPE'
-        self.opt_sauce.save()
+    def test_unknown_delta_sku_is_a_warning(self):
+        self.opt_sauce.deltas.update(item_sku='NOPE')
         fake = FakeClient()
         with _patch(fake):
             r = self._publish()
-        self.assertEqual(fake.addons, [])
-        self.assertTrue(any('NOPE' in w for w in r.data['_publish']['warnings']))
+        self.assertEqual(fake.deltas, [])
+        self.assertTrue(any('NOPE' in w for w in self._warnings(r)))
