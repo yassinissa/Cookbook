@@ -9,6 +9,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.management import call_command
+from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient, APITestCase
 
@@ -153,5 +154,13 @@ class SendCostDigestCommandTests(APITestCase):
 
     def test_dry_run_sends_nothing(self):
         call_command('send_cost_digest', '--dry-run')
+        self.assertEqual(mail.outbox, [])
+        self.assertFalse(DigestSubscription.objects.filter(user=self.cc, last_sent_at__isnull=False).exists())
+
+    @override_settings(
+        EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend', EMAIL_HOST='')
+    def test_unconfigured_smtp_skips_cleanly(self):
+        # No mail host on a real send path: skip and exit 0, don't crash the cron.
+        call_command('send_cost_digest')
         self.assertEqual(mail.outbox, [])
         self.assertFalse(DigestSubscription.objects.filter(user=self.cc, last_sent_at__isnull=False).exists())
