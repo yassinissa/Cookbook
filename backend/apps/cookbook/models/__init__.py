@@ -20,8 +20,8 @@ from .menu import (
     MenuEdition,
 )
 from .modifiers import (
-    ModifierGroup, ModifierOption, DishModifierGroup, MenuLineModifier,
-    ModifierSelection, ModifierOptionKind, ModifierRole,
+    ModifierGroup, ModifierOption, ModifierOptionIngredient, DishModifierGroup, MenuLineModifier,
+    ModifierSelection, ModifierOptionKind, ModifierRole, ModifierDeltaDirection, DeductionStatus,
 )
 from .history import (
     ActivityActionType, DishPriceHistory, ProductionCostHistory,
@@ -42,8 +42,8 @@ __all__ = [
     'Menu', 'MenuLine', 'MenuSnapshot', 'MenuSnapshotLine',
     'MenuPeriod', 'MenuPeriodLine', 'MenuPeriodKind', 'MenuPeriodOp', 'WEEKDAY_ALL',
     'MenuEdition',
-    'ModifierGroup', 'ModifierOption', 'DishModifierGroup', 'MenuLineModifier',
-    'ModifierSelection', 'ModifierOptionKind', 'ModifierRole',
+    'ModifierGroup', 'ModifierOption', 'ModifierOptionIngredient', 'DishModifierGroup', 'MenuLineModifier',
+    'ModifierSelection', 'ModifierOptionKind', 'ModifierRole', 'ModifierDeltaDirection', 'DeductionStatus',
     'ActivityActionType', 'DishPriceHistory', 'ProductionCostHistory',
     'DishRecipeActivityLog', 'ProductionRecipeActivityLog',
     'DigestCadence', 'DigestSubscription',

@@ -59,10 +59,27 @@ class ModifierGroupApiTests(APITestCase):
         self.assertEqual(ModifierOption.objects.get(group_id=gid, name_en='Chicken').price_delta,
                          Decimal('5.900'))
 
-    def test_addon_needs_a_sku(self):
+    def test_addon_needs_a_consumption_effect(self):
+        # an add-on with neither deltas nor "no stock impact" is rejected
         r = self._create(options=[{'name_en': 'Extra Cheese', 'price_delta': '1.0', 'kind': 'addon'}])
         self.assertEqual(r.status_code, 400)
-        self.assertIn('item_sku', r.data['options'][0])
+        self.assertIn('deltas', r.data['options'][0])
+
+        # ...but one with a delta is fine
+        ok = self._create(name_en='RoLL A', options=[{
+            'name_en': 'Extra Cheese', 'price_delta': '1.0', 'kind': 'addon',
+            'deltas': [{'item_sku': 'CHZ-1', 'quantity': '30', 'direction': 'add'}],
+        }])
+        self.assertEqual(ok.status_code, 201, ok.data)
+        self.assertEqual(ok.data['options'][0]['deduction_status'], 'ready')
+
+        # ...and so is one explicitly marked no-impact
+        ni = self._create(name_en='RoLL B', options=[{
+            'name_en': 'Extra Napkins', 'price_delta': '0', 'kind': 'addon',
+            'no_consumption_impact': True,
+        }])
+        self.assertEqual(ni.status_code, 201, ni.data)
+        self.assertEqual(ni.data['options'][0]['deduction_status'], 'no_impact')
 
     def test_min_max_validation(self):
         self.assertEqual(self._create(min_select=3, max_select=2).status_code, 400)

@@ -204,17 +204,35 @@ class InventoryClient:
             return self._request('PATCH', f'/pos/mappings/{existing["id"]}/', json=payload)
         return self._request('POST', '/pos/mappings/', json=payload)
 
-    def upsert_pos_addon(self, modifier_name, item_id, quantity, unit_id=None):
+    def upsert_pos_modifier_ingredient(self, pos_item_name, pos_modifier, item_id,
+                                       quantity, unit_id=None, direction='add'):
+        """One +/- ingredient delta for a (dish, modifier) pair. Keyed on
+        (pos_item_name, pos_modifier, item, direction) — find then POST/PATCH."""
         payload = {
-            'modifier_name': modifier_name,
+            'pos_item_name': pos_item_name,
+            'pos_modifier': pos_modifier or '',
             'item': item_id,
             'quantity': str(quantity),
             'unit': unit_id,
+            'direction': direction,
         }
         existing = next(
-            (r for r in self._get_all_pages('/pos/addons/', params={'search': modifier_name})
-             if r.get('modifier_name') == modifier_name),
+            (r for r in self._get_all_pages('/pos/modifier-ingredients/',
+                                            params={'search': pos_item_name})
+             if r.get('pos_item_name') == pos_item_name
+             and (r.get('pos_modifier') or '') == (pos_modifier or '')
+             and str(r.get('item')) == str(item_id)
+             and (r.get('direction') or 'add') == direction),
             None)
         if existing:
-            return self._request('PATCH', f'/pos/addons/{existing["id"]}/', json=payload)
-        return self._request('POST', '/pos/addons/', json=payload)
+            return self._request('PATCH', f'/pos/modifier-ingredients/{existing["id"]}/', json=payload)
+        return self._request('POST', '/pos/modifier-ingredients/', json=payload)
+
+    def delete_pos_modifier_ingredients(self, pos_item_name, pos_modifier):
+        """Drop every delta row for a (dish, modifier) pair — used before a
+        re-publish so removed deltas don't linger on inventory-platform."""
+        for r in self._get_all_pages('/pos/modifier-ingredients/',
+                                     params={'search': pos_item_name}):
+            if (r.get('pos_item_name') == pos_item_name
+                    and (r.get('pos_modifier') or '') == (pos_modifier or '')):
+                self._request('DELETE', f'/pos/modifier-ingredients/{r["id"]}/')
