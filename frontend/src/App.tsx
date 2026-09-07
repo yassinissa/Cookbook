@@ -5,6 +5,7 @@ import { AuthProvider } from '@/auth/AuthProvider'
 import { ToastProvider } from '@/components/Toast'
 import { I18nProvider } from '@/i18n'
 import { queryClient } from '@/lib/queryClient'
+import { UpdatePrompt } from '@/pwa/UpdatePrompt'
 import { router } from '@/router'
 import { ThemeProvider } from '@/theme/ThemeProvider'
 
@@ -16,6 +17,7 @@ export function App() {
           <AuthProvider>
             <ToastProvider>
               <RouterProvider router={router} />
+              <UpdatePrompt />
             </ToastProvider>
           </AuthProvider>
         </QueryClientProvider>

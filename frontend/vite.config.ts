@@ -9,7 +9,14 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt', not 'autoUpdate': a silent auto-reload can interrupt someone
+      // mid-edit, and — worse — an installed PWA that's only ever backgrounded
+      // never triggers the update check, so users sat on a stale build until a
+      // manual cache clear. src/pwa/UpdatePrompt.tsx registers the SW, re-checks
+      // on focus + hourly, and shows a dismissible "Reload" pill when a new
+      // build is waiting.
+      registerType: 'prompt',
+      injectRegister: null,
       // Enable the service worker in dev mode too, so installability can be
       // tested against the dev server (LAN IP on a phone) without a build.
       devOptions: { enabled: true },
