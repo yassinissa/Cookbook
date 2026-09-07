@@ -3,7 +3,7 @@
  * launched with VITE_USE_SEED=1 it returns the seed catalogue instead, so the
  * leadership demo is hermetic and every screen looks full.
  */
-import { http, listData, USE_SEED } from '@/lib/http'
+import { http, listData, fetchAllPages, USE_SEED } from '@/lib/http'
 import * as seed from '@/lib/seed'
 import {
   filterActivityFeed,
@@ -265,10 +265,8 @@ export async function fetchDishRecipes(): Promise<DishRecipeListItem[]> {
     await delay()
     return filterDishList(seed.seedDishList())
   }
-  const { data } = await http.get<Paginated<DishRecipeListItem> | DishRecipeListItem[]>(
-    '/cookbook/dish-recipes/',
-  )
-  return listData(data)
+  // the list screen filters/searches client-side, so it needs every recipe
+  return fetchAllPages<DishRecipeListItem>('/cookbook/dish-recipes/')
 }
 
 export async function fetchDishRecipe(id: string): Promise<DishRecipeDetail> {
@@ -355,10 +353,7 @@ export async function fetchProductionRecipes(): Promise<ProductionRecipeListItem
     await delay()
     return seed.seedProductionList()
   }
-  const { data } = await http.get<
-    Paginated<ProductionRecipeListItem> | ProductionRecipeListItem[]
-  >('/cookbook/production-recipes/')
-  return listData(data)
+  return fetchAllPages<ProductionRecipeListItem>('/cookbook/production-recipes/')
 }
 
 export async function fetchProductionRecipe(id: string): Promise<ProductionRecipeDetail> {

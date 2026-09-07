@@ -6,11 +6,11 @@ import { Card } from '@/components/Card'
 import { DishImage } from '@/components/DishImage'
 import { FoodCostValue } from '@/components/Meter'
 import { Icon } from '@/components/Icon'
-import { Input } from '@/components/Input'
+import { Input, Select } from '@/components/Input'
 import { Page, PageHeader, SegmentedButtons, BiName } from '@/components/Page'
 import { RatingPill } from '@/components/Pill'
 import { EmptyState, ErrorState, Skeleton } from '@/components/States'
-import { useDishRecipes } from '@/lib/queries'
+import { useDishRecipes, useReference } from '@/lib/queries'
 import { useAuth } from '@/auth/AuthProvider'
 import { kwd } from '@/lib/format'
 import { useI18n } from '@/i18n'
@@ -28,6 +28,7 @@ export function DishListPage() {
   const { can } = useAuth()
   const navigate = useNavigate()
   const { data: recipes, isLoading, isError, refetch } = useDishRecipes()
+  const { data: ref } = useReference()
   const canEdit = can('dish.edit')
 
   const [q, setQ] = useState('')
@@ -35,10 +36,13 @@ export function DishListPage() {
   const [category, setCategory] = useState('all')
   const [rating, setRating] = useState('all')
 
+  // Every branch we operate, in menu order — not just the ones that happen to
+  // have a recipe (and covering the dishes whose branch is a FK, not a string).
   const branches = useMemo(
-    () => Array.from(new Set((recipes ?? []).map((r) => r.branch).filter(Boolean))).sort(),
-    [recipes],
+    () => (ref?.branches ?? []).slice().sort((a, b) => a.sort_order - b.sort_order).map((b) => b.name_en),
+    [ref],
   )
+  const branchOf = (r: DishRecipeListItem) => r.branch_name || r.branch || ''
   const categories = useMemo(
     () =>
       Array.from(new Set((recipes ?? []).map((r) => r.category_name).filter(Boolean))).sort() as string[],
@@ -55,7 +59,7 @@ export function DishListPage() {
           r.name_ar.includes(q) ||
           r.recipe_code.includes(q),
       )
-    if (branch !== 'all') list = list.filter((r) => r.branch === branch)
+    if (branch !== 'all') list = list.filter((r) => branchOf(r) === branch)
     if (category !== 'all') list = list.filter((r) => r.category_name === category)
     if (rating !== 'all')
       list = list.filter((r) => (rating === 'flagged' ? r.rating_status === 'fix' || r.rating_status === 'attention' : r.rating_status === rating))
@@ -93,15 +97,22 @@ export function DishListPage() {
             />
           </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <FilterGroup
-              label={t('dishes.filter.branch')}
-              value={branch}
-              onChange={setBranch}
-              options={[
-                { value: 'all', label: t('dishes.filter.all') },
-                ...branches.map((b) => ({ value: b, label: b })),
-              ]}
-            />
+            <label className="flex items-center gap-2">
+              <span className="text-2xs font-semibold uppercase tracking-wide text-ink-subtle">
+                {t('dishes.filter.branch')}
+              </span>
+              <Select
+                className="h-8 py-0 text-sm"
+                value={branch}
+                onChange={(e) => setBranch(e.target.value)}
+                aria-label={t('dishes.filter.branch')}
+              >
+                <option value="all">{t('dishes.filter.all')}</option>
+                {branches.map((b) => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </Select>
+            </label>
             {categories.length > 1 && (
               <FilterGroup
                 label={t('dishes.filter.category')}
@@ -181,7 +192,7 @@ export function DishListPage() {
                       <td className="tnum px-3 py-2.5 font-mono text-xs text-ink-subtle">
                         {r.recipe_code || '—'}
                       </td>
-                      <td className="px-3 py-2.5 text-ink-muted">{r.branch || '—'}</td>
+                      <td className="px-3 py-2.5 text-ink-muted">{branchOf(r) || '—'}</td>
                       <td className="px-3 py-2.5 text-ink-muted">{r.section_name || '—'}</td>
                       <td className="px-3 py-2.5 text-end">
                         <FoodCostValue value={foodCostPct(r)} />
@@ -219,7 +230,7 @@ export function DishListPage() {
                     </div>
                     <div className="mt-1.5 flex items-center justify-between text-[13px]">
                       <span className="truncate text-ink-subtle">
-                        {r.branch} · #{r.recipe_code}
+                        {[branchOf(r), r.recipe_code && `#${r.recipe_code}`].filter(Boolean).join(' · ')}
                       </span>
                       <span className="flex flex-none items-center gap-3">
                         <FoodCostValue value={foodCostPct(r)} />

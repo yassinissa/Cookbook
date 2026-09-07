@@ -157,3 +157,14 @@ class DishRecipeApiTests(APITestCase):
         # list endpoint hides the archived version
         listing = self.client.get('/api/cookbook/dish-recipes/')
         self.assertEqual(listing.data['count'], 1)
+
+    def test_list_resolves_branch_name_from_string_or_fk(self):
+        from apps.cookbook.models import Branch
+        wnr = Branch.objects.create(name_en='WnR', code='WNR', sort_order=1)
+        with fake_inventory_items([]):
+            self.client.post('/api/cookbook/dish-recipes/', self._payload(), format='json')  # branch='Dine'
+        DishRecipe.objects.create(name_en='Wok Bowl', recipe_code='W1', branch_ref=wnr)  # FK, blank string
+
+        rows = {r['name_en']: r for r in self.client.get('/api/cookbook/dish-recipes/').data['results']}
+        self.assertEqual(rows['Tabbouleh Salad']['branch_name'], 'Dine')
+        self.assertEqual(rows['Wok Bowl']['branch_name'], 'WnR')     # was '' before — unfilterable

@@ -76,3 +76,21 @@ http.interceptors.response.use(
 export function listData<T>(data: T[] | { results: T[] }): T[] {
   return Array.isArray(data) ? data : data.results
 }
+
+/**
+ * Fetch every page of a DRF-paginated list (walking `next`) and return the
+ * flat array. Screens that filter/search client-side need the whole set, not
+ * just page 1 (PAGE_SIZE is 25). A bare-array response passes straight through.
+ */
+export async function fetchAllPages<T>(path: string): Promise<T[]> {
+  const out: T[] = []
+  let url: string | null = path
+  // hard stop so a pagination bug can't spin forever
+  for (let guard = 0; url && guard < 200; guard++) {
+    const { data }: { data: T[] | { results: T[]; next: string | null } } = await http.get(url)
+    if (Array.isArray(data)) return data
+    out.push(...data.results)
+    url = data.next
+  }
+  return out
+}

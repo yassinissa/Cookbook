@@ -243,6 +243,8 @@ export interface DishRecipeListItem {
   name_ar: string
   recipe_code: string
   branch: string
+  branch_ref: ID | null
+  branch_name: string
   category: ID | null
   category_name: string | null
   section: ID | null
@@ -270,6 +272,7 @@ export interface DishRecipeDetail {
   revision_date: string | null
   branch: string
   branch_ref: ID | null
+  branch_name: string
   category: MenuCategory | null
   section: Section | null
   service_style: ServiceStyle | null

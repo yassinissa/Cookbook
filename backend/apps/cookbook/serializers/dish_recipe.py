@@ -103,15 +103,21 @@ class DishRecipeListSerializer(HidesCostingFields, serializers.ModelSerializer):
     has_standard = serializers.SerializerMethodField()
     is_published = serializers.SerializerMethodField()
     image_url = serializers.SerializerMethodField()
+    # Dishes carry either the `branch_ref` FK (current) or the legacy free-text
+    # `branch` string. `branch_name` is the one to display and filter on.
+    branch_name = serializers.SerializerMethodField()
 
     class Meta:
         model  = DishRecipe
         fields = [
-            'id', 'name_en', 'name_ar', 'recipe_code', 'branch', 'category', 'category_name',
-            'section', 'section_name', 'pos_item_name', 'selling_price', 'cost', 'image_url',
-            'rating', 'rating_status', 'has_standard', 'is_published',
-            'version', 'is_current', 'ingredient_count', 'created_at',
+            'id', 'name_en', 'name_ar', 'recipe_code', 'branch', 'branch_ref', 'branch_name',
+            'category', 'category_name', 'section', 'section_name', 'pos_item_name',
+            'selling_price', 'cost', 'image_url', 'rating', 'rating_status', 'has_standard',
+            'is_published', 'version', 'is_current', 'ingredient_count', 'created_at',
         ]
+
+    def get_branch_name(self, obj):
+        return obj.branch_ref.name_en if obj.branch_ref_id else (obj.branch or '')
 
     def get_has_standard(self, obj):
         return hasattr(obj, 'standard') and obj.standard is not None
@@ -139,12 +145,13 @@ class DishRecipeDetailSerializer(HidesCostingFields, serializers.ModelSerializer
     activity_log  = DishRecipeActivityLogSerializer(many=True, read_only=True)
     publish_stale = serializers.SerializerMethodField()
     image_url     = serializers.SerializerMethodField()
+    branch_name   = serializers.SerializerMethodField()
 
     class Meta:
         model  = DishRecipe
         fields = [
             'id', 'name_en', 'name_ar', 'recipe_code', 'revision', 'revision_date',
-            'branch', 'branch_ref', 'category', 'section',
+            'branch', 'branch_ref', 'branch_name', 'category', 'section',
             'service_style', 'allergens', 'allergen_rollup', 'pos_item_name', 'selling_price',
             'rating', 'rating_status', 'rating_date', 'taste_profile', 'image_url',
             'prep_time_minutes', 'expected_waste_pct',
@@ -158,6 +165,9 @@ class DishRecipeDetailSerializer(HidesCostingFields, serializers.ModelSerializer
 
     def get_image_url(self, obj):
         return _absolute_image_url(self.context.get('request'), obj.image_url)
+
+    def get_branch_name(self, obj):
+        return obj.branch_ref.name_en if obj.branch_ref_id else (obj.branch or '')
 
     def get_publish_stale(self, obj):
         # a > 1s gap is a real edit; sub-second is just the publish save itself
