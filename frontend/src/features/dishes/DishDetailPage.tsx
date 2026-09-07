@@ -149,7 +149,7 @@ export function DishDetailPage() {
                 </p>
               )}
               <p className="mt-1 font-mono text-xs text-white/70">
-                {[dish.recipe_code && `#${dish.recipe_code}`, dish.revision, dish.branch, dish.category?.name]
+                {[dish.recipe_code && `#${dish.recipe_code}`, dish.revision, dish.branch_name || dish.branch, dish.category?.name]
                   .filter(Boolean)
                   .join('  ·  ')}
               </p>
