@@ -9,6 +9,9 @@ Enrolment is opt-out: every active user with an email address and the
 `costing.view` capability is a recipient, unless they hold a
 DigestSubscription row with cadence='off'. A recipient whose digest would be
 empty is skipped (no "nothing to report" email). Run weekly by a Render cron.
+
+If the SMTP backend is active but EMAIL_HOST is unset, the command logs a
+one-line notice and exits 0 rather than crashing the cron with a traceback.
 """
 from datetime import timedelta
 
@@ -41,6 +44,19 @@ class Command(BaseCommand):
         dry = opts['dry_run']
         one = opts['user']
         force = opts['force'] or bool(one)
+
+        # A cron that hard-crashes on unconfigured SMTP just emails an opaque
+        # traceback every week. If we'd be sending for real but no mail host is
+        # set, say so plainly and exit 0 — there's nothing to retry.
+        smtp = 'smtp' in settings.EMAIL_BACKEND
+        if not dry and smtp and not settings.EMAIL_HOST:
+            self.stdout.write(self.style.WARNING(
+                'send_cost_digest: EMAIL_HOST is not set - skipping. '
+                'Configure EMAIL_HOST / EMAIL_HOST_USER / EMAIL_HOST_PASSWORD / '
+                'DEFAULT_FROM_EMAIL (the cookbook-shared env group on Render) '
+                'to enable the weekly digest.'
+            ))
+            return
 
         if one:
             recipients = User.objects.filter(username=one) | User.objects.filter(pk=one if one.isdigit() else 0)
