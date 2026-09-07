@@ -30,7 +30,9 @@ RETRY_ON = (requests.exceptions.Timeout, requests.exceptions.ConnectionError)
 
 
 class InventoryAPIError(Exception):
-    pass
+    def __init__(self, message, *, status_code=None):
+        super().__init__(message)
+        self.status_code = status_code
 
 
 class InventoryClient:
@@ -79,7 +81,9 @@ class InventoryClient:
             self._login()
             resp = do_request()
         if not resp.ok:
-            raise InventoryAPIError(f'{method} {path} failed: {resp.status_code} {resp.text}')
+            raise InventoryAPIError(
+                f'{method} {path} failed: {resp.status_code} {resp.text}',
+                status_code=resp.status_code)
         return resp.json() if resp.content else None
 
     # ── read: reference data ─────────────────────────────────────────────

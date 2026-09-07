@@ -26,18 +26,50 @@ class RecipePublishError(Exception):
     rejected the payload. `args[0]` is a user-facing message."""
 
 
+# Cookbook's UnitScale codes and inventory-platform's unit codes are the same
+# measures spelled differently — case (Kg/kg, Pcs/pcs, Cup/cup) and a handful
+# of stems (Tbs/tbsp, Ts/tsp, Ltr/l, Pc·EA/pcs). Without this map a publish
+# resolves the unit to None and the platform silently falls back to the item's
+# default stock unit, which changes the quantity it deducts on a POS sale.
+_UNIT_ALIASES = {
+    'tbs': 'tbsp', 'tbsp': 'tbsp', 'tablespoon': 'tbsp',
+    'ts': 'tsp', 'tsp': 'tsp', 'teaspoon': 'tsp',
+    'ltr': 'l', 'liter': 'l', 'litre': 'l',
+    'pc': 'pcs', 'pcs': 'pcs', 'ea': 'pcs', 'each': 'pcs', 'piece': 'pcs', 'pieces': 'pcs',
+}
+
+
 def _catalogue(client):
-    """{sku: item_id}, {unit_code: unit_id} from a live pull."""
+    """{sku: item_id} plus a unit-code resolver, both from a live pull."""
     items = client.get_items()
     units = client.get_units()
     if isinstance(units, dict):
         units = units.get('results', [])
     sku_to_id = {i['sku']: i['id'] for i in items if i.get('sku')}
-    code_to_unit = {u['code']: u['id'] for u in units if u.get('code')}
-    return sku_to_id, code_to_unit
+
+    by_code = {}
+    for u in units:
+        code = (u.get('code') or '').strip()
+        if code:
+            by_code[code] = u['id']
+            by_code.setdefault(code.lower(), u['id'])
+
+    def resolve_unit(code):
+        if not code:
+            return None
+        code = code.strip()
+        if code in by_code:
+            return by_code[code]
+        lc = code.lower()
+        if lc in by_code:
+            return by_code[lc]
+        alias = _UNIT_ALIASES.get(lc)
+        return by_code.get(alias) if alias else None
+
+    return sku_to_id, resolve_unit
 
 
-def _ingredient_lines(recipe, sku_to_id, code_to_unit):
+def _ingredient_lines(recipe, sku_to_id, resolve_unit):
     lines, warnings = [], []
     for ing in recipe.ingredients.select_related('unit').all():
         item_id = sku_to_id.get(ing.item_sku)
@@ -48,7 +80,7 @@ def _ingredient_lines(recipe, sku_to_id, code_to_unit):
             continue
         unit_id = None
         if ing.unit_id:
-            unit_id = code_to_unit.get(ing.unit.code)
+            unit_id = resolve_unit(ing.unit.code)
             if unit_id is None:
                 warnings.append(
                     f'unit "{ing.unit.code}" for {ing.item_sku} has no match on '
@@ -83,10 +115,29 @@ def _finish_error(recipe, exc):
     recipe.save(update_fields=['publish_error', 'updated_at'])
 
 
+def _push(recipe, payload, *, create, update, relink):
+    """PATCH the linked inventory-platform recipe, or POST a new one. If the
+    stored id 404s — the row was deleted over there — drop the dead link and
+    POST fresh instead of failing forever. Returns the remote id."""
+    if recipe.inventory_recipe_id:
+        try:
+            update(recipe.inventory_recipe_id, payload)
+            return recipe.inventory_recipe_id
+        except InventoryAPIError as e:
+            if e.status_code != 404:
+                raise
+            recipe.inventory_recipe_id = ''   # linked row is gone — recreate below
+    create(payload)
+    row = relink()
+    if not row:
+        raise InventoryAPIError('recipe was created but could not be found to link its id')
+    return row['id']
+
+
 def publish_dish_recipe(recipe, *, client=None):
     client = client or InventoryClient()
-    sku_to_id, code_to_unit = _catalogue(client)
-    lines, warnings = _ingredient_lines(recipe, sku_to_id, code_to_unit)
+    sku_to_id, resolve_unit = _catalogue(client)
+    lines, warnings = _ingredient_lines(recipe, sku_to_id, resolve_unit)
     if not lines:
         raise RecipePublishError(
             'None of this recipe’s ingredients match an inventory item — nothing to publish.')
@@ -100,25 +151,22 @@ def publish_dish_recipe(recipe, *, client=None):
         'ingredients': lines,
     }
     try:
-        if recipe.inventory_recipe_id:
-            client.update_dish_recipe(recipe.inventory_recipe_id, payload)
-            remote_id = recipe.inventory_recipe_id
-        else:
-            client.create_dish_recipe(payload)
-            row = client.find_dish_recipe(recipe.name_en)
-            if not row:
-                raise InventoryAPIError('recipe was created but could not be found to link its id')
-            remote_id = row['id']
+        remote_id = _push(
+            recipe, payload,
+            create=client.create_dish_recipe,
+            update=client.update_dish_recipe,
+            relink=lambda: client.find_dish_recipe(recipe.name_en),
+        )
     except InventoryAPIError as e:
         _finish_error(recipe, e)
         raise RecipePublishError(f'inventory-platform rejected the recipe: {e}')
 
     _finish_ok(recipe, remote_id)
-    warnings += _publish_pos_modifiers(recipe, client, sku_to_id, code_to_unit)
+    warnings += _publish_pos_modifiers(recipe, client, sku_to_id, resolve_unit)
     return _result(recipe, warnings)
 
 
-def _publish_pos_modifiers(recipe, client, sku_to_id, code_to_unit):
+def _publish_pos_modifiers(recipe, client, sku_to_id, resolve_unit):
     """After the dish recipe is on inventory-platform, push its POS deduction
     data: a POSItemMapping for the base dish + each `type` modifier option
     (→ a variant recipe), and a POSAddonIngredient for each `addon` option.
@@ -162,7 +210,7 @@ def _publish_pos_modifiers(recipe, client, sku_to_id, code_to_unit):
                 if item_id is None:
                     warnings.append(f'{where}: SKU {opt.item_sku or "?"} not on inventory-platform — add-on skipped')
                     continue
-                unit_id = code_to_unit.get(opt.unit.code) if opt.unit_id else None
+                unit_id = resolve_unit(opt.unit.code) if opt.unit_id else None
                 try:
                     client.upsert_pos_addon(opt.pos_mods_string, item_id, opt.quantity or 0, unit_id)
                 except InventoryAPIError as e:
@@ -172,7 +220,7 @@ def _publish_pos_modifiers(recipe, client, sku_to_id, code_to_unit):
 
 def publish_production_recipe(recipe, *, client=None):
     client = client or InventoryClient()
-    sku_to_id, code_to_unit = _catalogue(client)
+    sku_to_id, resolve_unit = _catalogue(client)
 
     output_id = sku_to_id.get(recipe.output_item_sku)
     if output_id is None:
@@ -186,7 +234,7 @@ def publish_production_recipe(recipe, *, client=None):
             'This recipe’s prep kitchen is not linked to an inventory-platform store '
             '(set PrepKitchen.inventory_store_id).')
 
-    lines, warnings = _ingredient_lines(recipe, sku_to_id, code_to_unit)
+    lines, warnings = _ingredient_lines(recipe, sku_to_id, resolve_unit)
     payload = {
         'name_en': recipe.name_en,
         'name_ar': recipe.name_ar,
@@ -197,15 +245,12 @@ def publish_production_recipe(recipe, *, client=None):
         'ingredients': lines,
     }
     try:
-        if recipe.inventory_recipe_id:
-            client.update_production_recipe(recipe.inventory_recipe_id, payload)
-            remote_id = recipe.inventory_recipe_id
-        else:
-            client.create_production_recipe(payload)
-            row = client.find_production_recipe(recipe.name_en, prep_kitchen_id)
-            if not row:
-                raise InventoryAPIError('recipe was created but could not be found to link its id')
-            remote_id = row['id']
+        remote_id = _push(
+            recipe, payload,
+            create=client.create_production_recipe,
+            update=client.update_production_recipe,
+            relink=lambda: client.find_production_recipe(recipe.name_en, prep_kitchen_id),
+        )
     except InventoryAPIError as e:
         _finish_error(recipe, e)
         raise RecipePublishError(f'inventory-platform rejected the recipe: {e}')
