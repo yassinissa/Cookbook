@@ -5,8 +5,8 @@ Tick items off and delete them as they're done — this file should only ever
 describe work that is still outstanding. Architecture and the build commands
 live in [`README.md`](README.md#deployment-render) and [`render.yaml`](render.yaml).
 
-Last reviewed: **2026-09-07** (modifier pipeline merged; migrations + backfill
-still to run in prod).
+Last reviewed: **2026-09-07** (modifier pipeline + PWA reload prompt merged;
+migrations + backfill still to run in prod).
 
 ---
 
@@ -29,7 +29,12 @@ The blueprint is adopted (services `cookbook-api` / `cookbook-frontend` /
   — shipping a model is just a redeploy. Migrations on `main` and **not yet run
   in prod**: `cookbook` `0025`/`0026` (modifier consumption model) — the next
   `cookbook-api` deploy applies them.
-- **Frontend**: `npm ci && npm run build`.
+- **Frontend**: `npm ci && npm run build`. It's a PWA — a new build doesn't
+  reach an already-open/installed client on its own. Since PR #11 the app shows
+  a dismissible **"A new version is available · Reload"** pill (on tab focus, or
+  hourly) that one-taps to the new build; before PR #11, clients needed a manual
+  cache clear. Nothing to do on deploy — just know users may sit a few minutes
+  behind until they tap Reload.
 - **inventory-platform**: `pos_integration` `0007`/`0008` (the
   `POSModifierIngredient` model + data copy from `POSAddonIngredient`) are on its
   `main` — the next deploy of that service applies them.
