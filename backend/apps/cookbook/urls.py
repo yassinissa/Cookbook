@@ -35,6 +35,7 @@ router.register(r'modifier-groups', views_modifiers.ModifierGroupViewSet, basena
 router.register(r'dish-modifiers', views_modifiers.DishModifierViewSet, basename='dish-modifier')
 
 urlpatterns = [
+    path('modifier-readiness/', views_modifiers.ModifierReadinessView.as_view(), name='modifier-readiness'),
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('activity/', ActivityFeedView.as_view(), name='activity'),
     path('digest-subscription/', views_reporting.DigestSubscriptionView.as_view(), name='digest-subscription'),
