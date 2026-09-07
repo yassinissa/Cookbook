@@ -39,6 +39,9 @@ export function DishModifierPanel({ dishId, canEdit }: { dishId: string; canEdit
               <li key={g.id} className="flex items-center justify-between gap-2 text-sm">
                 <span className="text-ink">{g.group_name}</span>
                 <span className="flex items-center gap-2">
+                  {g.needs_data_count > 0 && (
+                    <Pill tone="warning" icon="warning">{g.needs_data_count}</Pill>
+                  )}
                   <span className="text-2xs text-ink-subtle">{g.option_count}</span>
                   <Pill tone={g.default_role === 'forced' ? 'warning' : 'neutral'}>
                     {t(`mods.dish.${g.default_role}`)}

@@ -45,6 +45,7 @@ import type {
   ModifierGroup,
   ModifierOption,
   ModifierOptionKind,
+  ModifierReadiness,
   ModifierRole,
   ModifierSelection,
   Paginated,
@@ -795,6 +796,12 @@ export async function fetchDishModifiers(): Promise<DishModifierRow[]> {
   if (USE_SEED) { await delay(150); return [] }
   const { data } = await http.get('/cookbook/dish-modifiers/')
   return listData<DishModifierRow>(data)
+}
+
+export async function fetchModifierReadiness(): Promise<ModifierReadiness> {
+  if (USE_SEED) { await delay(150); return { summary: { ready: 0, needs_data: 0, no_impact: 0, total: 0, needs_match_key: 0 }, options: [] } }
+  const { data } = await http.get('/cookbook/modifier-readiness/')
+  return data
 }
 
 export async function fetchDishModifier(dishId: string): Promise<DishModifierDetail> {
