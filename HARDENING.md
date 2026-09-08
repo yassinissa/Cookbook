@@ -73,14 +73,15 @@ services / read config + logs / check deploys), `inventory_platform` cloned at
   route in `config/urls.py`, every environment (`safe_join` blocks traversal).
   +`apps/core/tests/test_media.py` (3). Object storage still the eventual move
   if photo volume grows.
-- ☑ **Cron failure alerting** — PR #20, merged 2026-09-08. `send_cost_digest`
-  now exits non-zero (clean `CommandError`, not a traceback) when SMTP is
-  unconfigured or a send fails, so the Render cron goes red instead of
-  silently sending nothing. `--allow-unconfigured` downgrades that to a skip.
-  `render.yaml` cron gains `notifyOnFail: notify` (applies on a Blueprint
-  sync — the PATCH API silently ignores the field). **Manual:** confirm
-  Render → Settings → Notifications → Failed is on. Until SMTP is set the
-  weekly run now emails a failure every Monday — which is the point.
+- ☑ **Cron failure alerting** — PR #20, merged 2026-09-08 (blueprint fix
+  PR #23). `send_cost_digest` now exits non-zero (clean `CommandError`, not a
+  traceback) when SMTP is unconfigured or a send fails, so the Render cron
+  goes red instead of silently sending nothing. `--allow-unconfigured`
+  downgrades that to a skip. **Manual:** confirm Render → Settings →
+  Notifications → Failed is on (failure notification is a workspace setting,
+  not a blueprint field — PR #20's `notifyOnFail: notify` in `render.yaml`
+  was invalid and broke blueprint sync; removed in PR #23). Until SMTP is set
+  the weekly run now emails a failure every Monday — which is the point.
 - ☑ **DB backup/restore runbook** — PR #20. New `DB_BACKUP.md`: Render Basic
   = daily backups / 7-day retention / **no PITR** (worst case ~24 h loss);
   manual `pg_dump` before risky ops; the dashboard restore + env cut-over

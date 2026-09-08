@@ -93,11 +93,10 @@ services:
     region: oregon
     # 04:00 UTC Monday = 07:00 Asia/Kuwait (UTC+3, no DST) — a Monday-morning email.
     schedule: "0 4 * * 1"
-    # Notify the workspace on a failed run. send_cost_digest exits non-zero on
-    # an unconfigured SMTP host (or any send error), so a broken digest goes
-    # red here instead of silently sending nothing. Also confirm the workspace
-    # notification setting (Render → Settings → Notifications → Failed) is on.
-    notifyOnFail: notify
+    # send_cost_digest exits non-zero on an unconfigured SMTP host (or any send
+    # error), so a broken digest goes red here instead of silently sending
+    # nothing. Failure notification is a workspace setting, not a blueprint
+    # field — confirm Render → Settings → Notifications → Failed is on.
     buildCommand: pip install -r requirements/production.txt
     startCommand: python manage.py send_cost_digest
     envVars:
