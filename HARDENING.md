@@ -10,18 +10,16 @@ Legend: ☐ not started · ◐ in progress (branch open) · ☑ merged
 
 ## Tier 1 — critical (do first)
 
-- ◐ **Pin the local dev runtime to Python 3.12** — `chore/pin-dev-runtime` (PR #13).
-  Only the local venv drifted to 3.14 (unsupported by Django 4.2 — the source
-  of the "3 pre-existing 502-path test errors"). Aligns every runtime pin on
-  **3.12.10**: `.python-version`, `backend/runtime.txt`, and both
-  `render.yaml` `PYTHON_VERSION` values (were `3.12.8`, a patch Actions no
-  longer ships for ubuntu-24.04). Recreate `backend/venv` on 3.12 after merge.
-- ◐ **CI** — `ci/github-actions` (PR #14, stacked on #13). GitHub Actions:
-  backend `manage.py test` + `makemigrations --check` on Python `3.12`
-  (newest patch), frontend `typecheck` + `lint` + `build` on Node 24. Adds
-  `.gitattributes` (LF normalisation — CRLF breaks Linux CI). Baseline
-  locally: 179 tests, 0 failures (the 3 errors on 3.14 are the
-  template-context bug, gone on 3.12).
+- ☑ **Pin the local dev runtime to Python 3.12** — PR #13, merged 2026-09-08.
+  Every runtime pin aligned on **3.12.10**: `.python-version`,
+  `backend/runtime.txt`, both `render.yaml` `PYTHON_VERSION` values, plus
+  `frontend/.nvmrc` = 24 and `engines.node`. **Local venv must be recreated
+  on 3.12** (`cd backend && rm -rf venv && py -3.12 -m venv venv && ...`).
+- ☑ **CI** — PR #15 (was #14, auto-closed on base-branch delete), merged
+  2026-09-08. GitHub Actions on push to `main` + every PR: backend
+  `manage.py test` + `makemigrations --check` on Python `3.12`, frontend
+  `typecheck` + `lint` + `build` on Node 24. `.gitattributes` LF
+  normalisation. First green run: 179 tests, 0 failures on 3.12.
 - ☐ **Production observability** — `chore/prod-observability`. `production.py`
   has no `LOGGING` block and no error tracking. Add Sentry (`sentry-sdk` +
   `@sentry/react`, gated on `SENTRY_DSN`) and a real `LOGGING` config that
