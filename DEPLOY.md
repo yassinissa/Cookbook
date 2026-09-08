@@ -5,8 +5,9 @@ Tick items off and delete them as they're done — this file should only ever
 describe work that is still outstanding. Architecture and the build commands
 live in [`README.md`](README.md#deployment-render) and [`render.yaml`](render.yaml).
 
-Last reviewed: **2026-09-07** (modifier pipeline + PWA reload prompt merged;
-migrations + backfill still to run in prod).
+Last reviewed: **2026-09-08** (modifier pipeline + PWA reload prompt merged,
+migrations + backfill still to run in prod; Documents module merged — PR #12,
+frontend-only, nothing to do on deploy).
 
 ---
 
@@ -34,7 +35,8 @@ The blueprint is adopted (services `cookbook-api` / `cookbook-frontend` /
   a dismissible **"A new version is available · Reload"** pill (on tab focus, or
   hourly) that one-taps to the new build; before PR #11, clients needed a manual
   cache clear. Nothing to do on deploy — just know users may sit a few minutes
-  behind until they tap Reload.
+  behind until they tap Reload. The Documents module (PR #12) is part of this
+  bundle — pure frontend, no backend or env changes, gated `document.export`.
 - **inventory-platform**: `pos_integration` `0007`/`0008` (the
   `POSModifierIngredient` model + data copy from `POSAddonIngredient`) are on its
   `main` — the next deploy of that service applies them.
