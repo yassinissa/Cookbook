@@ -40,7 +40,12 @@ services:
     buildCommand: >-
       pip install -r requirements/production.txt &&
       python manage.py collectstatic --noinput &&
-      python manage.py migrate
+      python manage.py migrate &&
+      python manage.py sync_capabilities
+    # sync_capabilities mirrors apps/accounts/capabilities.py into the
+    # Capability table (idempotent, no --prune). A new capability still needs
+    # its own migration to grant it to roles — this is the safety net so the
+    # catalogue row always exists even if that migration is forgotten.
     # One gthread worker: a request can wait out inventory-platform's 30–60s
     # cold start without blocking the process, threads give concurrency, and a
     # single process keeps the public-menu LocMemCache coherent (a publish's
