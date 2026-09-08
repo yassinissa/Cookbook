@@ -41,11 +41,11 @@ services / read config + logs / check deploys), `inventory_platform` cloned at
   Add it to the `cookbook-api` `buildCommand` after `migrate` (idempotent).
   Removes the "forgot the capability migration" foot-gun. Also worth: deepen
   `/api/health/` to check DB connectivity (returns 200 blind right now).
-- ☐ **Deploy `main` to prod + blueprint-sync** — prod `cookbook-api` is live
-  on `342151e` (PR #13); PR #15 (CI) + the tracker commits haven't deployed
-  (only `.github`/docs/`render.yaml` changed — Render didn't auto-trigger).
-  Nothing prod-critical, but the `render.yaml` `PYTHON_VERSION` 3.12.8→3.12.10
-  bump needs a **Blueprint sync** (a plain deploy keeps the old env value).
+- ◐ **Deploy `main` to prod + blueprint-sync** — plain deploy of `cookbook-api`
+  + `cookbook-frontend` to `c77fceb` (latest `main`) done 2026-09-08, both
+  live, health clean. **Still pending:** a **Blueprint sync** from the Render
+  dashboard to apply the `render.yaml` `PYTHON_VERSION` 3.12.8→3.12.10 bump
+  (prod currently builds 3.12.8 fine, so not urgent).
 
 ## Tier 2 — robustness
 
