@@ -53,13 +53,14 @@ services / read config + logs / check deploys), `inventory_platform` cloned at
 
 ## Tier 2 — robustness
 
-- ◐ **PWA offline story** — `feat/pwa-offline-reads` (PR #19). Chosen scope:
-  **read-only cache of what was already loaded**. `workbox.runtimeCaching` in
+- ☑ **PWA offline story** — PR #19, merged 2026-09-08. Scope: **read-only
+  cache of what was already loaded**. `workbox.runtimeCaching` in
   `vite.config.ts` — `NetworkFirst` on `GET /api/*` (4s timeout, 7-day, 250
   entries), `StaleWhileRevalidate` on `/media/*`, Google Fonts, +
-  `navigateFallback` to the shell. `queryClient` → `networkMode:'offlineFirst'`
-  (queries fire offline so the SW can answer; writes fail fast). New
-  `OfflineBanner` strip + `parseApiError` offline message. +6 tests.
+  `navigateFallback` to the shell. `queryClient` → `networkMode:'offlineFirst'`.
+  `OfflineBanner` strip + `parseApiError` offline message. Queued writes
+  deliberately out of scope (versioning model isn't built for offline
+  conflict resolution). Ships on the next `cookbook-frontend` deploy.
 - ☑ **Frontend smoke tests** — PR #18, merged 2026-09-08. Vitest 5 + Testing
   Library + jsdom (`vitest.config.ts` separate from the app config so the PWA
   plugin stays out). 28 tests: `lib/format`, `lib/parseApiError`, `lib/cn`,
