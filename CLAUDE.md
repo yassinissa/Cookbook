@@ -225,8 +225,21 @@ before calling anything done — not just "the happy path returns 200."
     `cookbook-cost-digest` Render cron in `render.yaml` (`0 4 * * 1` UTC).
     Needs `EMAIL_*` + `FRONTEND_URL` settings; dev forces the console backend.
     Verified end-to-end 2026-09-02.
-  - **Documents / POS** routes render `ComingSoonPage` until their slice
-    lands.
+  - **Documents** (`src/features/documents/`) — `/documents` is a hub of four
+    independent print-to-PDF tools, each its own sub-page (`/documents/{recipe-card,
+    station-pack,prep-book,scoresheet}`), all gated `document.export`. No backend:
+    every sheet is a presentational component fed by the existing detail hooks,
+    wrapped in `<PrintFrame>` (a `no-print` toolbar + an injected route-scoped
+    `@media print` block — same technique as `LabelSheetPage`), and `window.print()`
+    is the export. `print/RecipeCardSheet` (dish|production — header, optional photo,
+    ingredients, method, yield, allergens, optional cost block; `lang` = en/ar/both),
+    `print/StandardSheet` (spec/sensory/taste tables, expected values only),
+    `print/PlatingSheet` (reuses `<PinnedImage>`). The scoresheet tool reuses the
+    existing `<ScoreSheet>` (force-shown on screen via a scoped style override).
+    Shared `.doc-sheet` / `.doc-section` / `.doc-page-break` print rules live in
+    `styles/base.css` next to `.print-sheet`. Verified end-to-end 2026-09-08.
+  - **POS** route: see the POS modifiers entry above (shipped). The old
+    `ComingSoonPage` placeholder is gone (no `ready: false` nav items remain).
 
   **Labour cost is deferred** until a separate HR app exists — the
   Production editor hides labour fields and sends `include_labor_cost:

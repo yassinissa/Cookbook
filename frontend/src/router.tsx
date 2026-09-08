@@ -26,7 +26,11 @@ import { InventoryListPage } from '@/features/inventory/InventoryListPage'
 import { LabelSheetPage } from '@/features/labels/LabelSheetPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import { ModifiersPage } from '@/features/pos/ModifiersPage'
-import { ComingSoonPage } from '@/features/placeholder/ComingSoonPage'
+import { DocumentsHubPage } from '@/features/documents/DocumentsHubPage'
+import { RecipeCardPage } from '@/features/documents/RecipeCardPage'
+import { StationPackPage } from '@/features/documents/StationPackPage'
+import { PrepBookPage } from '@/features/documents/PrepBookPage'
+import { ScoreSheetPage } from '@/features/documents/ScoreSheetPage'
 import { RouteError } from '@/app/RouteError'
 
 const cap = (c: CapabilityCode, element: ReactElement) => ({
@@ -83,7 +87,11 @@ export const router = createBrowserRouter([
           { path: '/inventory', ...cap('inventory.view', <InventoryListPage />) },
           { path: '/labels/:itemId', ...cap('inventory.view', <LabelSheetPage />) },
           { path: '/activity', ...cap('activity.view', <ActivityPage />) },
-          { path: '/documents', element: <ComingSoonPage titleKey="nav.documents" icon="documents" /> },
+          { path: '/documents', ...cap('document.export', <DocumentsHubPage />) },
+          { path: '/documents/recipe-card', ...cap('document.export', <RecipeCardPage />) },
+          { path: '/documents/station-pack', ...cap('document.export', <StationPackPage />) },
+          { path: '/documents/prep-book', ...cap('document.export', <PrepBookPage />) },
+          { path: '/documents/scoresheet', ...cap('document.export', <ScoreSheetPage />) },
           { path: '/pos', ...cap('pos.manage', <ModifiersPage />) },
 
           { path: '*', element: <Navigate to="/" replace /> },
