@@ -4,7 +4,12 @@ Production-readiness work agreed 2026-09-08. One PR per item, most-critical
 first. Tick items off as their PR merges; this file is the running tracker so
 the work survives across sessions.
 
-Legend: ☐ not started · ◐ in progress (branch open) · ☑ merged
+Legend: ☐ not started · ◐ in progress (branch open) · ☑ merged · ✗ dropped
+
+**Tooling available to this work:** `gh` CLI (authed), Python 3.12.10 local
+venv, `RENDER_API_KEY` in `.claude/settings.local.json` (read-only use — list
+services / read config + logs / check deploys), `inventory_platform` cloned at
+`C:\Users\lenovo\Desktop\inventory_platform`. Still needed: two Sentry DSNs.
 
 ---
 
@@ -24,15 +29,23 @@ Legend: ☐ not started · ◐ in progress (branch open) · ☑ merged
   has no `LOGGING` block and no error tracking. Add Sentry (`sentry-sdk` +
   `@sentry/react`, gated on `SENTRY_DSN`) and a real `LOGGING` config that
   ships WARN+ to stdout with structured context for the publish + cron paths.
-- ☐ **Reconcile prod ↔ `main` drift** — `fix/health-check-drift`. Live
-  `/api/health/` returns debug fields (`cors_all`, `settings`, `middleware_0`)
-  that aren't in `config/urls.py` on `main`. Someone hot-patched prod to chase
-  a CORS/settings issue. Diff prod against `main`, fold anything real into a
-  commit, redeploy so they match. While here, make the health check verify DB
-  connectivity.
+- ✗ **~~Reconcile prod ↔ `main` drift~~** — NOT A COOKBOOK ISSUE (checked via
+  Render API 2026-09-08). Cookbook's API is `cookbook-api-do9z.onrender.com`
+  and its `/api/health/` returns exactly `{"status": "ok"}` — matches `main`.
+  The debug fields (`cors_all`, `settings`, `middleware_0`) are on
+  `greenhill-api-sljm…` = **inventory-platform's** health endpoint, a
+  different repo (the README lists that URL, which is what misled the first
+  pass). inventory_platform has uncommitted local drift worth a look, but
+  separately.
 - ☐ **`sync_capabilities` on every deploy** — `chore/sync-capabilities-deploy`.
   Add it to the `cookbook-api` `buildCommand` after `migrate` (idempotent).
-  Removes the "forgot the capability migration" foot-gun.
+  Removes the "forgot the capability migration" foot-gun. Also worth: deepen
+  `/api/health/` to check DB connectivity (returns 200 blind right now).
+- ☐ **Deploy `main` to prod + blueprint-sync** — prod `cookbook-api` is live
+  on `342151e` (PR #13); PR #15 (CI) + the tracker commits haven't deployed
+  (only `.github`/docs/`render.yaml` changed — Render didn't auto-trigger).
+  Nothing prod-critical, but the `render.yaml` `PYTHON_VERSION` 3.12.8→3.12.10
+  bump needs a **Blueprint sync** (a plain deploy keeps the old env value).
 
 ## Tier 2 — robustness
 
@@ -54,12 +67,19 @@ Legend: ☐ not started · ◐ in progress (branch open) · ☑ merged
 
 ## Tier 3 — cleanup / debt
 
-- ☐ **Ship the modifier pipeline to prod** — the standing `DEPLOY.md` §2–3
-  work: deploy both services (migrations run), `backfill_wnr_modifiers
-  --commit`, re-publish WnR dishes, chef fills ~24 quantities on POS →
-  Readiness, final Lavu-report verify.
-- ☐ **SMTP env for the cost-digest cron** — `cookbook-shared` group
-  (`EMAIL_HOST` etc.). Reuse inventory-platform's Gmail app-password.
+- ◐ **Finish the modifier pipeline in prod** — migrations already applied
+  (verified via Render API 2026-09-08): Cookbook `0025`/`0026` shipped in the
+  `06b52a6` deploy on 2026-09-07, inventory-platform `0007`/`0008` in the
+  `8f852f1` deploy same day. **DEPLOY.md §2–3 "not yet run in prod" is stale.**
+  What actually remains: (1) `python manage.py backfill_wnr_modifiers --commit`
+  on Cookbook prod (one-off, not auto-run), (2) re-publish WnR dishes so
+  `POSModifierIngredient` rows reach inventory-platform (`INVENTORY_API_*` are
+  set), (3) chef fills ~24 quantities on POS → Readiness, (4) final
+  Lavu-report verify.
+- ☐ **SMTP env for the cost-digest cron** — CONFIRMED missing (Render API
+  2026-09-08): the `cookbook-shared` env group has only `EMAIL_PORT` +
+  `EMAIL_USE_TLS`. Need `EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`,
+  `DEFAULT_FROM_EMAIL`. Reuse inventory-platform's Gmail app-password.
 - ☐ **WNR1 stock + ingredient backfills** — the two runbooks in repo root,
   run from the inventory-platform Render shell.
 - ☐ **Confirm / close the prod WnR base-recipe gap** — ~60 report items have
