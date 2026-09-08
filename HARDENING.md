@@ -128,5 +128,18 @@ services / read config + logs / check deploys), `inventory_platform` cloned at
 - ☐ **Redis for cache + throttle** — prerequisite for running the API on more
   than one worker/instance (public-menu throttle + cache-bust are per-process
   today; `render.yaml` comments already acknowledge this).
-- ☐ **inventory-platform has no CI** — same gap Cookbook PR #15 closed here.
-  It has a `pos_integration` test suite (24+ tests) that nothing runs on a PR.
+- ☑ **inventory-platform CI** — inv-platform PR #3, merged 2026-09-08. GitHub
+  Actions: backend 163 tests (`authentication` + `notifications` +
+  `pos_integration`) + `makemigrations --check` on Python 3.12; frontend 85
+  vitest + build on Node 20. Fixed a missing `backend/apps/__init__.py`
+  (namespace package broke `unittest` discovery — bare `manage.py test` found
+  0). **Follow-ups filed below.**
+- ☐ **inventory-platform: `apps.core` test_regression hangs** — replays every
+  app's full migration set and stalls; excluded from CI. Needs its own fix
+  (likely a slow/looping data migration).
+- ☐ **inventory-platform: frontend `npm run lint` is broken** — eslint needs
+  the flat-config migration (exits 2); excluded from CI until fixed.
+- ☐ **inventory-platform: stale `backend/requirements/` tree** — `base.txt`
+  is missing `drf-spectacular` / `pywebpush` / `whitenoise` / etc.; the real
+  set is the top-level `backend/requirements.txt`. Delete `requirements/` or
+  resync it so nobody `pip install`s a broken env.
