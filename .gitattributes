@@ -1,0 +1,16 @@
+# Normalise line endings — the repo is developed on Windows but CI and Render
+# run on Linux, where a CRLF in a shell script or YAML file breaks execution.
+* text=auto eol=lf
+
+# Binary assets — never touch these
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.xls binary
+*.xlsx binary
+*.xlsm binary

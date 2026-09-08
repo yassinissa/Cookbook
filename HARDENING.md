@@ -17,9 +17,11 @@ Legend: ☐ not started · ◐ in progress (branch open) · ☑ merged
   `render.yaml` `PYTHON_VERSION` values (were `3.12.8`, a patch Actions no
   longer ships for ubuntu-24.04). Recreate `backend/venv` on 3.12 after merge.
 - ◐ **CI** — `ci/github-actions` (PR #14, stacked on #13). GitHub Actions:
-  backend `manage.py test` + `makemigrations --check` on Python `3.12`,
-  frontend `typecheck` + `lint` + `build` on Node 24. Adds `.gitattributes`
-  (LF normalisation). Baseline locally: 179 tests, 0 failures.
+  backend `manage.py test` + `makemigrations --check` on Python `3.12`
+  (newest patch), frontend `typecheck` + `lint` + `build` on Node 24. Adds
+  `.gitattributes` (LF normalisation — CRLF breaks Linux CI). Baseline
+  locally: 179 tests, 0 failures (the 3 errors on 3.14 are the
+  template-context bug, gone on 3.12).
 - ☐ **Production observability** — `chore/prod-observability`. `production.py`
   has no `LOGGING` block and no error tracking. Add Sentry (`sentry-sdk` +
   `@sentry/react`, gated on `SENTRY_DSN`) and a real `LOGGING` config that
