@@ -304,8 +304,12 @@ before calling anything done — not just "the happy path returns 200."
   empty→`None` skip), the subscription endpoint + validation, the public
   unsubscribe (auth-less + idempotent), and `send_cost_digest` (opt-out
   enrolment, resend guard, dry-run). `test_publishing.py` fakes
-  `InventoryClient` — nothing in the suite hits the network. Frontend has no
-  tests yet. Grow both alongside new work.
+  `InventoryClient` — nothing in the suite hits the network.
+  **Frontend**: Vitest + Testing Library (`vitest.config.ts`, jsdom,
+  `src/test/setup.ts`). `*.test.ts(x)` next to the unit under test — so far
+  `lib/format`, `lib/parseApiError`, `lib/cn`, `components/States`. `npm run
+  test` (CI runs it). Smoke-level for now; grow it alongside new screens.
+  Grow both suites alongside new work.
 - **Auth**: JWT via default Django `User` (+ `accounts.UserProfile`), one
   superuser (`cookadmin`). Roles: Administrator / Executive Chef / QA Manager
   / Cost Controller / Restaurant Cook / Prep Cook, seeded and admin-editable.
