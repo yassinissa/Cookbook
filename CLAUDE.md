@@ -32,8 +32,10 @@ before calling anything done — not just "the happy path returns 200."
   `DishRecipe.image` is an `ImageField` (Pillow) — the write serializer
   takes a base64 `image_data` (`''` clears it, ≤5 MB), mirrors the file URL
   into `image_url`, and the read serializers return `image_url` absolute.
-  `MEDIA_URL=/media/` is served by Django only under `DEBUG`;
-  `DATA_UPLOAD_MAX_MEMORY_SIZE` is raised for the inline payload.
+  `MEDIA_URL=/media/` is served by an explicit `^media/` → `django.views.static.serve`
+  route in `config/urls.py` in every environment (prod photos sit on a Render
+  Disk mounted at `backend/media`); `DATA_UPLOAD_MAX_MEMORY_SIZE` is raised for
+  the inline payload.
   - **Standalone read/action APIs**: `cookbook/dish-standards/`
     (`views_standards.py`) — addressed by *dish id*, list is one row per
     current dish (so QA sees gaps), `PATCH` upserts the `DishStandard`
@@ -87,7 +89,7 @@ before calling anything done — not just "the happy path returns 200."
     field is a file upload (`<ImagePicker>`) — reads the file to a base64
     `image_data` on the recipe JSON; the backend `DishRecipe.image`
     `ImageField` stores it and mirrors the URL into `image_url` (served from
-    `/media/` in DEBUG). Swapping a photo doesn't version the recipe.
+    `/media/`). Swapping a photo doesn't version the recipe.
   - **Production** (prep-kitchen) list / editor / detail — same shape as
     Dishes minus the plated photo, food-cost only (no labour — see below),
     yield card shows cost per output unit. `VersionDrawer` is shared

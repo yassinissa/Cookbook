@@ -92,7 +92,9 @@ credentials live in a shared `cookbook-shared` env group.
   step with `apps/accounts/capabilities.py` (a new capability still needs its
   own migration to grant it to roles — see the accounts `0003`/`0004` pattern).
   WhiteNoise serves the API's own static assets (`production.py`); dish/plating
-  photos (`MEDIA`) still need object storage or a Render Disk — a known gap.
+  photos (`MEDIA`) live on the Render Disk mounted at `backend/media` and are
+  served by the explicit `^media/` route in `config/urls.py`. Object storage
+  (S3/R2) is the move if photo volume ever grows.
 - **Frontend**: `npm ci && npm run build` → `dist/`, with an SPA rewrite so
   `/m/<slug>` and every client route resolve. Set `VITE_API_BASE_URL` to the
   API's `…/api`.

@@ -2,11 +2,11 @@
 NOTE — Master URL file. All API routes are prefixed with /api/.
 """
 from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.db import connection
 from django.http import JsonResponse
+from django.views.static import serve as serve_media
 
 
 def health_check(request):
@@ -31,9 +31,15 @@ urlpatterns = [
     path('api/cookbook/', include('apps.cookbook.urls')),
 ]
 
-# Uploaded dish photos, served straight off the Render disk mounted at
-# MEDIA_ROOT. A dedicated object store / CDN would scale better, but at this
-# volume (a handful of dish + plating photos) gunicorn serving them directly
-# is fine — this single-worker service already accepts that tradeoff
-# elsewhere (see publishing.py's worker count comment).
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Uploaded dish / plating photos, served straight off the Render disk mounted
+# at MEDIA_ROOT. `django.conf.urls.static.static()` only wires this under
+# DEBUG, which left every image 404 in production even though the disk was
+# mounted and the files were on it — so serve it explicitly in every
+# environment. `serve` uses `safe_join` (no path traversal). A dedicated
+# object store / CDN would scale better, but at this volume (a handful of
+# photos) the single gthread worker serving them directly is fine — the same
+# tradeoff this service already accepts elsewhere (see the worker-count note
+# in render.yaml / publishing.py).
+urlpatterns += [
+    re_path(r'^media/(?P<path>.*)$', serve_media, {'document_root': settings.MEDIA_ROOT}),
+]
