@@ -45,12 +45,11 @@ services / read config + logs / check deploys), `inventory_platform` cloned at
   **Takes effect on the next Blueprint sync** (buildCommand is blueprint-
   managed; a plain deploy keeps the stored one). Health-check change is code,
   so it ships on any deploy.
-- ◐ **Deploy `main` to prod + blueprint-sync** — plain deploys keeping prod on
-  latest `main` (done through 2026-09-08, health clean). **Still pending: one
-  Blueprint sync** from the Render dashboard, now carrying two `render.yaml`
-  changes: `PYTHON_VERSION` 3.12.8→3.12.10, and the `cookbook-api`
-  `buildCommand` gaining `sync_capabilities` (PR #16). Neither is urgent;
-  do them together.
+- ☑ **Deploy `main` to prod + blueprint-sync** — done 2026-09-08. Blueprint
+  synced + redeployed; prod `cookbook-api` build log confirms: Python
+  **3.12.10**, `sync_capabilities` ran (`0 created, 24 updated` — no drift),
+  `migrate` = "No migrations to apply" (prod DB fully current, incl.
+  0025/0026). Health endpoint clean.
 
 ## Tier 2 — robustness
 
