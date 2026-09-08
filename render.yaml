@@ -1,5 +1,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Render Blueprint for Cookbook — API + weekly-digest cron + frontend + Postgres.
+# (Last valid sync target: this comment forces Render to re-sync at HEAD after
+#  the invalid `notifyOnFail` key stuck the blueprint in an error state.)
 #
 # Cookbook shares this Render account with inventory-platform, whose own
 # backend is already named `greenhill-api`. Render matches blueprint services
