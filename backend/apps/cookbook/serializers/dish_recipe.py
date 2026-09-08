@@ -1,8 +1,10 @@
 import base64
 import binascii
 import uuid
+from io import BytesIO
 
 from django.core.files.base import ContentFile
+from PIL import Image, UnidentifiedImageError
 from rest_framework import serializers
 
 from apps.accounts.access import ALL, access_for
@@ -23,7 +25,28 @@ from .mixins import HidesCostingFields
 
 _IMAGE_EXT = {'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png',
               'image/webp': 'webp', 'image/gif': 'gif'}
+_IMAGE_FORMATS = {'JPEG', 'PNG', 'WEBP', 'GIF'}
 _MAX_IMAGE_BYTES = 5 * 1024 * 1024
+_MAX_IMAGE_PIXELS = 40_000_000   # ~40 MP — generous for a phone photo, stops decompression bombs
+
+
+def verify_image_bytes(blob, *, field='image_data'):
+    """The client declares the MIME type — don't trust it. Actually decode the
+    bytes with Pillow so a script / HTML blob relabelled as image/png is
+    rejected, and cap the pixel count so a tiny file can't expand to gigabytes
+    of memory when it's later opened."""
+    err = serializers.ValidationError(
+        {field: 'Unsupported or corrupt image. Use JPEG, PNG, WebP or GIF.'})
+    try:
+        Image.open(BytesIO(blob)).verify()          # structural integrity check
+        img = Image.open(BytesIO(blob))             # verify() leaves it unusable — reopen
+    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError):
+        raise err
+    if (img.format or '').upper() not in _IMAGE_FORMATS:
+        raise err
+    w, h = img.size
+    if w * h > _MAX_IMAGE_PIXELS:
+        raise serializers.ValidationError({field: 'Image resolution is too large (max ~40 MP).'})
 
 
 def _absolute_image_url(request, url):
@@ -57,6 +80,7 @@ def apply_image_data(recipe, image_data):
             {'image_data': 'Unsupported or corrupt image. Use JPEG, PNG, WebP or GIF.'})
     if len(blob) > _MAX_IMAGE_BYTES:
         raise serializers.ValidationError({'image_data': 'Image must be 5 MB or smaller.'})
+    verify_image_bytes(blob, field='image_data')
     recipe.image.save(f'{uuid.uuid4().hex}.{ext}', ContentFile(blob), save=False)
     recipe.image_url = recipe.image.url
 

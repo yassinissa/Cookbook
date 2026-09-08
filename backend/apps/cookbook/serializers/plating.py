@@ -20,7 +20,7 @@ from django.core.files.base import ContentFile
 from rest_framework import serializers
 
 from apps.cookbook.models import DishRecipe, PlatingGuide, PlatingImage
-from .dish_recipe import _absolute_image_url
+from .dish_recipe import _absolute_image_url, verify_image_bytes
 from .reference import ApproverSerializer
 
 
@@ -43,6 +43,7 @@ def _decode_image(image_data):
             {'images': 'Unsupported or corrupt image. Use JPEG, PNG, WebP or GIF.'})
     if len(blob) > _MAX_IMAGE_BYTES:
         raise serializers.ValidationError({'images': 'Each photo must be 5 MB or smaller.'})
+    verify_image_bytes(blob, field='images')
     return ContentFile(blob), ext
 
 

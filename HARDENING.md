@@ -125,9 +125,13 @@ services / read config + logs / check deploys), `inventory_platform` cloned at
   menu/search keyboard rework, `inert` backgrounds, focus-first-error audit, a
   live axe/accesslint scan, contrast check, screen-reader pass — all in
   `A11Y_AUDIT.md` §2–3.
-- ☐ **Security review** — run `security-review` over the recent
-  modifier/publish branches; the inventory service account is SUPER_ADMIN
-  (broad blast radius) — consider a narrower role.
+- ◐ **Security review** — pass 1 done (PR #22, `SECURITY.md`). Fixed: no
+  rate limiting (added anon/user/login throttles), missing prod security
+  headers (`SECURE_PROXY_SSL_HEADER` for Render + HSTS + nosniff + referrer),
+  image uploads trusting the client MIME type (Pillow `verify()` + pixel cap).
+  **Open:** no real logout / token blacklist, unsubscribe is a state-changing
+  GET, the SUPER_ADMIN inventory service account, `ipAllowList` — all in
+  `SECURITY.md` §2.
 - ☐ **Tighten DB `ipAllowList`** — `cookbook-db` accepts connections from
   `0.0.0.0/0` (any IP). Fine for solo dev + `pg_dump`; restrict to Render's
   egress + known IPs before real customer data. (`DB_BACKUP.md` §5.)

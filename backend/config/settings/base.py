@@ -84,8 +84,18 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 25,
-    # Only the public menu endpoint opts into throttling (scope 'public_menu').
+    'DEFAULT_THROTTLE_CLASSES': (
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ),
     'DEFAULT_THROTTLE_RATES': {
+        # A screen is a handful of requests and get_items() pages server-side
+        # in one call, so 'user' is generous; 'anon' only covers login (the
+        # public menu has its own tighter 'public_menu' scope, and the login
+        # view adds a 'login' scope on top).
+        'anon': config('THROTTLE_ANON', default='60/min'),
+        'user': config('THROTTLE_USER', default='600/min'),
+        'login': config('THROTTLE_LOGIN', default='10/min'),
         'public_menu': config('PUBLIC_MENU_THROTTLE', default='60/min'),
     },
 }

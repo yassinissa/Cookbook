@@ -39,6 +39,22 @@ DATABASES = {
 
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='', cast=Csv())
 
+# ─── SECURITY HEADERS ────────────────────────────────────────────────────────
+# Render terminates TLS at its edge and forwards to gunicorn over plain HTTP —
+# without this Django thinks every request is insecure (secure-cookie + HSTS
+# logic misfires, and SECURE_SSL_REDIRECT can loop).
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+
+# HSTS — the API is HTTPS-only. Start at 1h; raise to a year + preload once
+# confirmed stable (SECURE_HSTS_SECONDS is sticky in browsers).
+SECURE_HSTS_SECONDS = config('SECURE_HSTS_SECONDS', default=3600, cast=int)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = config('SECURE_HSTS_INCLUDE_SUBDOMAINS', default=False, cast=bool)
+SECURE_HSTS_PRELOAD = config('SECURE_HSTS_PRELOAD', default=False, cast=bool)
+
+SECURE_CONTENT_TYPE_NOSNIFF = True          # don't let browsers MIME-sniff uploads
+SECURE_REFERRER_POLICY = 'same-origin'
+X_FRAME_OPTIONS = 'DENY'
