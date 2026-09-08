@@ -54,7 +54,7 @@ services:
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings.production
       - key: PYTHON_VERSION
-        value: "3.12.8"            # Django 4.2 does not support 3.13+
+        value: "3.12.10"          # Django 4.2 does not support 3.13+; matches .python-version / runtime.txt
       - key: SECRET_KEY
         generateValue: true
       - key: DB_NAME
@@ -94,7 +94,7 @@ services:
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings.production
       - key: PYTHON_VERSION
-        value: "3.12.8"
+        value: "3.12.10"
       - key: SECRET_KEY
         fromService: { name: cookbook-api, type: web, envVarKey: SECRET_KEY }
       - key: DB_NAME
