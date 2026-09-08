@@ -43,28 +43,27 @@ The blueprint is adopted (services `cookbook-api` / `cookbook-frontend` /
   `POSModifierIngredient` model + data copy from `POSAddonIngredient`) were
   applied by its 2026-09-07 `8f852f1` deploy — that side is current too.
 
-## 3. Manual, after the deploy that ships the modifier pipeline
+## 3. Finish the modifier pipeline in prod
 
-The POS-modifier → stock-deduction work is **merged to both `main`s (2026-09-07,
-Cookbook PRs #6–#8 / inventory-platform PR #1)**. Once both services have
-deployed it, do these one-off runs:
+Both `main`s deployed the pipeline on 2026-09-07 (Cookbook PRs #6–#8 /
+inventory-platform PR #1). Remaining, in order:
 
-1. **Cookbook** — structural backfill of WnR's modifier catalogue:
-   ```
-   python manage.py backfill_wnr_modifiers          # dry run — read the plan
-   python manage.py backfill_wnr_modifiers --commit
-   ```
-   Safe, idempotent, no domain guessing; it only creates `needs_data` options
-   (nothing deducts wrong). Prints the chef worklist afterwards.
-2. **Re-publish the WnR dish recipes** (from the app's publish button, or a
-   scripted loop) so the new `POSItemMapping` / `POSModifierIngredient` rows
-   reach inventory-platform.
-3. A chef then fills the ~24 consumption quantities on the **POS → Readiness**
-   screen. The hand-off worklist — every row, its recommended action, and the
-   dish's current recipe — is [`WNR_MODIFIER_WORKLIST.md`](WNR_MODIFIER_WORKLIST.md).
-   Most rows are just "tick No stock impact"; the open numbers are the protein
-   grams for the protein-less-base dishes and the ANGUS-Beef swaps. Re-upload a
-   Lavu report to confirm every line lands on a success `deduction_note`.
+1. ☑ **Structural backfill** — `backfill_wnr_modifiers --commit` **applied to
+   prod 2026-09-08** (run locally against the prod DB, reading
+   `sales-by-item-wnr.xls`). Prod now has 6 groups / 23 options / 17 dish
+   attachments; every new option is `needs_data` (nothing deducts wrong).
+   Idempotent — re-run says "no structural changes needed".
+2. ☐ **Chef fills the ~8 real quantities + confirms the "no impact" rows** on
+   **POS → Readiness**. Kitchen hand-off: [`WNR_KITCHEN_QUESTIONS.md`](WNR_KITCHEN_QUESTIONS.md)
+   (trimmed) / [`WNR_MODIFIER_WORKLIST.md`](WNR_MODIFIER_WORKLIST.md) (full).
+   Plus author options for the 9 unmatched items (California Maki [With
+   Shrimp], Robata, …) — mostly "no stock impact".
+3. ☐ **Re-publish the WnR dish recipes** (publish button, or a scripted loop)
+   so the new `POSItemMapping` / `POSModifierIngredient` rows reach
+   inventory-platform. Do this *after* step 2 — publishing empty `needs_data`
+   options just emits warnings.
+4. ☐ **Verify** — re-upload a Lavu report; every line should land on a success
+   `deduction_note`.
 
 ## 4. Data backfills run from the Render Shell (not deploy config)
 
@@ -76,9 +75,11 @@ zero on hand.
 
 ## 5. Known gaps (not blockers)
 
-- ~60 WnR items sold via the Lavu report have **no Cookbook recipe** at all
-  (Dune, Kindo, 3zoz Maki, …). inventory-platform has them via
-  `seed_pos_recipes`; Cookbook itself does not. Authoring those base recipes is
-  separate from the modifier pipeline.
+- **7** WnR items in the sample Lavu report have **no Cookbook recipe**
+  (Chinese Fry Rice, Cream & Mushroom, Kindo, Kung Pao, Singapore Noodles,
+  Udon Chizu Noodles, Wok Rice) — verified against prod 2026-09-08 (prod has
+  82 current WnR recipes; `seed_wnr_demo` was run there). Authoring those 7
+  base recipes is separate from the modifier pipeline. *(An older note here
+  said "~60" — stale.)*
 - The `Crispy Salad` add-on option points at a non-existent SKU (`556`) — replace
   it with the real sauce SKU on the Readiness screen.

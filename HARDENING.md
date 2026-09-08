@@ -90,15 +90,15 @@ services / read config + logs / check deploys), `inventory_platform` cloned at
 
 ## Tier 3 — cleanup / debt
 
-- ◐ **Finish the modifier pipeline in prod** — migrations already applied
-  (verified via Render API 2026-09-08): Cookbook `0025`/`0026` shipped in the
-  `06b52a6` deploy on 2026-09-07, inventory-platform `0007`/`0008` in the
-  `8f852f1` deploy same day. **DEPLOY.md §2–3 "not yet run in prod" is stale.**
-  What actually remains: (1) `python manage.py backfill_wnr_modifiers --commit`
-  on Cookbook prod (one-off, not auto-run), (2) re-publish WnR dishes so
-  `POSModifierIngredient` rows reach inventory-platform (`INVENTORY_API_*` are
-  set), (3) chef fills ~24 quantities on POS → Readiness, (4) final
-  Lavu-report verify.
+- ◐ **Finish the modifier pipeline in prod** — migrations applied 2026-09-07;
+  **`backfill_wnr_modifiers --commit` applied to prod 2026-09-08** (run
+  locally against the prod DB). Prod modifier catalogue is now staged: 6
+  groups / 23 options / 17 dish attachments, all new options `needs_data`.
+  **Remaining:** (1) chef fills the ~8 real quantities + confirms the "no
+  impact" rows on POS → Readiness (`WNR_KITCHEN_QUESTIONS.md` is the ask) +
+  authors the 9 unmatched options; (2) re-publish the WnR dishes; (3) verify
+  with a Lavu report. Backup taken pre-backfill (logical dump in scratchpad +
+  Render PITR to Sep 4).
 - ☐ **SMTP env for the cost-digest cron** — CONFIRMED missing (Render API
   2026-09-08): the `cookbook-shared` env group has only `EMAIL_PORT` +
   `EMAIL_USE_TLS`. Need `EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`,
