@@ -245,7 +245,38 @@
     text-align: start;
     vertical-align: top;
   }
+  /* Documents module — ink-on-white sheets built from recipe data. */
+  .doc-sheet {
+    color: #000;
+  }
+  .doc-sheet table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .doc-sheet th,
+  .doc-sheet td {
+    border: 1px solid #999;
+    padding: 5px 8px;
+    text-align: start;
+    vertical-align: top;
+  }
+  .doc-section {
+    break-inside: avoid;
+  }
+  .doc-page-break {
+    break-before: page;
+  }
+  .doc-sheet img {
+    max-height: 78mm;
+    object-fit: contain;
+  }
   @page {
     margin: 14mm;
   }
+}
+
+/* Keep the on-screen preview readable without a printer: a light frame that
+   the print rules above neutralise. */
+.doc-sheet {
+  color: var(--ink);
 }
