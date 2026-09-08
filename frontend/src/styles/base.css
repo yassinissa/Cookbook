@@ -13,6 +13,44 @@
     -webkit-text-size-adjust: 100%;
   }
 
+  /* Kitchen tablets: kill the 300ms double-tap-zoom delay on taps, and the
+     grey tap flash (we draw our own active states). */
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  label,
+  [role='button'],
+  [role='option'],
+  [role='menuitem'] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Skip link — first tab stop, visually offscreen until focused. */
+  .skip-link {
+    position: fixed;
+    top: 0;
+    inset-inline-start: 0;
+    z-index: 100;
+    margin: 0.5rem;
+    padding: 0.5rem 0.875rem;
+    border-radius: 0.5rem;
+    background: var(--surface-raised);
+    color: var(--ink);
+    box-shadow: var(--shadow-popover);
+    transform: translateY(-150%);
+  }
+  .skip-link:focus {
+    transform: translateY(0);
+  }
+
+  /* headings targeted by an anchor clear the sticky TopBar */
+  :target {
+    scroll-margin-top: 4rem;
+  }
+
   body {
     @apply bg-canvas text-ink font-sans antialiased;
     font-feature-settings: 'ss01';

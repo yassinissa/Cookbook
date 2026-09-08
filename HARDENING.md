@@ -117,8 +117,14 @@ services / read config + logs / check deploys), `inventory_platform` cloned at
   leaving recipe lines `no_conversion` (see `ingredient-conversion-gaps` memo).
 - ☐ **`POSAddonIngredient` removal** — deprecated in both repos, "keep one
   release then drop."
-- ☐ **Accessibility audit** — never run. Kitchen context (glare, gloves,
-  speed, iOS-15 iPads) makes target size + contrast high-value.
+- ◐ **Accessibility audit** — pass 1 done (PR #21, `A11Y_AUDIT.md`): static
+  review of the design-system primitives + shell. Fixed skip link, unlabelled
+  nav landmarks, `<Button type>` default, `<Combobox>` duplicate-id,
+  `<Drawer>`/`<ConfirmDialog>` modal semantics (name, focus trap, restore),
+  `<Field>` required/error a11y, global `touch-action`. **Open:** the TopBar
+  menu/search keyboard rework, `inert` backgrounds, focus-first-error audit, a
+  live axe/accesslint scan, contrast check, screen-reader pass — all in
+  `A11Y_AUDIT.md` §2–3.
 - ☐ **Security review** — run `security-review` over the recent
   modifier/publish branches; the inventory service account is SUPER_ADMIN
   (broad blast radius) — consider a narrower role.
