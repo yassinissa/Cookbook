@@ -32,6 +32,12 @@ React + Vite + Tailwind frontend.
 
 ## Local development
 
+**Runtime versions are pinned.** Python **3.12** (`.python-version` /
+`backend/runtime.txt` — Django 4.2 doesn't support 3.13+) and Node **24**
+(`frontend/.nvmrc`). With `pyenv` / `nvm` installed they're picked up
+automatically; otherwise install those versions by hand. A venv built on the
+wrong Python shows up as spurious test errors (e.g. 502-path failures on 3.14).
+
 Run inventory-platform's backend on `:8000` (as it already does) and run
 Cookbook's own backend on a different port, e.g. `:8001`, so both APIs are
 reachable at once:
@@ -39,6 +45,7 @@ reachable at once:
 ```bash
 # backend
 cd backend
+pyenv install -s 3.12.10           # if pyenv is installed
 python -m venv venv && source venv/Scripts/activate  # Windows Git Bash
 pip install -r requirements/development.txt
 cp .env.example .env   # then fill in INVENTORY_API_USERNAME/PASSWORD
