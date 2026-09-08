@@ -37,18 +37,20 @@ services / read config + logs / check deploys), `inventory_platform` cloned at
   different repo (the README lists that URL, which is what misled the first
   pass). inventory_platform has uncommitted local drift worth a look, but
   separately.
-- ◐ **`sync_capabilities` on every deploy** — `chore/sync-capabilities-deploy`
-  (PR #16). Added to the `cookbook-api` `buildCommand` after `migrate`
-  (idempotent, no `--prune`) — safety net for the "forgot the capability
-  migration" foot-gun (role grants still need the migration). Same PR deepens
-  `/api/health/` to do a real `SELECT 1` and return 503 on DB failure
-  (+ `apps/core/tests/test_health.py`, 3 tests). Also corrects `DEPLOY.md` §2
-  (0025/0026 + inv 0007/0008 already deployed 2026-09-07).
-- ◐ **Deploy `main` to prod + blueprint-sync** — plain deploy of `cookbook-api`
-  + `cookbook-frontend` to `c77fceb` (latest `main`) done 2026-09-08, both
-  live, health clean. **Still pending:** a **Blueprint sync** from the Render
-  dashboard to apply the `render.yaml` `PYTHON_VERSION` 3.12.8→3.12.10 bump
-  (prod currently builds 3.12.8 fine, so not urgent).
+- ☑ **`sync_capabilities` on every deploy** — PR #16, merged 2026-09-08.
+  Added to `cookbook-api` `buildCommand` after `migrate` (idempotent, no
+  `--prune`) — safety net for the "forgot the capability migration" foot-gun
+  (role grants still need the migration). Also deepened `/api/health/` to a
+  real `SELECT 1` → 503 on DB failure (+ `apps/core/tests/test_health.py`).
+  **Takes effect on the next Blueprint sync** (buildCommand is blueprint-
+  managed; a plain deploy keeps the stored one). Health-check change is code,
+  so it ships on any deploy.
+- ◐ **Deploy `main` to prod + blueprint-sync** — plain deploys keeping prod on
+  latest `main` (done through 2026-09-08, health clean). **Still pending: one
+  Blueprint sync** from the Render dashboard, now carrying two `render.yaml`
+  changes: `PYTHON_VERSION` 3.12.8→3.12.10, and the `cookbook-api`
+  `buildCommand` gaining `sync_capabilities` (PR #16). Neither is urgent;
+  do them together.
 
 ## Tier 2 — robustness
 
