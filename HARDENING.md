@@ -73,11 +73,20 @@ services / read config + logs / check deploys), `inventory_platform` cloned at
   route in `config/urls.py`, every environment (`safe_join` blocks traversal).
   +`apps/core/tests/test_media.py` (3). Object storage still the eventual move
   if photo volume grows.
-- ☐ **Cron failure alerting** — `send_cost_digest` silently no-op'd for days
-  (unset SMTP). Whatever observability lands in Tier 1 should page on a cron
-  that errors or is skipped N weeks running.
-- ☐ **DB backup/restore runbook** — not documented. Confirm Render's automatic
-  backups are on for `cookbook-db` and write the restore steps.
+- ◐ **Cron failure alerting** — `chore/cron-failure-alerting` (PR #20).
+  `send_cost_digest` now exits non-zero (clean `CommandError`, not a
+  traceback) when SMTP is unconfigured or a send fails, so the Render cron
+  goes red instead of silently sending nothing. `--allow-unconfigured`
+  downgrades that to a skip. `render.yaml` cron gains `notifyOnFail: notify`
+  (applies on a Blueprint sync — the PATCH API silently ignores the field).
+  **Action:** confirm Render → Settings → Notifications → Failed is on. Once
+  SMTP is set the weekly run goes green; until then it will now email a
+  failure every Monday, which is the point.
+- ☑ **DB backup/restore runbook** — PR #20. New `DB_BACKUP.md`: Render Basic
+  = daily backups / 7-day retention / **no PITR** (worst case ~24 h loss);
+  manual `pg_dump` before risky ops; the dashboard restore + env cut-over
+  steps; `pg_restore`. Verified plan/retention facts via the Render API.
+  Restore has never been rehearsed — noted in the doc.
 
 ## Tier 3 — cleanup / debt
 
@@ -111,6 +120,9 @@ services / read config + logs / check deploys), `inventory_platform` cloned at
 - ☐ **Security review** — run `security-review` over the recent
   modifier/publish branches; the inventory service account is SUPER_ADMIN
   (broad blast radius) — consider a narrower role.
+- ☐ **Tighten DB `ipAllowList`** — `cookbook-db` accepts connections from
+  `0.0.0.0/0` (any IP). Fine for solo dev + `pg_dump`; restrict to Render's
+  egress + known IPs before real customer data. (`DB_BACKUP.md` §5.)
 - ☐ **Redis for cache + throttle** — prerequisite for running the API on more
   than one worker/instance (public-menu throttle + cache-bust are per-process
   today; `render.yaml` comments already acknowledge this).

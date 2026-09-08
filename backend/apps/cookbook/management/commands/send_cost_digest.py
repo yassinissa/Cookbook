@@ -10,15 +10,18 @@ Enrolment is opt-out: every active user with an email address and the
 DigestSubscription row with cadence='off'. A recipient whose digest would be
 empty is skipped (no "nothing to report" email). Run weekly by a Render cron.
 
-If the SMTP backend is active but EMAIL_HOST is unset, the command logs a
-one-line notice and exits 0 rather than crashing the cron with a traceback.
+If the SMTP backend is active but EMAIL_HOST is unset, the command exits
+non-zero with a one-line CommandError (not a traceback) so the Render cron
+goes red and notifies — a digest that silently sends nothing every week is
+worse than one that visibly fails. Pass --allow-unconfigured to downgrade
+that to a skip (exit 0) if you want the cron scheduled but tolerant.
 """
 from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.mail import EmailMultiAlternatives
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.template.loader import render_to_string
 from django.utils import timezone
 
@@ -39,24 +42,29 @@ class Command(BaseCommand):
         parser.add_argument('--user', help='Only this user (id or username); ignores the resend guard.')
         parser.add_argument('--force', action='store_true',
                             help='Ignore the resend guard for everyone.')
+        parser.add_argument('--allow-unconfigured', action='store_true',
+                            help='Skip (exit 0) instead of failing when SMTP is not configured.')
 
     def handle(self, *args, **opts):
         dry = opts['dry_run']
         one = opts['user']
         force = opts['force'] or bool(one)
 
-        # A cron that hard-crashes on unconfigured SMTP just emails an opaque
-        # traceback every week. If we'd be sending for real but no mail host is
-        # set, say so plainly and exit 0 — there's nothing to retry.
+        # No mail host on a real send path is a misconfiguration, not a
+        # no-op: fail loud (clean CommandError, not a traceback) so the cron
+        # goes red and Render notifies. A digest that quietly sends nothing
+        # every week is the failure mode we're guarding against.
         smtp = 'smtp' in settings.EMAIL_BACKEND
         if not dry and smtp and not settings.EMAIL_HOST:
-            self.stdout.write(self.style.WARNING(
-                'send_cost_digest: EMAIL_HOST is not set - skipping. '
+            msg = (
+                'EMAIL_HOST is not set — the weekly digest cannot send. '
                 'Configure EMAIL_HOST / EMAIL_HOST_USER / EMAIL_HOST_PASSWORD / '
-                'DEFAULT_FROM_EMAIL (the cookbook-shared env group on Render) '
-                'to enable the weekly digest.'
-            ))
-            return
+                'DEFAULT_FROM_EMAIL (the cookbook-shared env group on Render).'
+            )
+            if opts['allow_unconfigured']:
+                self.stdout.write(self.style.WARNING(f'send_cost_digest: {msg} Skipping.'))
+                return
+            raise CommandError(msg)
 
         if one:
             recipients = User.objects.filter(username=one) | User.objects.filter(pk=one if one.isdigit() else 0)

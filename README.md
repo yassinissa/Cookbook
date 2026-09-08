@@ -72,7 +72,9 @@ plus `INVENTORY_API_EMAIL` / `INVENTORY_API_PASSWORD` for a service account ther
 ## Deployment (Render)
 
 Outstanding production steps (env not yet set, one-off backfills to run) are
-tracked in [`DEPLOY.md`](DEPLOY.md).
+tracked in [`DEPLOY.md`](DEPLOY.md); database backup & restore is in
+[`DB_BACKUP.md`](DB_BACKUP.md); the production-readiness worklist is
+[`HARDENING.md`](HARDENING.md).
 
 [`render.yaml`](render.yaml) is a full Blueprint — Postgres, the Django API,
 the weekly-digest cron, and the Vite frontend as a static site. Cookbook
@@ -109,12 +111,15 @@ one-click unsubscribe from any email) under **Settings** in the app.
 
 - Command: `python manage.py send_cost_digest` (`--dry-run` builds and prints
   without sending; `--user <id|username>` targets one recipient and ignores the
-  5-day resend guard; `--force` ignores the guard for everyone).
+  5-day resend guard; `--force` ignores the guard for everyone;
+  `--allow-unconfigured` turns the "no SMTP host" hard-fail into a skip).
 - Schedule: the `cookbook-cost-digest` cron in `render.yaml` — `0 4 * * 1`
-  (04:00 UTC = 07:00 Asia/Kuwait). It pulls `SECRET_KEY` / `FRONTEND_URL` from
-  the API service and the DB creds from `cookbook-db`; SMTP comes from the
-  `cookbook-shared` env group. Dev sends nothing — `development.py` forces the
-  console email backend.
+  (04:00 UTC = 07:00 Asia/Kuwait), `notifyOnFail: notify`. It pulls
+  `SECRET_KEY` / `FRONTEND_URL` from the API service and the DB creds from
+  `cookbook-db`; SMTP comes from the `cookbook-shared` env group. With SMTP
+  unset the run **fails** (cron goes red, Render notifies) rather than
+  quietly doing nothing. Dev sends nothing — `development.py` forces the
+  console email backend, so the hard-fail never triggers locally.
 
 ### Public QR / print menu
 
