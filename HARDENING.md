@@ -107,8 +107,11 @@ services / read config + logs / check deploys), `inventory_platform` cloned at
 - ☐ **Confirm / close the prod WnR base-recipe gap** — ~60 report items have
   no Cookbook recipe unless `seed_wnr_demo` was run against prod (it wasn't,
   per `DEPLOY.md` §5). Decide: author them, or accept the gap.
-- ☐ **`seed_pos_recipes.py` is dead on a clean DB** — references removed
-  `ItemCategory.CHILLER_FREEZER`. Fix or delete.
+- ☑ **`seed_pos_recipes.py` dead on a clean DB** — inventory-platform PR #2,
+  merged 2026-09-08. Mapped the 31+4 removed-`ItemCategory.CHILLER_FREEZER`
+  refs to real categories; also fixed `_create_ingredients` keying
+  `get_or_create` on the non-unique `name_en` (→ key on SKU). +
+  `test_seed_pos_recipes.py`. Runs clean now (175 mappings on a fresh DB).
 - ☐ **Crispy Salad add-on → non-existent SKU `556`** (`DEPLOY.md` §5).
 - ☐ **Ingredient conversion gaps** — backlog of missing tbsp/piece-gram data
   leaving recipe lines `no_conversion` (see `ingredient-conversion-gaps` memo).
@@ -125,3 +128,5 @@ services / read config + logs / check deploys), `inventory_platform` cloned at
 - ☐ **Redis for cache + throttle** — prerequisite for running the API on more
   than one worker/instance (public-menu throttle + cache-bust are per-process
   today; `render.yaml` comments already acknowledge this).
+- ☐ **inventory-platform has no CI** — same gap Cookbook PR #15 closed here.
+  It has a `pos_integration` test suite (24+ tests) that nothing runs on a PR.
