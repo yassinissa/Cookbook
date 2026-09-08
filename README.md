@@ -115,10 +115,10 @@ one-click unsubscribe from any email) under **Settings** in the app.
   5-day resend guard; `--force` ignores the guard for everyone;
   `--allow-unconfigured` turns the "no SMTP host" hard-fail into a skip).
 - Schedule: the `cookbook-cost-digest` cron in `render.yaml` — `0 4 * * 1`
-  (04:00 UTC = 07:00 Asia/Kuwait), `notifyOnFail: notify`. It pulls
-  `SECRET_KEY` / `FRONTEND_URL` from the API service and the DB creds from
-  `cookbook-db`; SMTP comes from the `cookbook-shared` env group. With SMTP
-  unset the run **fails** (cron goes red, Render notifies) rather than
+  (04:00 UTC = 07:00 Asia/Kuwait). It pulls `SECRET_KEY` / `FRONTEND_URL` from
+  the API service and the DB creds from `cookbook-db`; SMTP comes from the
+  `cookbook-shared` env group. With SMTP unset the run **fails** (cron goes
+  red, and the workspace's Failed-notification setting emails you) rather than
   quietly doing nothing. Dev sends nothing — `development.py` forces the
   console email backend, so the hard-fail never triggers locally.
 
