@@ -81,7 +81,14 @@ before calling anything done — not just "the happy path returns 200."
   filtered nav as a screen), `src/features/{dashboard,dishes,menus,auth,
   more,placeholder,production,standards,activity}`, `src/lib/{api,queries,http,format,seed}`,
   `src/i18n` (bespoke EN/AR provider, full RTL via `dir` + logical
-  `ms-*/pe-*` utils), `src/theme` (light/dark via `data-theme`). Slice 1
+  `ms-*/pe-*` utils), `src/theme` (light/dark via `data-theme`), `src/pwa`
+  (`UpdatePrompt` reload pill + `OfflineBanner`). **PWA/offline**: `vite.config.ts`
+  `workbox.runtimeCaching` — `NetworkFirst` on `GET /api/*` (`cookbook-api`
+  cache, 4s timeout, 7-day) so an offline iPad reads the last-loaded
+  recipes/standards/plating; `StaleWhileRevalidate` on `/media/*`;
+  `navigateFallback` to the precached shell. `queryClient` uses
+  `networkMode:'offlineFirst'` so queries still fire offline (SW answers);
+  writes fail fast and `parseApiError` returns the offline message. Slice 1
   screens built:
   - **Dashboard**; **Dish** list (thumbnails via `<DishImage>`, its
     placeholder covers photo-less dishes) / editor / detail (live cost

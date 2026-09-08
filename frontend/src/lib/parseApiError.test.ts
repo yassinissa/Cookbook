@@ -1,6 +1,10 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 
 import { parseApiError } from './parseApiError'
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 function axiosLike(status: number, data: unknown) {
   return { response: { status, data } } as unknown
@@ -11,6 +15,11 @@ describe('parseApiError', () => {
     const { fields, message } = parseApiError(new Error('Network Error'))
     expect(fields).toEqual({})
     expect(message).toMatch(/could not reach the server/i)
+  })
+
+  it('reports an offline save when navigator is offline', () => {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    expect(parseApiError(new Error('Network Error')).message).toMatch(/you're offline/i)
   })
 
   it('maps DRF field errors to the fields map', () => {

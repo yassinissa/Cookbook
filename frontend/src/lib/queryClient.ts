@@ -6,6 +6,17 @@ export const queryClient = new QueryClient({
       staleTime: 30_000,
       retry: 1,
       refetchOnWindowFocus: false,
+      // 'offlineFirst', not the default 'online': when the browser reports no
+      // connection we still want the query to run so the service worker can
+      // answer it from the runtime cache (see vite.config.ts). Retries still
+      // pause while genuinely offline.
+      networkMode: 'offlineFirst',
+    },
+    mutations: {
+      // Attempt the write even when offline so it fails fast with a network
+      // error the form turns into pwa.offline.saveBlocked, rather than sitting
+      // "paused" with no feedback.
+      networkMode: 'offlineFirst',
     },
   },
 })

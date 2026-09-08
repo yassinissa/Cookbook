@@ -31,9 +31,12 @@ export function parseApiError(
 ): ParsedApiError {
   const axiosErr = err as AxiosError
   if (!axiosErr?.response) {
+    const offline = typeof navigator !== 'undefined' && navigator.onLine === false
     return {
       fields: {},
-      message: 'Could not reach the server. Check your connection and retry.',
+      message: offline
+        ? "You're offline — this change wasn't saved. Reconnect and try again."
+        : 'Could not reach the server. Check your connection and retry.',
     }
   }
 
