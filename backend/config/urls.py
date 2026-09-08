@@ -5,10 +5,20 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
+from django.db import connection
 from django.http import JsonResponse
 
 
 def health_check(request):
+    """Liveness + a real DB round-trip. Render's `healthCheckPath` polls this;
+    a 200 that only proves the process is up would keep routing traffic to an
+    instance that can't reach Postgres. Returns 503 on a DB failure."""
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT 1')
+            cursor.fetchone()
+    except Exception:
+        return JsonResponse({'status': 'error', 'database': 'unreachable'}, status=503)
     return JsonResponse({'status': 'ok'})
 
 

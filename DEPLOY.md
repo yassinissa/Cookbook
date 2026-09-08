@@ -26,10 +26,12 @@ The blueprint is adopted (services `cookbook-api` / `cookbook-frontend` /
 
 ## 2. Every deploy runs automatically
 
-- **API**: `pip install -r requirements/production.txt && collectstatic && migrate`
-  — shipping a model is just a redeploy. Migrations on `main` and **not yet run
-  in prod**: `cookbook` `0025`/`0026` (modifier consumption model) — the next
-  `cookbook-api` deploy applies them.
+- **API**: `pip install -r requirements/production.txt && collectstatic &&
+  migrate && sync_capabilities` — shipping a model is just a redeploy;
+  `sync_capabilities` keeps the `Capability` table in step with the code
+  catalogue (a role grant for a *new* capability still needs its own accounts
+  migration). `cookbook` `0025`/`0026` (modifier consumption model) were
+  applied by the 2026-09-07 deploy — prod is current.
 - **Frontend**: `npm ci && npm run build`. It's a PWA — a new build doesn't
   reach an already-open/installed client on its own. Since PR #11 the app shows
   a dismissible **"A new version is available · Reload"** pill (on tab focus, or
@@ -38,8 +40,8 @@ The blueprint is adopted (services `cookbook-api` / `cookbook-frontend` /
   behind until they tap Reload. The Documents module (PR #12) is part of this
   bundle — pure frontend, no backend or env changes, gated `document.export`.
 - **inventory-platform**: `pos_integration` `0007`/`0008` (the
-  `POSModifierIngredient` model + data copy from `POSAddonIngredient`) are on its
-  `main` — the next deploy of that service applies them.
+  `POSModifierIngredient` model + data copy from `POSAddonIngredient`) were
+  applied by its 2026-09-07 `8f852f1` deploy — that side is current too.
 
 ## 3. Manual, after the deploy that ships the modifier pipeline
 

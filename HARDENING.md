@@ -37,10 +37,13 @@ services / read config + logs / check deploys), `inventory_platform` cloned at
   different repo (the README lists that URL, which is what misled the first
   pass). inventory_platform has uncommitted local drift worth a look, but
   separately.
-- ☐ **`sync_capabilities` on every deploy** — `chore/sync-capabilities-deploy`.
-  Add it to the `cookbook-api` `buildCommand` after `migrate` (idempotent).
-  Removes the "forgot the capability migration" foot-gun. Also worth: deepen
-  `/api/health/` to check DB connectivity (returns 200 blind right now).
+- ◐ **`sync_capabilities` on every deploy** — `chore/sync-capabilities-deploy`
+  (PR #16). Added to the `cookbook-api` `buildCommand` after `migrate`
+  (idempotent, no `--prune`) — safety net for the "forgot the capability
+  migration" foot-gun (role grants still need the migration). Same PR deepens
+  `/api/health/` to do a real `SELECT 1` and return 503 on DB failure
+  (+ `apps/core/tests/test_health.py`, 3 tests). Also corrects `DEPLOY.md` §2
+  (0025/0026 + inv 0007/0008 already deployed 2026-09-07).
 - ◐ **Deploy `main` to prod + blueprint-sync** — plain deploy of `cookbook-api`
   + `cookbook-frontend` to `c77fceb` (latest `main`) done 2026-09-08, both
   live, health clean. **Still pending:** a **Blueprint sync** from the Render

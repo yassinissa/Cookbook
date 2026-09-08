@@ -87,7 +87,10 @@ create them, or use the file as the reference for manual setup. Secrets
 credentials live in a shared `cookbook-shared` env group.
 
 - **API build**: `pip install -r requirements/production.txt && collectstatic &&
-  migrate` — migrations run every deploy, so shipping a model is just a redeploy.
+  migrate && sync_capabilities` — migrations run every deploy, so shipping a
+  model is just a redeploy; `sync_capabilities` keeps the `Capability` table in
+  step with `apps/accounts/capabilities.py` (a new capability still needs its
+  own migration to grant it to roles — see the accounts `0003`/`0004` pattern).
   WhiteNoise serves the API's own static assets (`production.py`); dish/plating
   photos (`MEDIA`) still need object storage or a Render Disk — a known gap.
 - **Frontend**: `npm ci && npm run build` → `dist/`, with an SPA rewrite so
