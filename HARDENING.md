@@ -53,10 +53,13 @@ services / read config + logs / check deploys), `inventory_platform` cloned at
 
 ## Tier 2 — robustness
 
-- ☐ **PWA offline story** — `vite.config.ts` sets no `runtimeCaching` /
-  `navigateFallback`; the SW precaches build assets only. On a kitchen iPad
-  with spotty wifi every API call fails with no fallback. Add read-through
-  caching for recipe/standard GETs, or explicitly scope offline out in docs.
+- ◐ **PWA offline story** — `feat/pwa-offline-reads` (PR #19). Chosen scope:
+  **read-only cache of what was already loaded**. `workbox.runtimeCaching` in
+  `vite.config.ts` — `NetworkFirst` on `GET /api/*` (4s timeout, 7-day, 250
+  entries), `StaleWhileRevalidate` on `/media/*`, Google Fonts, +
+  `navigateFallback` to the shell. `queryClient` → `networkMode:'offlineFirst'`
+  (queries fire offline so the SW can answer; writes fail fast). New
+  `OfflineBanner` strip + `parseApiError` offline message. +6 tests.
 - ☑ **Frontend smoke tests** — PR #18, merged 2026-09-08. Vitest 5 + Testing
   Library + jsdom (`vitest.config.ts` separate from the app config so the PWA
   plugin stays out). 28 tests: `lib/format`, `lib/parseApiError`, `lib/cn`,

@@ -20,6 +20,56 @@ export default defineConfig({
       // Enable the service worker in dev mode too, so installability can be
       // tested against the dev server (LAN IP on a phone) without a build.
       devOptions: { enabled: true },
+      workbox: {
+        // Offline = read what was already loaded. A hard refresh on any route
+        // while offline still resolves to the app shell (precached), which
+        // then renders from the API cache below.
+        navigateFallback: 'index.html',
+        navigateFallbackDenylist: [/^\/api\//, /^\/media\//],
+        cleanupOutdatedCaches: true,
+        runtimeCaching: [
+          {
+            // Cookbook read endpoints. NetworkFirst so an online client always
+            // gets fresh data; an offline one falls back to the last response
+            // it saw (a flaky link gives up after 4s and uses the cache).
+            // Writes are POST/PATCH/DELETE — Workbox never caches those, so
+            // they just fail offline and the form shows pwa.offline.saveBlocked.
+            urlPattern: ({ url, request }) =>
+              request.method === 'GET' && url.pathname.startsWith('/api/'),
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'cookbook-api',
+              networkTimeoutSeconds: 4,
+              expiration: { maxEntries: 250, maxAgeSeconds: 60 * 60 * 24 * 7 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Dish / plating photos.
+            urlPattern: ({ url }) => url.pathname.startsWith('/media/'),
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'cookbook-media',
+              expiration: { maxEntries: 120, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com',
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'google-fonts-stylesheets' },
+          },
+          {
+            urlPattern: ({ url }) => url.origin === 'https://fonts.gstatic.com',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-webfonts',
+              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
+      },
       manifest: {
         name: 'Cookbook — Green Hills',
         short_name: 'Cookbook',
