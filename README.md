@@ -74,7 +74,8 @@ plus `INVENTORY_API_EMAIL` / `INVENTORY_API_PASSWORD` for a service account ther
 Outstanding production steps (env not yet set, one-off backfills to run) are
 tracked in [`DEPLOY.md`](DEPLOY.md); database backup & restore is in
 [`DB_BACKUP.md`](DB_BACKUP.md); the production-readiness worklist is
-[`HARDENING.md`](HARDENING.md).
+[`HARDENING.md`](HARDENING.md), with the security and accessibility review
+notes in [`SECURITY.md`](SECURITY.md) / [`A11Y_AUDIT.md`](A11Y_AUDIT.md).
 
 [`render.yaml`](render.yaml) is a full Blueprint — Postgres, the Django API,
 the weekly-digest cron, and the Vite frontend as a static site. Cookbook

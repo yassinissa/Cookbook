@@ -1,9 +1,19 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from apps.accounts.access import ALL, access_for
 from apps.cookbook.models import Branch, PrepKitchen
+
+
+class ThrottledLoginView(TokenObtainPairView):
+    """JWT login, rate-limited per client IP (scope 'login', default 10/min) so
+    the password endpoint can't be brute-forced. Everything else relies on the
+    global anon/user throttles."""
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'login'
 
 
 def _scope_payload(id_set, model):
