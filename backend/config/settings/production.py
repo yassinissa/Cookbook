@@ -20,10 +20,11 @@ STORAGES = {
     'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
     'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
 }
-# Dish / plating photos (MEDIA) are NOT served here — WhiteNoise only serves
-# STATIC_ROOT. In production they need object storage (S3/R2) or a Render Disk
-# mounted at backend/media plus a media route. Tracked as a follow-up; the
-# recipe/menu APIs work without it, only the images 404.
+# Dish / plating photos (MEDIA) live on the Render Disk mounted at
+# backend/media (see render.yaml) and are served by the explicit `^media/`
+# route in config/urls.py — WhiteNoise itself only serves STATIC_ROOT and
+# can't pick up newly-uploaded files without a per-request stat. Object
+# storage (S3/R2) is the eventual move if photo volume grows.
 
 DATABASES = {
     'default': {
