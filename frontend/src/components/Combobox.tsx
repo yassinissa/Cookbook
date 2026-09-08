@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 
 import { Icon } from './Icon'
 import { cn } from '@/lib/cn'
@@ -19,6 +19,8 @@ export function Combobox({ value, items, onSelect, placeholder, invalid }: Combo
   const [active, setActive] = useState(0)
   const wrapRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
+  const listId = useId()
+  const optionId = (i: number) => `${listId}-opt-${i}`
 
   const selected = useMemo(() => items.find((i) => i.sku === value), [items, value])
   const display = open ? query : selected ? `${selected.name_en} · ${selected.sku}` : value
@@ -59,7 +61,9 @@ export function Combobox({ value, items, onSelect, placeholder, invalid }: Combo
         <input
           role="combobox"
           aria-expanded={open}
-          aria-controls="combobox-list"
+          aria-controls={listId}
+          aria-autocomplete="list"
+          aria-activedescendant={open && matches[active] ? optionId(active) : undefined}
           aria-invalid={invalid || undefined}
           className={cn(
             'h-9 w-full rounded-lg border bg-surface ps-8 pe-2 text-[13px] text-ink placeholder:text-ink-subtle',
@@ -94,7 +98,7 @@ export function Combobox({ value, items, onSelect, placeholder, invalid }: Combo
 
       {open && (
         <ul
-          id="combobox-list"
+          id={listId}
           ref={listRef}
           role="listbox"
           className="absolute z-30 mt-1 max-h-64 w-full min-w-56 overflow-y-auto rounded-lg border border-hairline bg-surface-raised py-1 shadow-popover"
@@ -105,6 +109,7 @@ export function Combobox({ value, items, onSelect, placeholder, invalid }: Combo
           {matches.map((item, i) => (
             <li
               key={item.sku}
+              id={optionId(i)}
               role="option"
               aria-selected={i === active}
               onMouseEnter={() => setActive(i)}

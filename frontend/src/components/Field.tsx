@@ -20,6 +20,7 @@ export function Field({ label, required, help, error, className, children }: Fie
   const control = cloneElement(children, {
     id,
     'aria-invalid': error ? true : undefined,
+    'aria-required': required || undefined,
     'aria-describedby': error ? errId : help ? helpId : undefined,
   })
 
@@ -27,7 +28,7 @@ export function Field({ label, required, help, error, className, children }: Fie
     <div className={cn('flex flex-col gap-1.5', className)}>
       <label htmlFor={id} className="text-[13px] font-medium text-ink-muted">
         {label}
-        {required && <span className="text-danger"> *</span>}
+        {required && <span className="text-danger" aria-hidden="true"> *</span>}
       </label>
       {control}
       {help && !error && (
@@ -36,7 +37,7 @@ export function Field({ label, required, help, error, className, children }: Fie
         </p>
       )}
       {error && (
-        <p id={errId} className="text-xs font-medium text-danger-ink">
+        <p id={errId} role="alert" className="text-xs font-medium text-danger-ink">
           {error}
         </p>
       )}

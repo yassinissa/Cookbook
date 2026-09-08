@@ -35,13 +35,17 @@ const sizes: Record<Size, string> = {
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = 'secondary', size = 'md', loading, icon, iconEnd, className, children, disabled, ...rest },
+  { variant = 'secondary', size = 'md', loading, icon, iconEnd, className, children, disabled, type, ...rest },
   ref,
 ) {
   return (
     <button
       ref={ref}
+      // default to "button" — a bare <button> in a <form> submits, which has
+      // caused stray submits from icon/ghost buttons. Callers opt into submit.
+      type={type ?? 'button'}
       disabled={disabled || loading}
+      aria-busy={loading || undefined}
       className={cn(base, variants[variant], sizes[size], className)}
       {...rest}
     >

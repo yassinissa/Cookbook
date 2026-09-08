@@ -22,7 +22,7 @@ export function Sidebar() {
         <Wordmark />
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
+      <nav aria-label={t('a11y.mainNav')} className="flex-1 overflow-y-auto px-3 py-4">
         {sections.map((section) => (
           <div key={section.labelKey} className="mb-5">
             <p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-subtle">
