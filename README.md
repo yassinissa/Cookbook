@@ -1,5 +1,7 @@
 # Cookbook
 
+![CI](https://github.com/yassinissa/Cookbook/actions/workflows/ci.yml/badge.svg)
+
 Recipe authoring system for Green Hills, split into two phases:
 
 - **Preparation** — prep-kitchen recipes (raw materials → prepared product)
