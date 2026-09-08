@@ -59,12 +59,12 @@ services / read config + logs / check deploys), `inventory_platform` cloned at
   caching for recipe/standard GETs, or explicitly scope offline out in docs.
 - ☐ **Frontend smoke tests** — no test runner at all. Vitest + Testing
   Library: render every route, exercise the mutation happy-paths.
-- ◐ **Prod media serving** — `fix/prod-media-serving` (PR #17). Confirmed
-  broken: `/media/` 404s in prod (disk mounted, files on it, no route — the
-  `static()` helper is DEBUG-only). Fix: explicit `^media/` →
-  `django.views.static.serve` route in `config/urls.py`, every environment.
-  `safe_join` blocks traversal. +`apps/core/tests/test_media.py` (3). Object
-  storage still the eventual move if photo volume grows.
+- ☑ **Prod media serving** — PR #17, merged + deployed 2026-09-08. `/media/`
+  was 404 in prod (disk mounted, files on it, no route — `static()` is
+  DEBUG-only). Fixed with an explicit `^media/` → `django.views.static.serve`
+  route in `config/urls.py`, every environment (`safe_join` blocks traversal).
+  +`apps/core/tests/test_media.py` (3). Object storage still the eventual move
+  if photo volume grows.
 - ☐ **Cron failure alerting** — `send_cost_digest` silently no-op'd for days
   (unset SMTP). Whatever observability lands in Tier 1 should page on a cron
   that errors or is skipped N weeks running.
