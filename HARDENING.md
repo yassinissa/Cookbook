@@ -57,8 +57,12 @@ services / read config + logs / check deploys), `inventory_platform` cloned at
   `navigateFallback`; the SW precaches build assets only. On a kitchen iPad
   with spotty wifi every API call fails with no fallback. Add read-through
   caching for recipe/standard GETs, or explicitly scope offline out in docs.
-- ☐ **Frontend smoke tests** — no test runner at all. Vitest + Testing
-  Library: render every route, exercise the mutation happy-paths.
+- ◐ **Frontend smoke tests** — `test/frontend-smoke` (PR #18). Vitest 5 +
+  Testing Library + jsdom (`vitest.config.ts` separate from the app config so
+  the PWA plugin stays out). 28 tests: `lib/format`, `lib/parseApiError`,
+  `lib/cn`, `components/States`. `npm run test` wired into the CI frontend job.
+  Foundation only — route-level render tests + mutation happy-paths still to
+  grow alongside new screens.
 - ☑ **Prod media serving** — PR #17, merged + deployed 2026-09-08. `/media/`
   was 404 in prod (disk mounted, files on it, no route — `static()` is
   DEBUG-only). Fixed with an explicit `^media/` → `django.views.static.serve`
