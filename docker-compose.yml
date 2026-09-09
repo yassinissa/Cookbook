@@ -1,0 +1,90 @@
+# ── Cookbook — self-hosted stack ─────────────────────────────────────────────
+# One command deploy on a plain VPS:
+#     cp .env.docker.example .env   # then fill it in
+#     docker compose up -d --build
+#
+# Services:  db (postgres) · api (django+gunicorn) · web (vite build behind nginx)
+#            caddy (public entry: TLS + routing)
+#
+# Running Cookbook AND inventory-platform on the same box: see DEPLOY_SELFHOST.md
+# — you drop the `caddy` service here and point one shared Caddy at both.
+#
+# On Coolify you don't use this file: point it at backend/Dockerfile and
+# frontend/Dockerfile, add a Postgres resource, set env in the UI.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: cookbook
+
+services:
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${DB_USER} -d $${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [internal]
+
+  api:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+    volumes:
+      - media_data:/app/media        # uploaded dish / plating photos
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/health/"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    networks: [internal]
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+    restart: unless-stopped
+    depends_on: [api]
+    networks: [internal]
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      COOKBOOK_DOMAIN: ${COOKBOOK_DOMAIN}
+      COOKBOOK_API_DOMAIN: ${COOKBOOK_API_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - media_data:/srv/media:ro      # Caddy serves /media/* straight off disk
+      - caddy_data:/data              # Let's Encrypt certs — persist this
+      - caddy_config:/config
+    depends_on: [api, web]
+    networks: [internal]
+
+volumes:
+  db_data:
+  media_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  internal:

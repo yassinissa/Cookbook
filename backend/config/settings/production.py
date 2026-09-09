@@ -39,6 +39,15 @@ DATABASES = {
 
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='', cast=Csv())
 
+# Behind a TLS-terminating proxy (Render's edge, or Caddy/Traefik when self-
+# hosted) Django 4.x rejects admin / DRF-browsable-API POSTs unless the origin
+# is trusted explicitly — the scheme must be included, e.g.
+# "https://cookbook.example.com". Falls back to CORS_ALLOWED_ORIGINS so Render,
+# where only that was set, keeps working unchanged.
+CSRF_TRUSTED_ORIGINS = config(
+    'CSRF_TRUSTED_ORIGINS', default=','.join(CORS_ALLOWED_ORIGINS), cast=Csv()
+)
+
 # ─── SECURITY HEADERS ────────────────────────────────────────────────────────
 # Render terminates TLS at its edge and forwards to gunicorn over plain HTTP —
 # without this Django thinks every request is insecure (secure-cookie + HSTS

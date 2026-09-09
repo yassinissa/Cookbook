@@ -1,0 +1,28 @@
+# Keep the build context small and the image clean.
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Local dev DB + uploaded media (media/ is a mounted volume in deployment)
+db.sqlite3
+media/
+staticfiles/
+
+# Secrets & local config — env is injected at runtime
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Docs that don't belong in the runtime image
+*.md

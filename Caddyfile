@@ -1,0 +1,26 @@
+# Public entry point for the Cookbook stack.
+# Two hostnames (matches the Render layout so migrating is a pure DNS swap):
+#   {$COOKBOOK_DOMAIN}      → the SPA            e.g. cookbook.greenhillskw.co
+#   {$COOKBOOK_API_DOMAIN}  → the Django API     e.g. cookbook-api.greenhillskw.co
+#
+# Caddy fetches + renews a Let's Encrypt cert for each automatically (ports
+# 80/443 open, DNS already pointing here).
+
+{$COOKBOOK_API_DOMAIN} {
+	encode zstd gzip
+
+	# Uploaded photos — served straight off the shared volume, no Django hop.
+	# Django returns absolute image_url on this host, so /media lives here.
+	handle_path /media/* {
+		root * /srv/media
+		file_server
+	}
+
+	# API + Django's own static (admin / DRF browsable API via WhiteNoise).
+	reverse_proxy api:8000
+}
+
+{$COOKBOOK_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:80
+}
