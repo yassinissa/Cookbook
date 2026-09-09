@@ -71,6 +71,7 @@ services:
       - "443:443"
     environment:
       COOKBOOK_DOMAIN: ${COOKBOOK_DOMAIN}
+      COOKBOOK_API_DOMAIN: ${COOKBOOK_API_DOMAIN}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - media_data:/srv/media:ro      # Caddy serves /media/* straight off disk
