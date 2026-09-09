@@ -1,0 +1,24 @@
+# Public entry point for the Cookbook stack.
+# Caddy fetches + renews a Let's Encrypt cert for {$COOKBOOK_DOMAIN} automatically
+# (port 80/443 must be open and DNS must already point here).
+
+{$COOKBOOK_DOMAIN} {
+	encode zstd gzip
+
+	# Uploaded photos — served straight off the shared volume, no Django hop.
+	handle_path /media/* {
+		root * /srv/media
+		file_server
+	}
+
+	# API + Django's own static (admin / DRF browsable API via WhiteNoise).
+	@backend path /api/* /static/*
+	handle @backend {
+		reverse_proxy api:8000
+	}
+
+	# Everything else → the SPA.
+	handle {
+		reverse_proxy web:80
+	}
+}
