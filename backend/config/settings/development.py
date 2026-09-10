@@ -23,4 +23,6 @@ DATABASES = {
 
 CORS_ALLOW_ALL_ORIGINS = True
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Default to console (nothing leaves the box) — set EMAIL_BACKEND in .env to
+# opt a local run into real SMTP sending, e.g. for testing the cost digest.
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
