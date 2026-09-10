@@ -120,6 +120,7 @@ function UserDrawer({
 
   const [username, setUsername] = useState(user?.username ?? '')
   const [displayName, setDisplayName] = useState(user?.display_name ?? '')
+  const [email, setEmail] = useState(user?.email ?? '')
   const [password, setPassword] = useState('')
   const [roleId, setRoleId] = useState(user?.role_id ?? '')
   const [override, setOverride] = useState(user?.scope_overridden ?? false)
@@ -155,6 +156,7 @@ function UserDrawer({
       const payload: Record<string, unknown> = {
         username,
         display_name: displayName,
+        email,
         role_id: roleId || null,
         scope_overridden: override,
         branch_ids: override ? branchIds : [],
@@ -199,6 +201,9 @@ function UserDrawer({
           </Field>
           <Field label={t('users.displayName')}>
             <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+          </Field>
+          <Field label={t('users.email')} help={t('users.emailHelp')}>
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </Field>
           <Field
             label={t('users.password')}
