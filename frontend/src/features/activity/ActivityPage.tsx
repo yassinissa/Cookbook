@@ -1,11 +1,11 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 import { Icon, type IconName } from '@/components/Icon'
 import { Input, Select } from '@/components/Input'
-import { Page, PageHeader, SegmentedButtons } from '@/components/Page'
+import { Page, PageHeader, SegmentedButtons, FilterTrigger, FilterSheet } from '@/components/Page'
 import { Pill } from '@/components/Pill'
 import { EmptyState, ErrorState, Skeleton } from '@/components/States'
 import { useActivity } from '@/lib/queries'
@@ -50,20 +50,94 @@ export function ActivityPage() {
     })
   }
   const clearAll = () => setParams(new URLSearchParams())
+  const clearFilterFields = () => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev)
+      for (const k of ['kind', 'action', 'actor', 'date_from', 'date_to']) next.delete(k)
+      next.delete('page')
+      return next
+    })
+  }
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
-  const activeFilters =
-    !!query.kind ||
-    !!query.action ||
-    !!query.actor ||
-    !!query.recipe ||
-    !!query.q ||
-    !!query.date_from ||
-    !!query.date_to
+  const activeFilterCount = [
+    query.kind,
+    query.action,
+    query.actor,
+    query.date_from,
+    query.date_to,
+  ].filter(Boolean).length
+
+  const activeFilters = activeFilterCount > 0 || !!query.recipe || !!query.q
 
   const groups = useMemo(() => groupByDay(data?.results ?? [], locale), [data, locale])
 
   const from = data && data.count ? (data.page - 1) * data.page_size + 1 : 0
   const to = data ? Math.min(data.page * data.page_size, data.count) : 0
+
+  const filterFields = (
+    <>
+      <FilterField label={t('activity.filter.kind')}>
+        <SegmentedButtons
+          label={t('activity.filter.kind')}
+          value={query.kind ?? 'all'}
+          onChange={(v) => set('kind', v === 'all' ? '' : v)}
+          options={[
+            { value: 'all', label: t('activity.filter.all') },
+            { value: 'dish', label: t('activity.filter.dishes') },
+            { value: 'production', label: t('activity.filter.production') },
+          ]}
+        />
+      </FilterField>
+
+      <FilterField label={t('activity.filter.action')}>
+        <Select
+          className="h-8 w-full text-[13px] lg:w-auto"
+          value={query.action ?? ''}
+          onChange={(e) => set('action', e.target.value)}
+        >
+          <option value="">{t('activity.filter.all')}</option>
+          {(data?.action_types ?? []).map((a) => (
+            <option key={a.value} value={a.value}>
+              {a.label}
+            </option>
+          ))}
+        </Select>
+      </FilterField>
+
+      <FilterField label={t('activity.filter.actor')}>
+        <Select
+          className="h-8 w-full text-[13px] lg:w-auto"
+          value={query.actor ?? ''}
+          onChange={(e) => set('actor', e.target.value)}
+        >
+          <option value="">{t('activity.filter.anyone')}</option>
+          {(data?.actors ?? []).map((a) => (
+            <option key={a} value={a}>
+              {a}
+            </option>
+          ))}
+        </Select>
+      </FilterField>
+
+      <FilterField label={t('activity.filter.from')}>
+        <Input
+          type="date"
+          className="h-8 w-full text-[13px] lg:w-auto"
+          value={query.date_from ?? ''}
+          onChange={(e) => set('date_from', e.target.value)}
+        />
+      </FilterField>
+      <FilterField label={t('activity.filter.to')}>
+        <Input
+          type="date"
+          className="h-8 w-full text-[13px] lg:w-auto"
+          value={query.date_to ?? ''}
+          onChange={(e) => set('date_to', e.target.value)}
+        />
+      </FilterField>
+    </>
+  )
 
   return (
     <Page stagger>
@@ -77,84 +151,29 @@ export function ActivityPage() {
 
       {(data || isLoading) && (
         <Card className="mb-5 p-3">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-            <FilterField label={t('activity.filter.kind')}>
-              <SegmentedButtons
-                label={t('activity.filter.kind')}
-                value={query.kind ?? 'all'}
-                onChange={(v) => set('kind', v === 'all' ? '' : v)}
-                options={[
-                  { value: 'all', label: t('activity.filter.all') },
-                  { value: 'dish', label: t('activity.filter.dishes') },
-                  { value: 'production', label: t('activity.filter.production') },
-                ]}
-              />
-            </FilterField>
-
-            <FilterField label={t('activity.filter.action')}>
-              <Select
-                className="h-8 text-[13px]"
-                value={query.action ?? ''}
-                onChange={(e) => set('action', e.target.value)}
-              >
-                <option value="">{t('activity.filter.all')}</option>
-                {(data?.action_types ?? []).map((a) => (
-                  <option key={a.value} value={a.value}>
-                    {a.label}
-                  </option>
-                ))}
-              </Select>
-            </FilterField>
-
-            <FilterField label={t('activity.filter.actor')}>
-              <Select
-                className="h-8 text-[13px]"
-                value={query.actor ?? ''}
-                onChange={(e) => set('actor', e.target.value)}
-              >
-                <option value="">{t('activity.filter.anyone')}</option>
-                {(data?.actors ?? []).map((a) => (
-                  <option key={a} value={a}>
-                    {a}
-                  </option>
-                ))}
-              </Select>
-            </FilterField>
-
-            <FilterField label={t('activity.filter.from')}>
-              <Input
-                type="date"
-                className="h-8 text-[13px]"
-                value={query.date_from ?? ''}
-                onChange={(e) => set('date_from', e.target.value)}
-              />
-            </FilterField>
-            <FilterField label={t('activity.filter.to')}>
-              <Input
-                type="date"
-                className="h-8 text-[13px]"
-                value={query.date_to ?? ''}
-                onChange={(e) => set('date_to', e.target.value)}
-              />
-            </FilterField>
-
-            <div className="relative">
-              <span className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-ink-subtle">
-                <Icon name="search" size={14} />
-              </span>
-              <Input
-                className="h-8 ps-8 text-[13px]"
-                placeholder={t('activity.filter.search')}
-                value={query.q ?? ''}
-                onChange={(e) => set('q', e.target.value)}
-              />
+          <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-4 lg:gap-y-3">
+            <div className="flex items-center gap-2">
+              <div className="relative max-w-xs flex-1 lg:flex-none">
+                <span className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-ink-subtle">
+                  <Icon name="search" size={14} />
+                </span>
+                <Input
+                  className="h-8 ps-8 text-[13px]"
+                  placeholder={t('activity.filter.search')}
+                  value={query.q ?? ''}
+                  onChange={(e) => set('q', e.target.value)}
+                />
+              </div>
+              <FilterTrigger onClick={() => setFiltersOpen(true)} activeCount={activeFilterCount} />
             </div>
+
+            <div className="hidden flex-wrap items-center gap-x-4 gap-y-3 lg:flex">{filterFields}</div>
 
             {activeFilters && (
               <button
                 type="button"
                 onClick={clearAll}
-                className="text-2xs font-semibold uppercase tracking-wide text-accent-ink hover:underline"
+                className="hidden text-2xs font-semibold uppercase tracking-wide text-accent-ink hover:underline lg:inline"
               >
                 {t('activity.filter.clear')}
               </button>
@@ -162,6 +181,15 @@ export function ActivityPage() {
           </div>
         </Card>
       )}
+
+      <FilterSheet
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        onClear={clearFilterFields}
+        activeCount={activeFilterCount}
+      >
+        {filterFields}
+      </FilterSheet>
 
       {isLoading && <FeedSkeleton />}
 
@@ -275,7 +303,7 @@ function EntryRow({
 
 function FilterField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="flex items-center gap-2">
+    <label className="flex flex-col gap-1.5 lg:flex-row lg:items-center lg:gap-2">
       <span className="text-2xs font-semibold uppercase tracking-wide text-ink-subtle">{label}</span>
       {children}
     </label>

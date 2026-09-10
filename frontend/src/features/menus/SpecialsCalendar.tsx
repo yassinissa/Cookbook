@@ -6,7 +6,7 @@ import { Card, CardBody } from '@/components/Card'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Drawer } from '@/components/Drawer'
 import { EmptyState, ErrorState, Skeleton } from '@/components/States'
-import { Icon } from '@/components/Icon'
+import { IconButton } from '@/components/IconButton'
 import { useToast } from '@/components/Toast'
 import { useEffectiveMenu, useMenuPeriods } from '@/lib/queries'
 import * as api from '@/lib/api'
@@ -122,23 +122,9 @@ export function SpecialsCalendar({
       <Card elevated>
         <CardBody>
           <div className="mb-3 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => shiftMonth(-1)}
-              aria-label="Previous month"
-              className="rounded-md p-1.5 text-ink-subtle hover:bg-surface-sunken"
-            >
-              <Icon name="chevronLeft" size={16} />
-            </button>
+            <IconButton label="Previous month" icon="chevronLeft" onClick={() => shiftMonth(-1)} />
             <p className="text-sm font-semibold capitalize text-ink">{monthLabel}</p>
-            <button
-              type="button"
-              onClick={() => shiftMonth(1)}
-              aria-label="Next month"
-              className="rounded-md p-1.5 text-ink-subtle hover:bg-surface-sunken"
-            >
-              <Icon name="chevronRight" size={16} />
-            </button>
+            <IconButton label="Next month" icon="chevronRight" onClick={() => shiftMonth(1)} />
           </div>
 
           <div className="grid grid-cols-7 gap-1 text-center">
@@ -222,14 +208,7 @@ export function SpecialsCalendar({
                   </div>
                   {canEdit && (
                     <div className="flex flex-none gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setEditing(p)}
-                        aria-label={t('specials.edit')}
-                        className="rounded-md p-1.5 text-ink-subtle hover:bg-surface-sunken hover:text-ink"
-                      >
-                        <Icon name="edit" size={15} />
-                      </button>
+                      <IconButton label={t('specials.edit')} icon="edit" size={15} onClick={() => setEditing(p)} />
                       <DeleteButton menuId={menuId} period={p} t={t} />
                     </div>
                   )}
@@ -276,14 +255,7 @@ function DeleteButton({ menuId, period, t }: { menuId: string; period: MenuPerio
   })
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label={t('action.delete')}
-        className="rounded-md p-1.5 text-ink-subtle hover:bg-surface-sunken hover:text-danger-ink"
-      >
-        <Icon name="trash" size={15} />
-      </button>
+      <IconButton label={t('action.delete')} icon="trash" tone="danger" size={15} onClick={() => setOpen(true)} />
       <ConfirmDialog
         open={open}
         title={t('specials.confirmDelete')}

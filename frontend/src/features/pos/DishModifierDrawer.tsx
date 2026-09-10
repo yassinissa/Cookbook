@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
-import { Icon } from '@/components/Icon'
+import { IconButton } from '@/components/IconButton'
 import { Select } from '@/components/Input'
 import { ErrorState, Skeleton } from '@/components/States'
 import { useToast } from '@/components/Toast'
@@ -101,14 +101,14 @@ export function DishModifierDrawer({ dishId, onClose }: { dishId: string; onClos
                       </button>
                     ))}
                   </div>
-                  <button
-                    type="button"
+                  <IconButton
+                    label={t('action.delete')}
+                    icon="close"
+                    tone="danger"
+                    size={15}
+                    className="flex-none"
                     onClick={() => setRows((all) => all.filter((_, j) => j !== i))}
-                    aria-label={t('action.delete')}
-                    className="text-ink-subtle hover:text-danger-ink"
-                  >
-                    <Icon name="close" size={15} />
-                  </button>
+                  />
                 </li>
               ))}
             </ul>

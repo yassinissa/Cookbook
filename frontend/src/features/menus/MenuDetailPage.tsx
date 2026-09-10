@@ -6,7 +6,7 @@ import { Card, CardBody, CardHeader } from '@/components/Card'
 import { TrendChart } from '@/components/Charts'
 import { DishImage } from '@/components/DishImage'
 import { FoodCostValue } from '@/components/Meter'
-import { Icon } from '@/components/Icon'
+import { IconButton } from '@/components/IconButton'
 import { Page, BiName } from '@/components/Page'
 import { RatingPill } from '@/components/Pill'
 import { EmptyState, ErrorState, Skeleton } from '@/components/States'
@@ -388,14 +388,14 @@ function MenuRow({
       </td>
       <td className="px-3 py-2 text-end">
         {!readOnly && (
-          <button
-            type="button"
+          <IconButton
+            label={`${t('menus.line.remove')} ${line.dish_name}`}
+            icon="close"
+            tone="danger"
+            size={15}
+            className="-my-2"
             onClick={onRemove}
-            className="text-ink-subtle hover:text-danger-ink"
-            aria-label={`${t('menus.line.remove')} ${line.dish_name}`}
-          >
-            <Icon name="close" size={15} />
-          </button>
+          />
         )}
       </td>
     </tr>

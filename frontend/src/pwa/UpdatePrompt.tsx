@@ -3,6 +3,7 @@ import { registerSW } from 'virtual:pwa-register'
 
 import { Button } from '@/components/Button'
 import { Icon } from '@/components/Icon'
+import { IconButton } from '@/components/IconButton'
 import { useI18n } from '@/i18n'
 
 /**
@@ -61,15 +62,13 @@ export function UpdatePrompt() {
       <Button size="sm" variant="primary" onClick={() => updateRef.current?.(true)}>
         {t('pwa.update.reload')}
       </Button>
-      <button
-        type="button"
+      <IconButton
+        label={t('action.close')}
+        icon="close"
+        size={15}
+        className="-me-1.5 flex-none"
         onClick={() => setWaiting(false)}
-        aria-label={t('action.close')}
-        className="flex-none text-ink-subtle transition-colors hover:text-ink
-                   focus-visible:outline-2 focus-visible:outline-[var(--focus)]"
-      >
-        <Icon name="close" size={15} />
-      </button>
+      />
     </div>
   )
 }

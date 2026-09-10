@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 import { Drawer } from '@/components/Drawer'
 import { Icon } from '@/components/Icon'
+import { IconButton } from '@/components/IconButton'
 import { Pill } from '@/components/Pill'
 import { ErrorState, LoadingRow } from '@/components/States'
 import {
@@ -170,14 +171,7 @@ function DiffView({
         <h3 className="text-[13px] font-semibold text-ink">
           {data ? `v${data.from.version} → v${data.to.version}` : t('version.title')}
         </h3>
-        <button
-          type="button"
-          onClick={onClear}
-          className="text-ink-subtle hover:text-ink"
-          aria-label={t('action.close')}
-        >
-          <Icon name="close" size={15} />
-        </button>
+        <IconButton label={t('action.close')} icon="close" size={15} className="-me-2" onClick={onClear} />
       </div>
       {isLoading && <LoadingRow />}
       {isError && <ErrorState onRetry={() => refetch()} />}

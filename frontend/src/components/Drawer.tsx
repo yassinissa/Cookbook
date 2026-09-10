@@ -19,6 +19,7 @@ interface DrawerProps {
 export function Drawer({ open, onClose, title, children, width = 'md', footer }: DrawerProps) {
   const { dir } = useI18n()
   const panelRef = useRef<HTMLDivElement>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
   const returnFocus = useRef<HTMLElement | null>(null)
   const titleId = useId()
 
@@ -34,9 +35,12 @@ export function Drawer({ open, onClose, title, children, width = 'md', footer }:
     }
     document.addEventListener('keydown', onKey)
 
-    const first = panelRef.current?.querySelector<HTMLElement>(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-    )
+    // Prefer the first focusable field in the body over the header's Close
+    // button, so e.g. a search input gets the initial keystroke.
+    const focusable = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    const first =
+      bodyRef.current?.querySelector<HTMLElement>(focusable) ??
+      panelRef.current?.querySelector<HTMLElement>(focusable)
     first?.focus()
 
     return () => {
@@ -69,7 +73,7 @@ export function Drawer({ open, onClose, title, children, width = 'md', footer }:
           <h2 id={titleId} className="text-sm font-semibold text-ink">{title}</h2>
           <IconButton label="Close" icon="close" onClick={onClose} />
         </header>
-        <div className="scroll-x flex-1 overflow-y-auto overscroll-contain px-4 py-4">{children}</div>
+        <div ref={bodyRef} className="scroll-x flex-1 overflow-y-auto overscroll-contain px-4 py-4">{children}</div>
         {footer && <footer className="border-t border-hairline px-4 py-3">{footer}</footer>}
       </div>
     </div>,

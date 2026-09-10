@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
 import { Field } from '@/components/Field'
-import { Icon } from '@/components/Icon'
+import { IconButton } from '@/components/IconButton'
 import { Input, Select, Textarea } from '@/components/Input'
 import { useToast } from '@/components/Toast'
 import { useDishRecipes } from '@/lib/queries'
@@ -206,7 +206,7 @@ export function PeriodEditor({
                   aria-label={t(DAY_KEYS[i])}
                   onClick={() => toggleDay(i)}
                   className={cn(
-                    'h-9 w-9 rounded-lg border text-sm font-medium transition-colors',
+                    'h-11 w-11 rounded-lg border text-sm font-medium transition-colors',
                     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]',
                     on
                       ? 'border-accent bg-accent text-accent-on'
@@ -294,14 +294,14 @@ function LineRow({
             ))}
           </Select>
         </div>
-        <button
-          type="button"
+        <IconButton
+          label={t('menus.line.remove')}
+          icon="trash"
+          tone="danger"
+          size={15}
+          className="flex-none"
           onClick={onRemove}
-          aria-label={t('menus.line.remove')}
-          className="mt-1 text-ink-subtle hover:text-danger-ink"
-        >
-          <Icon name="trash" size={15} />
-        </button>
+        />
       </div>
       {needs(line.op, 'price') && (
         <Input

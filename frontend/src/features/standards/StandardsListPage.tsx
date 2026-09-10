@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Card } from '@/components/Card'
 import { Icon } from '@/components/Icon'
 import { Input } from '@/components/Input'
-import { Page, PageHeader, SegmentedButtons, BiName } from '@/components/Page'
+import { Page, PageHeader, SegmentedButtons, FilterTrigger, FilterSheet, BiName } from '@/components/Page'
 import { Pill } from '@/components/Pill'
 import { Stat } from '@/components/Stat'
 import { EmptyState, ErrorState, Skeleton } from '@/components/States'
@@ -46,6 +46,12 @@ export function StandardsListPage() {
   const [q, setQ] = useState('')
   const [branch, setBranch] = useState('all')
   const [status, setStatus] = useState<StatusKey>('all')
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const activeFilterCount = [branch !== 'all', status !== 'all'].filter(Boolean).length
+  const clearFilters = () => {
+    setBranch('all')
+    setStatus('all')
+  }
 
   const branches = useMemo(
     () => Array.from(new Set((rows ?? []).map((r) => r.branch).filter(Boolean))).sort(),
@@ -81,6 +87,33 @@ export function StandardsListPage() {
   }, [rows, q, branch, status])
 
   const coveragePct = summary.total ? Math.round((summary.withStd / summary.total) * 100) : 0
+
+  const filterFields = (
+    <>
+      {branches.length > 1 && (
+        <FilterGroup
+          label={t('standards.filter.branch')}
+          value={branch}
+          onChange={setBranch}
+          options={[
+            { value: 'all', label: t('standards.filter.all') },
+            ...branches.map((b) => ({ value: b, label: b })),
+          ]}
+        />
+      )}
+      <FilterGroup
+        label={t('standards.filter.status')}
+        value={status}
+        onChange={(v) => setStatus(v as StatusKey)}
+        options={[
+          { value: 'all', label: t('standards.filter.all') },
+          { value: 'approved', label: t('standards.filter.approved') },
+          { value: 'review', label: t('standards.filter.review') },
+          { value: 'missing', label: t('standards.filter.missing') },
+        ]}
+      />
+    </>
+  )
 
   return (
     <Page stagger>
@@ -147,43 +180,32 @@ export function StandardsListPage() {
             </Card>
           )}
 
-          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="relative max-w-xs">
-              <span className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-ink-subtle">
-                <Icon name="search" size={15} />
-              </span>
-              <Input
-                className="ps-8"
-                placeholder={t('dishes.search')}
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              {branches.length > 1 && (
-                <FilterGroup
-                  label={t('standards.filter.branch')}
-                  value={branch}
-                  onChange={setBranch}
-                  options={[
-                    { value: 'all', label: t('standards.filter.all') },
-                    ...branches.map((b) => ({ value: b, label: b })),
-                  ]}
+          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex items-center gap-2">
+              <div className="relative max-w-xs flex-1 lg:flex-none">
+                <span className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-ink-subtle">
+                  <Icon name="search" size={15} />
+                </span>
+                <Input
+                  className="ps-8"
+                  placeholder={t('dishes.search')}
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
                 />
-              )}
-              <FilterGroup
-                label={t('standards.filter.status')}
-                value={status}
-                onChange={(v) => setStatus(v as StatusKey)}
-                options={[
-                  { value: 'all', label: t('standards.filter.all') },
-                  { value: 'approved', label: t('standards.filter.approved') },
-                  { value: 'review', label: t('standards.filter.review') },
-                  { value: 'missing', label: t('standards.filter.missing') },
-                ]}
-              />
+              </div>
+              <FilterTrigger onClick={() => setFiltersOpen(true)} activeCount={activeFilterCount} />
             </div>
+            <div className="hidden flex-wrap items-center gap-x-4 gap-y-2 lg:flex">{filterFields}</div>
           </div>
+
+          <FilterSheet
+            open={filtersOpen}
+            onClose={() => setFiltersOpen(false)}
+            onClear={clearFilters}
+            activeCount={activeFilterCount}
+          >
+            {filterFields}
+          </FilterSheet>
 
           {visible.length === 0 ? (
             <EmptyState
@@ -329,7 +351,7 @@ function FilterGroup({
   options: { value: string; label: string }[]
 }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-col gap-1.5 lg:flex-row lg:items-center lg:gap-2">
       <span className="text-2xs font-semibold uppercase tracking-wide text-ink-subtle">{label}</span>
       <SegmentedButtons options={options} value={value} onChange={onChange} label={label} />
     </div>

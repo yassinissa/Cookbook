@@ -101,7 +101,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 type="button"
                 onClick={() => dismiss(t.id)}
                 aria-label="Dismiss"
-                className="flex-none px-2.5 text-ink-subtle transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-[var(--focus)]"
+                className="flex-none px-3.5 text-ink-subtle transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-[var(--focus)]"
               >
                 <Icon name="close" size={15} />
               </button>

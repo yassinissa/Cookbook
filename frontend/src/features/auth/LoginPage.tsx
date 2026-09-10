@@ -203,7 +203,7 @@ export function LoginPage() {
                         onClick={() => setShowPw((v) => !v)}
                         aria-label={showPw ? t('login.hidePassword') : t('login.showPassword')}
                         aria-pressed={showPw}
-                        className="absolute end-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-white/40 transition-colors hover:text-white/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
+                        className="absolute end-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-md text-white/40 transition-colors hover:text-white/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
                       >
                         <Icon name={showPw ? 'eyeOff' : 'eye'} size={18} aria-hidden />
                       </button>

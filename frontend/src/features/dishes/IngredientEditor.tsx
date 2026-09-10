@@ -143,7 +143,9 @@ export function IngredientEditor({
                 icon="close"
                 tone="danger"
                 size={15}
-                className="h-8 w-8"
+                // full 44px target on the stacked mobile card; matched to the
+                // row's h-9 inputs on the desktop grid row.
+                className="md:h-9 md:w-9"
                 onClick={() => onRemove(i)}
               />
             </div>
@@ -212,7 +214,7 @@ export function StepEditor({
               icon="close"
               tone="danger"
               size={15}
-              className="mt-0.5 h-8 w-8 flex-none"
+              className="mt-0.5 flex-none"
               onClick={() => onRemove(i)}
             />
           </li>

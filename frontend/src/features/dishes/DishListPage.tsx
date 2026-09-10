@@ -7,7 +7,7 @@ import { DishImage } from '@/components/DishImage'
 import { FoodCostValue } from '@/components/Meter'
 import { Icon } from '@/components/Icon'
 import { Input, Select } from '@/components/Input'
-import { Page, PageHeader, SegmentedButtons, BiName } from '@/components/Page'
+import { Page, PageHeader, SegmentedButtons, FilterTrigger, FilterSheet, BiName } from '@/components/Page'
 import { RatingPill } from '@/components/Pill'
 import { EmptyState, ErrorState, Skeleton } from '@/components/States'
 import { useDishRecipes, useReference } from '@/lib/queries'
@@ -35,6 +35,13 @@ export function DishListPage() {
   const [branch, setBranch] = useState('all')
   const [category, setCategory] = useState('all')
   const [rating, setRating] = useState('all')
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const activeFilterCount = [branch !== 'all', category !== 'all', rating !== 'all'].filter(Boolean).length
+  const clearFilters = () => {
+    setBranch('all')
+    setCategory('all')
+    setRating('all')
+  }
 
   // Every branch we operate, in menu order — not just the ones that happen to
   // have a recipe (and covering the dishes whose branch is a FK, not a string).
@@ -66,6 +73,48 @@ export function DishListPage() {
     return list
   }, [recipes, q, branch, category, rating])
 
+  const filterFields = (
+    <>
+      <label className="flex flex-col gap-1.5 lg:flex-row lg:items-center lg:gap-2">
+        <span className="text-2xs font-semibold uppercase tracking-wide text-ink-subtle">
+          {t('dishes.filter.branch')}
+        </span>
+        <Select
+          className="w-full lg:h-8 lg:w-auto lg:py-0 lg:text-sm"
+          value={branch}
+          onChange={(e) => setBranch(e.target.value)}
+          aria-label={t('dishes.filter.branch')}
+        >
+          <option value="all">{t('dishes.filter.all')}</option>
+          {branches.map((b) => (
+            <option key={b} value={b}>{b}</option>
+          ))}
+        </Select>
+      </label>
+      {categories.length > 1 && (
+        <FilterGroup
+          label={t('dishes.filter.category')}
+          value={category}
+          onChange={setCategory}
+          options={[
+            { value: 'all', label: t('dishes.filter.all') },
+            ...categories.map((c) => ({ value: c, label: c })),
+          ]}
+        />
+      )}
+      <FilterGroup
+        label={t('dishes.filter.rating')}
+        value={rating}
+        onChange={setRating}
+        options={[
+          { value: 'all', label: t('dishes.filter.all') },
+          { value: 'flagged', label: 'Flagged' },
+          { value: 'ok', label: 'OK' },
+        ]}
+      />
+    </>
+  )
+
   return (
     <Page stagger>
       <PageHeader
@@ -84,59 +133,33 @@ export function DishListPage() {
       {isError && <ErrorState body={t('state.retryHint')} onRetry={() => refetch()} />}
 
       {(recipes || isLoading) && (
-        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="relative max-w-xs">
-            <span className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-ink-subtle">
-              <Icon name="search" size={15} />
-            </span>
-            <Input
-              className="ps-8"
-              placeholder={t('dishes.search')}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <label className="flex items-center gap-2">
-              <span className="text-2xs font-semibold uppercase tracking-wide text-ink-subtle">
-                {t('dishes.filter.branch')}
+        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex items-center gap-2">
+            <div className="relative max-w-xs flex-1 lg:flex-none">
+              <span className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-ink-subtle">
+                <Icon name="search" size={15} />
               </span>
-              <Select
-                className="h-8 py-0 text-sm"
-                value={branch}
-                onChange={(e) => setBranch(e.target.value)}
-                aria-label={t('dishes.filter.branch')}
-              >
-                <option value="all">{t('dishes.filter.all')}</option>
-                {branches.map((b) => (
-                  <option key={b} value={b}>{b}</option>
-                ))}
-              </Select>
-            </label>
-            {categories.length > 1 && (
-              <FilterGroup
-                label={t('dishes.filter.category')}
-                value={category}
-                onChange={setCategory}
-                options={[
-                  { value: 'all', label: t('dishes.filter.all') },
-                  ...categories.map((c) => ({ value: c, label: c })),
-                ]}
+              <Input
+                className="ps-8"
+                placeholder={t('dishes.search')}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
               />
-            )}
-            <FilterGroup
-              label={t('dishes.filter.rating')}
-              value={rating}
-              onChange={setRating}
-              options={[
-                { value: 'all', label: t('dishes.filter.all') },
-                { value: 'flagged', label: 'Flagged' },
-                { value: 'ok', label: 'OK' },
-              ]}
-            />
+            </div>
+            <FilterTrigger onClick={() => setFiltersOpen(true)} activeCount={activeFilterCount} />
           </div>
+          <div className="hidden flex-wrap items-center gap-x-4 gap-y-2 lg:flex">{filterFields}</div>
         </div>
       )}
+
+      <FilterSheet
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        onClear={clearFilters}
+        activeCount={activeFilterCount}
+      >
+        {filterFields}
+      </FilterSheet>
 
       {isLoading && <ListSkeleton />}
 
@@ -260,7 +283,7 @@ function FilterGroup({
   options: { value: string; label: string }[]
 }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-col gap-1.5 lg:flex-row lg:items-center lg:gap-2">
       <span className="text-2xs font-semibold uppercase tracking-wide text-ink-subtle">{label}</span>
       <SegmentedButtons options={options} value={value} onChange={onChange} label={label} />
     </div>

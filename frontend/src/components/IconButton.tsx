@@ -22,7 +22,10 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
       aria-label={label}
       title={label}
       className={cn(
-        'inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors duration-150',
+        // 44px meets the comfortable (Apple/Android HIG) touch-target size —
+        // WCAG 2.5.8 AA's floor is only 24px, but this app runs on kitchen
+        // tablets/phones, often with imprecise or gloved taps.
+        'inline-flex h-11 w-11 items-center justify-center rounded-lg transition-colors duration-150',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]',
         'disabled:opacity-40 disabled:pointer-events-none',
         tone === 'danger'

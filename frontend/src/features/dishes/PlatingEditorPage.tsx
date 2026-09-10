@@ -461,7 +461,7 @@ function ImageField({
             disabled={index === 0}
             onClick={() => onMove(-1)}
             aria-label={t('action.moveUp')}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-ink-muted hover:bg-surface-sunken disabled:opacity-30"
+            className="flex h-11 w-11 items-center justify-center rounded-md text-ink-muted hover:bg-surface-sunken disabled:opacity-30"
           >
             <Icon name="chevronLeft" size={15} className="rotate-90" />
           </button>
@@ -470,7 +470,7 @@ function ImageField({
             disabled={index === count - 1}
             onClick={() => onMove(1)}
             aria-label={t('action.moveDown')}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-ink-muted hover:bg-surface-sunken disabled:opacity-30"
+            className="flex h-11 w-11 items-center justify-center rounded-md text-ink-muted hover:bg-surface-sunken disabled:opacity-30"
           >
             <Icon name="chevronRight" size={15} className="rotate-90" />
           </button>
@@ -478,7 +478,7 @@ function ImageField({
             type="button"
             onClick={onRemove}
             aria-label={t('action.delete')}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-danger-ink hover:bg-danger-subtle"
+            className="flex h-11 w-11 items-center justify-center rounded-md text-danger-ink hover:bg-danger-subtle"
           >
             <Icon name="trash" size={15} />
           </button>
@@ -551,7 +551,7 @@ function ImageField({
               type="button"
               onClick={() => removePin(p.n)}
               aria-label={t('action.delete')}
-              className="mt-1 flex h-7 w-7 flex-none items-center justify-center rounded-md text-danger-ink hover:bg-danger-subtle"
+              className="flex h-11 w-11 flex-none items-center justify-center rounded-md text-danger-ink hover:bg-danger-subtle"
             >
               <Icon name="close" size={15} />
             </button>

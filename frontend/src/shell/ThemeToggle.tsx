@@ -13,7 +13,7 @@ export function ThemeToggle() {
       onClick={cycle}
       aria-label={`${t('theme.light')} / ${t('theme.dark')} / ${t('theme.system')}`}
       title={label}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-subtle transition-colors hover:bg-surface-sunken hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
+      className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-ink-subtle transition-colors hover:bg-surface-sunken hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
     >
       <Icon name={icon} size={18} />
     </button>

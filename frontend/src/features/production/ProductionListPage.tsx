@@ -5,7 +5,7 @@ import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 import { Icon } from '@/components/Icon'
 import { Input } from '@/components/Input'
-import { Page, PageHeader, SegmentedButtons, BiName } from '@/components/Page'
+import { Page, PageHeader, SegmentedButtons, FilterTrigger, FilterSheet, BiName } from '@/components/Page'
 import { EmptyState, ErrorState, Skeleton } from '@/components/States'
 import { useProductionRecipes } from '@/lib/queries'
 import { useAuth } from '@/auth/AuthProvider'
@@ -29,6 +29,12 @@ export function ProductionListPage() {
   const [q, setQ] = useState('')
   const [kitchen, setKitchen] = useState('all')
   const [section, setSection] = useState('all')
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const activeFilterCount = [kitchen !== 'all', section !== 'all'].filter(Boolean).length
+  const clearFilters = () => {
+    setKitchen('all')
+    setSection('all')
+  }
 
   const kitchens = useMemo(
     () =>
@@ -60,6 +66,33 @@ export function ProductionListPage() {
     return list
   }, [recipes, q, kitchen, section])
 
+  const filterFields = (
+    <>
+      {kitchens.length > 1 && (
+        <FilterGroup
+          label={t('production.filter.kitchen')}
+          value={kitchen}
+          onChange={setKitchen}
+          options={[
+            { value: 'all', label: t('production.filter.all') },
+            ...kitchens.map((k) => ({ value: k, label: k })),
+          ]}
+        />
+      )}
+      {sections.length > 1 && (
+        <FilterGroup
+          label={t('production.filter.section')}
+          value={section}
+          onChange={setSection}
+          options={[
+            { value: 'all', label: t('production.filter.all') },
+            ...sections.map((s) => ({ value: s, label: s })),
+          ]}
+        />
+      )}
+    </>
+  )
+
   return (
     <Page stagger>
       <PageHeader
@@ -82,44 +115,33 @@ export function ProductionListPage() {
       {isError && <ErrorState body={t('state.retryHint')} onRetry={() => refetch()} />}
 
       {(recipes || isLoading) && (
-        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="relative max-w-xs">
-            <span className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-ink-subtle">
-              <Icon name="search" size={15} />
-            </span>
-            <Input
-              className="ps-8"
-              placeholder={t('production.search')}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            {kitchens.length > 1 && (
-              <FilterGroup
-                label={t('production.filter.kitchen')}
-                value={kitchen}
-                onChange={setKitchen}
-                options={[
-                  { value: 'all', label: t('production.filter.all') },
-                  ...kitchens.map((k) => ({ value: k, label: k })),
-                ]}
+        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex items-center gap-2">
+            <div className="relative max-w-xs flex-1 lg:flex-none">
+              <span className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-ink-subtle">
+                <Icon name="search" size={15} />
+              </span>
+              <Input
+                className="ps-8"
+                placeholder={t('production.search')}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
               />
-            )}
-            {sections.length > 1 && (
-              <FilterGroup
-                label={t('production.filter.section')}
-                value={section}
-                onChange={setSection}
-                options={[
-                  { value: 'all', label: t('production.filter.all') },
-                  ...sections.map((s) => ({ value: s, label: s })),
-                ]}
-              />
-            )}
+            </div>
+            <FilterTrigger onClick={() => setFiltersOpen(true)} activeCount={activeFilterCount} />
           </div>
+          <div className="hidden flex-wrap items-center gap-x-4 gap-y-2 lg:flex">{filterFields}</div>
         </div>
       )}
+
+      <FilterSheet
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        onClear={clearFilters}
+        activeCount={activeFilterCount}
+      >
+        {filterFields}
+      </FilterSheet>
 
       {isLoading && <ListSkeleton />}
 
@@ -242,7 +264,7 @@ function FilterGroup({
   options: { value: string; label: string }[]
 }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-col gap-1.5 lg:flex-row lg:items-center lg:gap-2">
       <span className="text-2xs font-semibold uppercase tracking-wide text-ink-subtle">{label}</span>
       <SegmentedButtons options={options} value={value} onChange={onChange} label={label} />
     </div>

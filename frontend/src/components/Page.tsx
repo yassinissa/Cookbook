@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react'
 
+import { Button } from './Button'
+import { Drawer } from './Drawer'
+import { Pill } from './Pill'
 import { cn } from '@/lib/cn'
+import { useI18n } from '@/i18n'
 
 export function Page({
   children,
@@ -84,6 +88,72 @@ export function SegmentedButtons<T extends string>({
         </button>
       ))}
     </div>
+  )
+}
+
+/**
+ * Mobile-only "Filters" button (hidden lg+, where filters render inline) that
+ * opens a `FilterSheet`. Shows the number of active (non-default) filters as
+ * a count badge so it's clear filtering is happening behind the sheet.
+ */
+export function FilterTrigger({
+  onClick,
+  activeCount = 0,
+  className,
+}: {
+  onClick: () => void
+  activeCount?: number
+  className?: string
+}) {
+  const { t } = useI18n()
+  return (
+    <Button variant="secondary" icon="filter" className={cn('lg:hidden', className)} onClick={onClick}>
+      {t('action.filters')}
+      {activeCount > 0 && (
+        <Pill tone="accent" className="ms-0.5">
+          {activeCount}
+        </Pill>
+      )}
+    </Button>
+  )
+}
+
+/** Full-width mobile sheet for filter controls that render inline at lg+. */
+export function FilterSheet({
+  open,
+  onClose,
+  onClear,
+  activeCount = 0,
+  children,
+}: {
+  open: boolean
+  onClose: () => void
+  /** Omit to hide the "Clear filters" footer action. */
+  onClear?: () => void
+  activeCount?: number
+  children: ReactNode
+}) {
+  const { t } = useI18n()
+  return (
+    <Drawer
+      open={open}
+      onClose={onClose}
+      title={t('action.filters')}
+      footer={
+        onClear && (
+          <button
+            type="button"
+            onClick={onClear}
+            disabled={activeCount === 0}
+            className="text-[13px] font-medium text-ink-muted hover:text-ink disabled:opacity-40 disabled:pointer-events-none"
+          >
+            {t('action.clearFilters')}
+          </button>
+        )
+      }
+    >
+      <div className="flex flex-col gap-5">{children}</div>
+    </Drawer>
   )
 }
 

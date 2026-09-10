@@ -27,7 +27,7 @@ export function IdentitySwitcher() {
         type="button"
         onClick={() => setOpen((o) => !o)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
-        className="flex h-9 items-center gap-1.5 rounded-lg border border-dashed border-hairline-strong px-2 text-[12px] font-medium text-ink-muted transition-colors hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
+        className="flex h-11 items-center gap-1.5 rounded-lg border border-dashed border-hairline-strong px-2 text-[12px] font-medium text-ink-muted transition-colors hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
         title="Demo identity (seed build)"
       >
         <Icon name="users" size={14} />

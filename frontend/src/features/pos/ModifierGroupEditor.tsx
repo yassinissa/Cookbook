@@ -7,6 +7,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Drawer } from '@/components/Drawer'
 import { Field } from '@/components/Field'
 import { Icon } from '@/components/Icon'
+import { IconButton } from '@/components/IconButton'
 import { Input, Select, Textarea } from '@/components/Input'
 import { Pill } from '@/components/Pill'
 import { useToast } from '@/components/Toast'
@@ -339,9 +340,14 @@ function OptionRow({
             onChange={(e) => onChange({ price_delta: e.target.value })}
           />
         </div>
-        <button type="button" onClick={onRemove} aria-label={t('action.delete')} className="mt-1 text-ink-subtle hover:text-danger-ink">
-          <Icon name="trash" size={15} />
-        </button>
+        <IconButton
+          label={t('action.delete')}
+          icon="trash"
+          tone="danger"
+          size={15}
+          className="flex-none"
+          onClick={onRemove}
+        />
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -444,14 +450,14 @@ function OptionRow({
                     <option key={u.id} value={u.id}>{u.code}</option>
                   ))}
                 </Select>
-                <button
-                  type="button"
+                <IconButton
+                  label={t('action.delete')}
+                  icon="trash"
+                  tone="danger"
+                  size={13}
+                  className="sm:h-9 sm:w-9"
                   onClick={() => onChange({ deltas: o.deltas.filter((_, j) => j !== k) })}
-                  aria-label={t('action.delete')}
-                  className="text-ink-subtle hover:text-danger-ink"
-                >
-                  <Icon name="trash" size={13} />
-                </button>
+                />
               </div>
             ))
           )}
