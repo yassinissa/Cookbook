@@ -1,5 +1,4 @@
 /* Shapes from /api/auth/me/ and /api/accounts/. */
-
 export type CapabilityCode =
   | 'dashboard.view'
   | 'dish.view' | 'dish.edit' | 'dish.delete' | 'recipe.history'
