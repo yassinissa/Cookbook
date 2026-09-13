@@ -22,6 +22,7 @@ export const NAV: NavSection[] = [
     labelKey: 'nav.section.recipes',
     items: [
       { to: '/', labelKey: 'nav.dashboard', icon: 'dashboard', ready: true, capability: 'dashboard.view' },
+      { to: '/kitchen', labelKey: 'nav.kitchen', icon: 'store', ready: true },
       { to: '/recipes/dishes', labelKey: 'nav.dishes', icon: 'dish', ready: true, capability: 'dish.view' },
       { to: '/recipes/production', labelKey: 'nav.production', icon: 'production', ready: true, capability: 'production.view' },
       { to: '/standards', labelKey: 'nav.standards', icon: 'standards', ready: true, capability: 'standard.view' },
@@ -55,8 +56,8 @@ export const NAV: NavSection[] = [
  */
 export const BOTTOM_NAV: NavItem[] = [
   { to: '/', labelKey: 'nav.dashboard', icon: 'dashboard', ready: true, capability: 'dashboard.view' },
+  { to: '/kitchen', labelKey: 'nav.kitchen', icon: 'store', ready: true },
   { to: '/recipes/dishes', labelKey: 'nav.dishes', icon: 'dish', ready: true, capability: 'dish.view' },
-  { to: '/menus', labelKey: 'nav.menus', icon: 'menu', ready: true, capability: 'menu.view' },
   { to: '/recipes/production', labelKey: 'nav.production', icon: 'production', ready: true, capability: 'production.view' },
   { to: '/more', labelKey: 'nav.more', icon: 'more', ready: true },
 ]

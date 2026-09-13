@@ -5,6 +5,7 @@ export const en = {
   'app.group': 'Green Hills',
 
   'nav.dashboard': 'Dashboard',
+  'nav.kitchen': 'Kitchen',
   'nav.dishes': 'Dish Recipes',
   'nav.production': 'Production Recipes',
   'nav.standards': 'QA Standards',
@@ -125,6 +126,17 @@ export const en = {
   'reason.no_price': 'No selling price',
   'reason.over_target': 'Over target',
   'reason.uncosted_lines': 'Uncosted lines',
+
+  'kitchen.eyebrow': 'Kitchen',
+  'kitchen.title': 'Kitchen',
+  'kitchen.subtitle': 'Everything your station needs to prep, plate, and serve — no prices, just the recipe.',
+  'kitchen.tab.label': 'Recipe type',
+  'kitchen.tab.dishes': 'Dishes',
+  'kitchen.tab.production': 'Production',
+  'kitchen.search': 'Search by name',
+  'kitchen.empty': 'No recipes match this search.',
+  'kitchen.dishes.emptyAll': 'No dish recipes here yet.',
+  'kitchen.production.emptyAll': 'No production recipes here yet.',
 
   'dishes.title': 'Dish Recipes',
   'dishes.count': '{n} recipes',
@@ -847,6 +859,7 @@ export const ar: Record<MessageKey, string> = {
   'app.group': 'غرين هيلز',
 
   'nav.dashboard': 'لوحة المعلومات',
+  'nav.kitchen': 'المطبخ',
   'nav.dishes': 'وصفات الأطباق',
   'nav.production': 'وصفات التحضير',
   'nav.standards': 'معايير الجودة',
@@ -967,6 +980,17 @@ export const ar: Record<MessageKey, string> = {
   'reason.no_price': 'لا يوجد سعر بيع',
   'reason.over_target': 'فوق الهدف',
   'reason.uncosted_lines': 'أسطر غير محسوبة',
+
+  'kitchen.eyebrow': 'المطبخ',
+  'kitchen.title': 'المطبخ',
+  'kitchen.subtitle': 'كل ما تحتاجه محطتك للتحضير والتقديم — بدون أسعار، الوصفة فقط.',
+  'kitchen.tab.label': 'نوع الوصفة',
+  'kitchen.tab.dishes': 'الأطباق',
+  'kitchen.tab.production': 'التحضير',
+  'kitchen.search': 'ابحث بالاسم',
+  'kitchen.empty': 'لا توجد وصفات تطابق هذا البحث.',
+  'kitchen.dishes.emptyAll': 'لا توجد وصفات أطباق هنا بعد.',
+  'kitchen.production.emptyAll': 'لا توجد وصفات تحضير هنا بعد.',
 
   'dishes.title': 'وصفات الأطباق',
   'dishes.count': '{n} وصفة',

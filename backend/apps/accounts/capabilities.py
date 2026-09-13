@@ -135,4 +135,41 @@ SYSTEM_ROLES = [
         'grants_all_branches': False,
         'grants_all_prep_kitchens': False,
     },
+    {
+        'name': 'Branch Staff',
+        'description': 'Kitchen floor staff — reads their own brand\'s dish recipes and prep '
+                        'guides only (the Kitchen screen), no edit access.',
+        'capabilities': ['dashboard.view', 'dish.view', 'nutrition.view'],
+        'grants_all_branches': False,
+        'grants_all_prep_kitchens': False,
+    },
+    {
+        'name': 'Branch Manager',
+        'description': 'Full recipe control (add, edit, delete) for their own brand only — '
+                        'the admin experience narrowed to one branch.',
+        'capabilities': [
+            'dashboard.view', 'dish.view', 'dish.edit', 'dish.delete', 'recipe.history',
+            'inventory.view', 'nutrition.view',
+        ],
+        'grants_all_branches': False,
+        'grants_all_prep_kitchens': False,
+    },
+    {
+        'name': 'Prep Kitchen Staff',
+        'description': 'Prep kitchen floor staff — reads their own kitchen\'s production '
+                        'recipes and procedures only (the Kitchen screen), no edit access.',
+        'capabilities': ['dashboard.view', 'production.view', 'nutrition.view'],
+        'grants_all_branches': False,
+        'grants_all_prep_kitchens': False,
+    },
+    {
+        'name': 'Prep Kitchen Manager',
+        'description': 'Full recipe control (add, edit, delete) for their own prep kitchen only.',
+        'capabilities': [
+            'dashboard.view', 'production.view', 'production.edit', 'production.delete',
+            'recipe.history', 'inventory.view', 'nutrition.view',
+        ],
+        'grants_all_branches': False,
+        'grants_all_prep_kitchens': False,
+    },
 ]

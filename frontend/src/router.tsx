@@ -6,6 +6,9 @@ import type { CapabilityCode } from '@/types/access'
 import { AppShell } from '@/shell/AppShell'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
+import { KitchenPage } from '@/features/kitchen/KitchenPage'
+import { KitchenDishPage } from '@/features/kitchen/KitchenDishPage'
+import { KitchenProductionPage } from '@/features/kitchen/KitchenProductionPage'
 import { DishListPage } from '@/features/dishes/DishListPage'
 import { DishEditorPage } from '@/features/dishes/DishEditorPage'
 import { DishDetailPage } from '@/features/dishes/DishDetailPage'
@@ -62,6 +65,10 @@ export const router = createBrowserRouter([
         element: <AppShell />,
         children: [
           { path: '/', ...cap('dashboard.view', <DashboardPage />) },
+
+          { path: '/kitchen', element: <KitchenPage /> },
+          { path: '/kitchen/dishes/:id', ...cap('dish.view', <KitchenDishPage />) },
+          { path: '/kitchen/production/:id', ...cap('production.view', <KitchenProductionPage />) },
 
           { path: '/recipes/dishes', ...cap('dish.view', <DishListPage />) },
           { path: '/recipes/dishes/new', ...cap('dish.edit', <DishEditorPage />) },
