@@ -17,6 +17,7 @@ import {
 import type {
   ActivityFeed,
   ActivityQuery,
+  Branch,
   Dashboard,
   DigestSubscription,
   DishRecipeDetail,
@@ -101,6 +102,38 @@ export async function fetchReference(): Promise<ReferenceData> {
     units,
     tasteDescriptors,
   }
+}
+
+// slug mirrors Branch.save()'s server-side slugify() closely enough for the
+// seed demo — the real value always comes from the API once persisted.
+function slugifyForSeed(name: string): string {
+  return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-+|-+$)/g, '') || 'branch'
+}
+
+export async function createBranch(payload: Partial<Branch>): Promise<Branch> {
+  if (USE_SEED) {
+    await delay()
+    const name_en = payload.name_en ?? ''
+    return {
+      id: `branch-${Date.now()}`,
+      name_en,
+      name_ar: payload.name_ar ?? '',
+      code: payload.code ?? '',
+      slug: slugifyForSeed(name_en),
+      sort_order: payload.sort_order ?? 0,
+    }
+  }
+  const { data } = await http.post('/cookbook/reference/branches/', payload)
+  return data
+}
+export async function updateBranch(id: ID, payload: Partial<Branch>): Promise<Branch> {
+  if (USE_SEED) {
+    await delay()
+    const existing = seed.seedReference().branches.find((b) => b.id === id)
+    return { ...(existing ?? { id, name_en: '', name_ar: '', code: '', slug: '', sort_order: 0 }), ...payload }
+  }
+  const { data } = await http.patch(`/cookbook/reference/branches/${id}/`, payload)
+  return data
 }
 
 export async function fetchInventoryItems(): Promise<InventoryItem[]> {

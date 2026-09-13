@@ -38,9 +38,23 @@ class MenuCategoryViewSet(ReadOnlyReferenceViewSet):
     serializer_class = MenuCategorySerializer
 
 
-class BranchViewSet(ReadOnlyReferenceViewSet):
+class BranchViewSet(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin, mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Branch doubles as "brand" — the key every dish publish sends to
+    inventory-platform (see Branch.slug / apps.cookbook.publishing). Unlike
+    other reference data, this one earns an in-product create/edit screen
+    (gated by admin.branches) rather than staying Django-admin-only: getting
+    the brand key right is now load-bearing for POS matching correctness.
+    No delete — branches are referenced too widely to remove safely."""
     queryset = Branch.objects.all()
     serializer_class = BranchSerializer
+    pagination_class = None
+    permission_classes = [capability_required(default=None, by_action={
+        'create': 'admin.branches', 'update': 'admin.branches', 'partial_update': 'admin.branches',
+    })]
 
 
 class PrepKitchenViewSet(ReadOnlyReferenceViewSet):

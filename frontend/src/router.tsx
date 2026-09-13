@@ -21,6 +21,7 @@ import { MenuListPage } from '@/features/menus/MenuListPage'
 import { MenuDetailPage } from '@/features/menus/MenuDetailPage'
 import { UsersPage } from '@/features/admin/UsersPage'
 import { RolesPage } from '@/features/admin/RolesPage'
+import { BranchesPage } from '@/features/admin/BranchesPage'
 import { MorePage } from '@/features/more/MorePage'
 import { InventoryListPage } from '@/features/inventory/InventoryListPage'
 import { LabelSheetPage } from '@/features/labels/LabelSheetPage'
@@ -73,6 +74,7 @@ export const router = createBrowserRouter([
 
           { path: '/admin/users', ...cap('admin.users', <UsersPage />) },
           { path: '/admin/roles', ...cap('admin.roles', <RolesPage />) },
+          { path: '/admin/branches', ...cap('admin.branches', <BranchesPage />) },
 
           { path: '/more', element: <MorePage /> },
           { path: '/settings', element: <SettingsPage /> },

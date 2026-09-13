@@ -15,6 +15,10 @@ class BranchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Branch
         fields = ['id', 'name_en', 'name_ar', 'code', 'slug', 'sort_order']
+        # slug is auto-derived from name_en on first save (Branch.save()) — it's
+        # the brand key sent to inventory-platform on every publish, so it must
+        # never change under a recipe that's already been published there.
+        read_only_fields = ['slug']
 
 
 class PrepKitchenSerializer(serializers.ModelSerializer):

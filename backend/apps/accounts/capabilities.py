@@ -61,6 +61,7 @@ CAPABILITIES = [
     # Administration
     ('admin.users',         'Manage users & assignments',        'Administration'),
     ('admin.roles',         'Manage roles & capabilities',       'Administration'),
+    ('admin.branches',      'Add & edit brands / branches',      'Administration'),
 ]
 
 CAPABILITY_CODES = [c for c, _, _ in CAPABILITIES]
