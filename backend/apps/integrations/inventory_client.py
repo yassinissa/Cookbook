@@ -44,19 +44,28 @@ class InventoryClient:
 
     # ── auth ──────────────────────────────────────────────────────────────
     def _login(self):
-        try:
-            resp = requests.post(
+        def do_login():
+            return requests.post(
                 f'{self.base_url}/auth/login/',
                 json={'email': self.email, 'password': self.password},
                 timeout=LOGIN_TIMEOUT,
             )
+        try:
+            resp = do_login()
         except RETRY_ON:
             time.sleep(2)
-            resp = requests.post(
-                f'{self.base_url}/auth/login/',
-                json={'email': self.email, 'password': self.password},
-                timeout=LOGIN_TIMEOUT,
-            )
+            try:
+                resp = do_login()
+            except RETRY_ON as e:
+                # Both attempts failed to even connect — a cold Render instance
+                # that never woke, or a genuine outage. Every caller of
+                # InventoryClient only ever catches InventoryAPIError (that's
+                # the whole point of this class), so a raw ConnectionError/
+                # Timeout escaping here previously 500'd the entire request —
+                # including saves that had nothing to do with inventory data,
+                # like a plain photo upload. Wrap it like every other failure
+                # mode so callers degrade gracefully instead.
+                raise InventoryAPIError(f'Inventory login failed: could not reach the server ({e})')
         if not resp.ok:
             raise InventoryAPIError(f'Inventory login failed: {resp.status_code} {resp.text}')
         self._access_token = resp.json()['access']
@@ -75,11 +84,19 @@ class InventoryClient:
             resp = do_request()
         except RETRY_ON:
             time.sleep(2)
-            resp = do_request()
+            try:
+                resp = do_request()
+            except RETRY_ON as e:
+                # See the matching comment in _login() — never let a raw
+                # requests exception escape this class.
+                raise InventoryAPIError(f'{method} {path} failed: could not reach the server ({e})')
 
         if resp.status_code == 401:
             self._login()
-            resp = do_request()
+            try:
+                resp = do_request()
+            except RETRY_ON as e:
+                raise InventoryAPIError(f'{method} {path} failed: could not reach the server ({e})')
         if not resp.ok:
             raise InventoryAPIError(
                 f'{method} {path} failed: {resp.status_code} {resp.text}',
