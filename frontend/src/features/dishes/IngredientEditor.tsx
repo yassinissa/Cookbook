@@ -99,7 +99,11 @@ export function IngredientEditor({
                 placeholder={t('editor.ing.item')}
                 onSelect={(sku, item) => {
                   onChange(i, 'item_sku', sku)
-                  if (item && !ing.item_name_snapshot) onChange(i, 'item_name_snapshot', item.name_en)
+                  // Re-sync the display name whenever the underlying item actually
+                  // changes — otherwise swapping to a different ingredient on an
+                  // already-filled row leaves the old item's name snapshotted
+                  // against the new SKU (shows up as a wrong version-diff label).
+                  if (item && sku !== ing.item_sku) onChange(i, 'item_name_snapshot', item.name_en)
                 }}
               />
             </div>
@@ -157,7 +161,7 @@ export function IngredientEditor({
                   placeholder={t('editor.ing.altItem')}
                   onSelect={(sku, item) => {
                     onChange(i, 'alt_item_sku', sku)
-                    if (item && !ing.alt_item_name_snapshot) {
+                    if (item && sku !== ing.alt_item_sku) {
                       onChange(i, 'alt_item_name_snapshot', item.name_en)
                     }
                   }}
