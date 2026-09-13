@@ -3,17 +3,21 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/Button'
 import { Card, CardBody, CardHeader } from '@/components/Card'
 import { DishImage } from '@/components/DishImage'
+import { Icon } from '@/components/Icon'
 import { Page } from '@/components/Page'
+import { Pill } from '@/components/Pill'
 import { ErrorState, Skeleton } from '@/components/States'
-import { AllergenPanel, NutritionPanel } from '@/features/dishes/NutritionPanel'
+import { NutritionPanel } from '@/features/dishes/NutritionPanel'
 import { PlatingPanel } from '@/features/dishes/PlatingPanel'
+import { hasStandardContent, StandardCard } from '@/features/standards/StandardView'
 import { useDishRecipe } from '@/lib/queries'
 import { useI18n } from '@/i18n'
 import type { NutritionRollup } from '@/types/api'
 
-/* Read-only "how do I make this" card for kitchen floor staff — photo,
- * ingredients, method, allergens, plating guide. No cost, no price, no
- * edit/delete/publish controls; those live on the regular Dish detail page. */
+/* The staff guide for one dish — photo, safety info, quick facts,
+ * ingredients, method, "what good looks like", and the plating guide as
+ * the finale. Read-only: no cost, no price, no edit/delete/publish
+ * controls — those live on the regular Dish detail page. */
 export function KitchenDishPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -32,6 +36,14 @@ export function KitchenDishPage() {
   const nutrition = (
     dish.nutrition && Object.keys(dish.nutrition).length ? dish.nutrition : null
   ) as NutritionRollup | null
+  const allergens = dish.allergen_rollup?.all ?? []
+
+  const glance: { label: string; value: string }[] = []
+  if (dish.section?.name) glance.push({ label: t('kitchen.glance.station'), value: dish.section.name })
+  if (dish.prep_time_minutes)
+    glance.push({ label: t('kitchen.glance.prepTime'), value: t('kitchen.glance.minutes', { n: dish.prep_time_minutes }) })
+  if (dish.service_style?.name) glance.push({ label: t('kitchen.glance.serviceStyle'), value: dish.service_style.name })
+  if (dish.category?.name) glance.push({ label: t('kitchen.glance.category'), value: dish.category.name })
 
   return (
     <Page stagger>
@@ -41,12 +53,13 @@ export function KitchenDishPage() {
         </Button>
       </div>
 
-      <div className="card-lit relative mb-6 overflow-hidden rounded-card border border-hairline">
+      {/* hero */}
+      <div className="card-lit relative mb-4 overflow-hidden rounded-card border border-hairline">
         <div className="aspect-[16/9] w-full bg-surface-sunken sm:aspect-[21/9]">
           <DishImage src={dish.image_url} name={dish.name_en} rounded="rounded-none" />
         </div>
         <span aria-hidden className="spice-rail-h absolute inset-x-0 top-0 h-1" />
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent p-4 sm:p-6">
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4 sm:p-6">
           <h1 className="font-display text-[1.75rem] font-medium tracking-tight text-white">
             {dish.name_en}
           </h1>
@@ -55,13 +68,35 @@ export function KitchenDishPage() {
               {dish.name_ar}
             </p>
           )}
-          <p className="mt-1 font-mono text-xs text-white/70">
-            {[dish.branch_name || dish.branch, dish.category?.name].filter(Boolean).join('  ·  ')}
-          </p>
+          {dish.taste_profile && (
+            <p className="mt-1.5 text-sm italic text-white/80">{dish.taste_profile}</p>
+          )}
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+      {/* safety — never buried, always right under the photo */}
+      <div className="mb-6">
+        {allergens.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-danger-subtle bg-danger-subtle px-4 py-3">
+            <Icon name="alert" size={16} className="flex-none text-danger-ink" />
+            <span className="text-sm font-semibold text-danger-ink">{t('allergens.title')}:</span>
+            <div className="flex flex-wrap gap-1.5">
+              {allergens.map((a) => (
+                <Pill key={a} tone="danger">
+                  {a}
+                </Pill>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 rounded-lg border border-hairline bg-surface px-4 py-3">
+            <Icon name="check" size={16} className="flex-none text-success-ink" />
+            <span className="text-sm text-ink-muted">{t('kitchen.allergens.none')}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
         <div className="space-y-6">
           <Card elevated>
             <CardHeader title={t('editor.section.ingredients')} />
@@ -87,10 +122,10 @@ export function KitchenDishPage() {
           <Card elevated>
             <CardHeader title={t('editor.section.method')} />
             <CardBody>
-              <ol className="space-y-3">
+              <ol className="space-y-4">
                 {dish.steps.map((s) => (
-                  <li key={s.id ?? s.step_number} className="flex gap-3 text-sm">
-                    <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-surface-sunken font-mono text-xs font-semibold text-ink-subtle">
+                  <li key={s.id ?? s.step_number} className="flex gap-3.5 text-sm">
+                    <span className="spice-rail flex h-7 w-7 flex-none items-center justify-center rounded-full font-mono text-xs font-semibold text-white">
                       {s.step_number}
                     </span>
                     <p className="pt-0.5 leading-relaxed text-ink">{s.instruction}</p>
@@ -99,14 +134,32 @@ export function KitchenDishPage() {
               </ol>
             </CardBody>
           </Card>
-
-          {id && <PlatingPanel dishId={id} canEdit={false} />}
         </div>
 
         <div className="space-y-6">
-          <AllergenPanel rollup={dish.allergen_rollup} />
+          {glance.length > 0 && (
+            <Card elevated rail="idle">
+              <CardHeader title={t('kitchen.glance')} />
+              <CardBody className="space-y-2.5">
+                {glance.map((g) => (
+                  <div key={g.label} className="flex items-baseline justify-between gap-3 text-sm">
+                    <span className="text-ink-subtle">{g.label}</span>
+                    <span className="font-medium text-ink">{g.value}</span>
+                  </div>
+                ))}
+              </CardBody>
+            </Card>
+          )}
           <NutritionPanel nutrition={nutrition} />
         </div>
+      </div>
+
+      {/* the finale — full width for the standard + the plating photo(s) */}
+      <div className="mt-6 space-y-6">
+        {dish.standard && hasStandardContent(dish.standard) && (
+          <StandardCard std={dish.standard} t={t} title={t('kitchen.standard.title')} />
+        )}
+        {id && <PlatingPanel dishId={id} canEdit={false} />}
       </div>
     </Page>
   )
@@ -116,7 +169,7 @@ function DetailSkeleton() {
   return (
     <Page>
       <Skeleton className="mb-6 aspect-[21/9] w-full rounded-card" />
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+      <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
         <div className="space-y-6">
           <Skeleton className="h-64" />
           <Skeleton className="h-48" />

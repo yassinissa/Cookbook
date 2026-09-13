@@ -8,9 +8,9 @@ import { ErrorState, Skeleton } from '@/components/States'
 import { useProductionRecipe } from '@/lib/queries'
 import { useI18n } from '@/i18n'
 
-/* Read-only "how do I make this batch" card for prep kitchen floor staff —
- * yield, ingredients, method. No cost, no edit/delete/publish controls;
- * those live on the regular Production detail page. */
+/* The staff guide for one production batch — yield, ingredients, method.
+ * Read-only: no cost, no edit/delete/publish controls; those live on the
+ * regular Production detail page. */
 export function KitchenProductionPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -27,7 +27,13 @@ export function KitchenProductionPage() {
   }
 
   const unitCode = recipe.output_unit?.code ?? ''
-  const meta = [recipe.prep_kitchen, recipe.section?.name].filter(Boolean).join('  ·  ')
+
+  const glance: { label: string; value: string }[] = [
+    { label: t('kitchen.glance.yield'), value: `${recipe.output_qty} ${unitCode}`.trim() },
+  ]
+  if (recipe.section?.name) glance.push({ label: t('kitchen.glance.station'), value: recipe.section.name })
+  if (recipe.prep_time_minutes)
+    glance.push({ label: t('kitchen.glance.prepTime'), value: t('kitchen.glance.minutes', { n: recipe.prep_time_minutes }) })
 
   return (
     <Page stagger>
@@ -37,10 +43,10 @@ export function KitchenProductionPage() {
         </Button>
       </div>
 
-      <Card elevated rail="idle" className="relative mb-6 overflow-hidden">
+      <div className="card-lit relative mb-6 overflow-hidden rounded-card border border-hairline">
         <span aria-hidden className="spice-rail-h absolute inset-x-0 top-0 h-1" />
-        <CardBody className="flex items-center gap-4">
-          <span className="flex h-14 w-14 flex-none items-center justify-center rounded-full bg-surface-sunken text-ink-subtle">
+        <div className="flex items-center gap-4 p-4 sm:p-6">
+          <span className="spice-rail flex h-14 w-14 flex-none items-center justify-center rounded-full text-white">
             <Icon name="production" size={26} />
           </span>
           <div className="min-w-0">
@@ -52,55 +58,66 @@ export function KitchenProductionPage() {
                 {recipe.name_ar}
               </p>
             )}
-            {meta && <p className="mt-1 font-mono text-xs text-ink-subtle">{meta}</p>}
+            {recipe.prep_kitchen && (
+              <p className="mt-1 font-mono text-xs text-ink-subtle">{recipe.prep_kitchen}</p>
+            )}
           </div>
-        </CardBody>
-      </Card>
+        </div>
+      </div>
 
-      <div className="space-y-6">
-        <Card elevated>
-          <CardHeader
-            title={t('production.yield.title')}
-            subtitle={t('production.yield.batchOf', { qty: recipe.output_qty, unit: unitCode })}
-          />
-        </Card>
+      <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+        <div className="space-y-6">
+          <Card elevated>
+            <CardHeader title={t('editor.section.ingredients')} />
+            <CardBody flush>
+              <table className="w-full text-sm">
+                <tbody className="divide-y divide-hairline">
+                  {recipe.ingredients.map((i) => (
+                    <tr key={i.id ?? i.item_sku}>
+                      <td className="px-4 py-2.5 text-ink">
+                        {i.item_name_snapshot}
+                        {i.prep_note && <span className="text-ink-subtle"> · {i.prep_note}</span>}
+                      </td>
+                      <td className="tnum whitespace-nowrap px-4 py-2.5 text-end font-mono text-ink-muted">
+                        {i.quantity} {i.unit_detail?.code ?? ''}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardBody>
+          </Card>
 
-        <Card elevated>
-          <CardHeader title={t('editor.section.ingredients')} />
-          <CardBody flush>
-            <table className="w-full text-sm">
-              <tbody className="divide-y divide-hairline">
-                {recipe.ingredients.map((i) => (
-                  <tr key={i.id ?? i.item_sku}>
-                    <td className="px-4 py-2.5 text-ink">
-                      {i.item_name_snapshot}
-                      {i.prep_note && <span className="text-ink-subtle"> · {i.prep_note}</span>}
-                    </td>
-                    <td className="tnum whitespace-nowrap px-4 py-2.5 text-end font-mono text-ink-muted">
-                      {i.quantity} {i.unit_detail?.code ?? ''}
-                    </td>
-                  </tr>
+          <Card elevated>
+            <CardHeader title={t('editor.section.method')} />
+            <CardBody>
+              <ol className="space-y-4">
+                {recipe.steps.map((s) => (
+                  <li key={s.id ?? s.step_number} className="flex gap-3.5 text-sm">
+                    <span className="spice-rail flex h-7 w-7 flex-none items-center justify-center rounded-full font-mono text-xs font-semibold text-white">
+                      {s.step_number}
+                    </span>
+                    <p className="pt-0.5 leading-relaxed text-ink">{s.instruction}</p>
+                  </li>
                 ))}
-              </tbody>
-            </table>
-          </CardBody>
-        </Card>
+              </ol>
+            </CardBody>
+          </Card>
+        </div>
 
-        <Card elevated>
-          <CardHeader title={t('editor.section.method')} />
-          <CardBody>
-            <ol className="space-y-3">
-              {recipe.steps.map((s) => (
-                <li key={s.id ?? s.step_number} className="flex gap-3 text-sm">
-                  <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-surface-sunken font-mono text-xs font-semibold text-ink-subtle">
-                    {s.step_number}
-                  </span>
-                  <p className="pt-0.5 leading-relaxed text-ink">{s.instruction}</p>
-                </li>
+        <div className="space-y-6">
+          <Card elevated rail="idle">
+            <CardHeader title={t('kitchen.glance')} />
+            <CardBody className="space-y-2.5">
+              {glance.map((g) => (
+                <div key={g.label} className="flex items-baseline justify-between gap-3 text-sm">
+                  <span className="text-ink-subtle">{g.label}</span>
+                  <span className="font-medium text-ink">{g.value}</span>
+                </div>
               ))}
-            </ol>
-          </CardBody>
-        </Card>
+            </CardBody>
+          </Card>
+        </div>
       </div>
     </Page>
   )
@@ -110,10 +127,12 @@ function DetailSkeleton() {
   return (
     <Page>
       <Skeleton className="mb-6 h-24 w-full rounded-card" />
-      <div className="space-y-6">
-        <Skeleton className="h-16" />
-        <Skeleton className="h-48" />
-        <Skeleton className="h-48" />
+      <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+        <div className="space-y-6">
+          <Skeleton className="h-48" />
+          <Skeleton className="h-48" />
+        </div>
+        <Skeleton className="h-40" />
       </div>
     </Page>
   )
