@@ -112,7 +112,11 @@ class EnforcementTests(Base):
         self.assertEqual(c.delete(f'/api/cookbook/dish-recipes/{sal.id}/').status_code, 204)
 
     def test_costing_fields_hidden_without_capability(self):
-        cook = self.cook(branches=[self.salmiya])   # Restaurant Cook has no costing.view
+        # Restaurant Cook has costing.view by default now (its edit form needs
+        # the real price to avoid blanking it on save) — deny it explicitly so
+        # this test still exercises the HidesCostingFields mechanism itself,
+        # independent of any one role's capability list.
+        cook = self.cook(branches=[self.salmiya], denied=['costing.view'])
         c = self.api(cook)
         sal = DishRecipe.objects.get(recipe_code='100')
         data = c.get(f'/api/cookbook/dish-recipes/{sal.id}/').data
@@ -120,7 +124,7 @@ class EnforcementTests(Base):
         self.assertIsNone(data['selling_price'])
         self.assertEqual(data['cost_breakdown'], {})
 
-        cook.profile.extra_capabilities.set(Capability.objects.filter(code='costing.view'))
+        cook.profile.denied_capabilities.clear()   # denied always wins over extra — lift it first
         data = c.get(f'/api/cookbook/dish-recipes/{sal.id}/').data
         self.assertEqual(data['selling_price'], '3.000')
 

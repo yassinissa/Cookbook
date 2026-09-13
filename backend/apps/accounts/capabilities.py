@@ -121,6 +121,7 @@ SYSTEM_ROLES = [
         'capabilities': [
             'dashboard.view', 'dish.view', 'dish.edit', 'recipe.history',
             'menu.view', 'inventory.view', 'nutrition.view', 'production.view',
+            'costing.view', 'costing.recalculate',
         ],
         'grants_all_branches': False,
         'grants_all_prep_kitchens': False,
@@ -130,7 +131,7 @@ SYSTEM_ROLES = [
         'description': 'Authors production recipes for their own prep kitchen only.',
         'capabilities': [
             'dashboard.view', 'production.view', 'production.edit', 'recipe.history',
-            'inventory.view', 'nutrition.view',
+            'inventory.view', 'nutrition.view', 'costing.view', 'costing.recalculate',
         ],
         'grants_all_branches': False,
         'grants_all_prep_kitchens': False,
@@ -138,7 +139,7 @@ SYSTEM_ROLES = [
     {
         'name': 'Branch Staff',
         'description': 'Kitchen floor staff — reads their own brand\'s dish recipes and prep '
-                        'guides only (the Kitchen screen), no edit access.',
+                        'guides only (the Kitchen screen), no edit access, no pricing.',
         'capabilities': ['dashboard.view', 'dish.view', 'nutrition.view'],
         'grants_all_branches': False,
         'grants_all_prep_kitchens': False,
@@ -149,7 +150,7 @@ SYSTEM_ROLES = [
                         'the admin experience narrowed to one branch.',
         'capabilities': [
             'dashboard.view', 'dish.view', 'dish.edit', 'dish.delete', 'recipe.history',
-            'inventory.view', 'nutrition.view',
+            'inventory.view', 'nutrition.view', 'costing.view', 'costing.recalculate',
         ],
         'grants_all_branches': False,
         'grants_all_prep_kitchens': False,
@@ -157,7 +158,7 @@ SYSTEM_ROLES = [
     {
         'name': 'Prep Kitchen Staff',
         'description': 'Prep kitchen floor staff — reads their own kitchen\'s production '
-                        'recipes and procedures only (the Kitchen screen), no edit access.',
+                        'recipes and procedures only (the Kitchen screen), no edit access, no pricing.',
         'capabilities': ['dashboard.view', 'production.view', 'nutrition.view'],
         'grants_all_branches': False,
         'grants_all_prep_kitchens': False,
@@ -167,7 +168,7 @@ SYSTEM_ROLES = [
         'description': 'Full recipe control (add, edit, delete) for their own prep kitchen only.',
         'capabilities': [
             'dashboard.view', 'production.view', 'production.edit', 'production.delete',
-            'recipe.history', 'inventory.view', 'nutrition.view',
+            'recipe.history', 'inventory.view', 'nutrition.view', 'costing.view', 'costing.recalculate',
         ],
         'grants_all_branches': False,
         'grants_all_prep_kitchens': False,
