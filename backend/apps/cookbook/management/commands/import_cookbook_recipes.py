@@ -81,7 +81,6 @@ class Command(BaseCommand):
                     'name_ar': d['name_ar'],
                     'recipe_code': d['recipe_code'],
                     'revision': d['revision'],
-                    'branch': branch,
                     'branch_ref': branches.get(branch.lower()),
                     'category': cats.get(d['category'].lower()),
                     'section': sections.get(d['section'].lower()),

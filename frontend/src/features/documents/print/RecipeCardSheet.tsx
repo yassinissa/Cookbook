@@ -35,7 +35,7 @@ export function RecipeCardSheet({
   const dish = recipe as DishRecipeDetail
   const prod = recipe as ProductionRecipeDetail
 
-  const scope = isDish ? dish.branch_name || dish.branch : prod.prep_kitchen
+  const scope = isDish ? dish.branch_name : prod.prep_kitchen
   const meta = [
     recipe.recipe_code && `#${recipe.recipe_code}`,
     recipe.revision,

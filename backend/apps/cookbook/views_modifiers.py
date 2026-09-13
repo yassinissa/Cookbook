@@ -87,8 +87,7 @@ class ModifierReadinessView(APIView):
                 {
                     'dish_id': str(dmg.dish_id),
                     'dish': dmg.dish.name_en,
-                    'branch': (dmg.dish.branch_ref.name_en if dmg.dish.branch_ref_id
-                               else (dmg.dish.branch or None)),
+                    'branch': (dmg.dish.branch_ref.name_en if dmg.dish.branch_ref_id else None),
                     'pos_item_name': dmg.dish.pos_item_name or dmg.dish.name_en,
                     'role': dmg.default_role,
                 }

@@ -98,8 +98,8 @@ class ProductionRecipeAdmin(admin.ModelAdmin):
 
 @admin.register(DishRecipe)
 class DishRecipeAdmin(admin.ModelAdmin):
-    list_display  = ['name_en', 'recipe_code', 'branch', 'category', 'selling_price', 'cost', 'rating_status', 'version', 'is_current']
-    list_filter   = ['branch', 'category', 'is_current', 'rating_status']
+    list_display  = ['name_en', 'recipe_code', 'branch_ref', 'category', 'selling_price', 'cost', 'rating_status', 'version', 'is_current']
+    list_filter   = ['branch_ref', 'category', 'is_current', 'rating_status']
     search_fields = ['name_en', 'name_ar', 'recipe_code', 'pos_item_name']
     inlines       = [DishIngredientInline, DishStepInline, DishStandardInline]
 

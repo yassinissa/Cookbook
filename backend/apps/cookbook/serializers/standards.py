@@ -62,6 +62,7 @@ class DishStandardListSerializer(serializers.ModelSerializer):
     """One row per current dish — shows the standard's headline specs plus
     whether it exists / is approved / has drifted since approval."""
     category_name       = serializers.CharField(source='category.name', read_only=True, default=None)
+    branch_name         = serializers.SerializerMethodField()
     has_standard        = serializers.SerializerMethodField()
     is_approved         = serializers.SerializerMethodField()
     qa_approved_by_name = serializers.SerializerMethodField()
@@ -76,7 +77,7 @@ class DishStandardListSerializer(serializers.ModelSerializer):
     class Meta:
         model  = DishRecipe
         fields = [
-            'id', 'name_en', 'name_ar', 'recipe_code', 'branch', 'branch_ref',
+            'id', 'name_en', 'name_ar', 'recipe_code', 'branch_ref', 'branch_name',
             'category', 'category_name', 'rating_status',
             'has_standard', 'is_approved', 'qa_approved_by_name', 'approval_date',
             'portion_weight_g', 'serving_temp_c', 'holding_time_minutes',
@@ -85,6 +86,9 @@ class DishStandardListSerializer(serializers.ModelSerializer):
 
     def _std(self, obj):
         return getattr(obj, 'standard', None)
+
+    def get_branch_name(self, obj):
+        return obj.branch_ref.name_en if obj.branch_ref_id else ''
 
     def get_has_standard(self, obj):
         return self._std(obj) is not None
@@ -127,6 +131,7 @@ class DishStandardDetailSerializer(serializers.ModelSerializer):
     """Dish header + the full nested standard (or null)."""
     category      = serializers.CharField(source='category.name', read_only=True, default=None)
     section       = serializers.CharField(source='section.name', read_only=True, default=None)
+    branch_name   = serializers.SerializerMethodField()
     standard      = DishStandardSerializer(read_only=True)
     spec_coverage = serializers.SerializerMethodField()
     needs_review  = serializers.SerializerMethodField()
@@ -136,11 +141,14 @@ class DishStandardDetailSerializer(serializers.ModelSerializer):
         model  = DishRecipe
         fields = [
             'id', 'name_en', 'name_ar', 'recipe_code', 'revision',
-            'branch', 'branch_ref', 'category', 'section', 'image_url',
+            'branch_ref', 'branch_name', 'category', 'section', 'image_url',
             'rating', 'rating_status', 'taste_profile', 'version',
             'standard', 'spec_coverage', 'needs_review', 'qa_approved_by',
             'updated_at',
         ]
+
+    def get_branch_name(self, obj):
+        return obj.branch_ref.name_en if obj.branch_ref_id else ''
 
     def get_spec_coverage(self, obj):
         return spec_coverage(getattr(obj, 'standard', None))

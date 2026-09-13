@@ -44,12 +44,12 @@ export function DishListPage() {
   }
 
   // Every branch we operate, in menu order — not just the ones that happen to
-  // have a recipe (and covering the dishes whose branch is a FK, not a string).
+  // have a recipe.
   const branches = useMemo(
     () => (ref?.branches ?? []).slice().sort((a, b) => a.sort_order - b.sort_order).map((b) => b.name_en),
     [ref],
   )
-  const branchOf = (r: DishRecipeListItem) => r.branch_name || r.branch || ''
+  const branchOf = (r: DishRecipeListItem) => r.branch_name || ''
   const categories = useMemo(
     () =>
       Array.from(new Set((recipes ?? []).map((r) => r.category_name).filter(Boolean))).sort() as string[],

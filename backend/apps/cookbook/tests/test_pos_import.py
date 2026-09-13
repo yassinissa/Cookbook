@@ -92,13 +92,13 @@ class POSImportTests(APITestCase):
         self.menu = Menu.objects.create(branch=self.branch, name='Dine Menu', is_active=True)
         # a dish matched by pos_item_name, and one by name_en
         self.arayes = DishRecipe.objects.create(
-            name_en='Meat Arayes v2', recipe_code='ARY', branch='Dine', branch_ref=self.branch,
+            name_en='Meat Arayes v2', recipe_code='ARY', branch_ref=self.branch,
             category=self.cat, pos_item_name='Meat Arayes', selling_price=Decimal('3.75'))
         self.egg = DishRecipe.objects.create(
-            name_en='Fried Egg', recipe_code='EGG', branch='Dine', branch_ref=self.branch,
+            name_en='Fried Egg', recipe_code='EGG', branch_ref=self.branch,
             category=self.cat, selling_price=Decimal('1.50'))
         self.mystery = DishRecipe.objects.create(
-            name_en='Mystery Dish', recipe_code='MYS', branch='Dine', branch_ref=self.branch,
+            name_en='Mystery Dish', recipe_code='MYS', branch_ref=self.branch,
             category=self.cat, selling_price=Decimal('2.00'))
         MenuLine.objects.create(menu=self.menu, dish=self.arayes, sort_order=1)
         MenuLine.objects.create(menu=self.menu, dish=self.egg, sort_order=2)

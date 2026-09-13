@@ -101,13 +101,13 @@ class DishModifierApiTests(APITestCase):
         self.luma = Branch.objects.create(name_en='Luma', sort_order=2)
         self.cat = MenuCategory.objects.create(name='Grill', sort_order=1)
         self.tikka = DishRecipe.objects.create(
-            name_en='Meat Tikka', recipe_code='TIK', branch='Dine', branch_ref=self.dine,
+            name_en='Meat Tikka', recipe_code='TIK', branch_ref=self.dine,
             category=self.cat, pos_item_name='Meat Tikka', selling_price=Decimal('3.5'))
         self.old_tikka = DishRecipe.objects.create(
-            name_en='Meat Tikka', recipe_code='TIK', branch='Dine', branch_ref=self.dine,
+            name_en='Meat Tikka', recipe_code='TIK', branch_ref=self.dine,
             is_current=False, version=1)
         self.luma_dish = DishRecipe.objects.create(
-            name_en='Luma Fattoush', recipe_code='LF', branch='Luma', branch_ref=self.luma,
+            name_en='Luma Fattoush', recipe_code='LF', branch_ref=self.luma,
             category=self.cat, selling_price=Decimal('4.0'))
         self.roll = ModifierGroup.objects.create(name_en='RoLL', selection='single', min_select=1)
         self.sauce = ModifierGroup.objects.create(name_en='Sauce', selection='multi')

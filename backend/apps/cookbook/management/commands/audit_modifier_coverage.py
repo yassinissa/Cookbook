@@ -14,7 +14,6 @@ from collections import defaultdict
 from decimal import Decimal, InvalidOperation
 
 from django.core.management.base import BaseCommand, CommandError
-from django.db.models import Q
 
 from apps.cookbook.models import (
     DishRecipe, DishModifierGroup, ModifierOptionKind, DeductionStatus,
@@ -106,7 +105,7 @@ class Command(BaseCommand):
         branch = opts['branch']
         dish_qs = DishRecipe.objects.filter(is_current=True)
         if branch:
-            dish_qs = dish_qs.filter(Q(branch_ref__name_en__iexact=branch) | Q(branch__iexact=branch))
+            dish_qs = dish_qs.filter(branch_ref__name_en__iexact=branch)
 
         def find_dish(name):
             n = name.casefold()

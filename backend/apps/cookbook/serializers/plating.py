@@ -116,7 +116,7 @@ class PlatingGuideListSerializer(serializers.ModelSerializer):
     class Meta:
         model  = DishRecipe
         fields = [
-            'id', 'name_en', 'name_ar', 'recipe_code', 'branch', 'branch_ref',
+            'id', 'name_en', 'name_ar', 'recipe_code', 'branch_ref',
             'category', 'category_name',
             'has_plating', 'image_count', 'pin_count', 'plate_spec', 'pickup_window_seconds',
         ]
@@ -152,7 +152,7 @@ class PlatingGuideDetailSerializer(serializers.ModelSerializer):
         model  = DishRecipe
         fields = [
             'id', 'name_en', 'name_ar', 'recipe_code', 'revision',
-            'branch', 'branch_ref', 'category', 'section', 'image_url',
+            'branch_ref', 'category', 'section', 'image_url',
             'version', 'plating', 'updated_at',
         ]
 

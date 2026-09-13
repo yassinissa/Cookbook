@@ -29,7 +29,7 @@ class Base(APITestCase):
 
     def _seed_dish(self, name, code, branch):
         d = DishRecipe.objects.create(
-            name_en=name, recipe_code=code, branch=branch.name_en, branch_ref=branch,
+            name_en=name, recipe_code=code, branch_ref=branch,
             category=self.category, section=self.section, selling_price=Decimal('3.000'),
             cost=Decimal('0.800'), cost_breakdown={'food_cost_pct': '26.67', 'per_serving': '0.800'},
         )

@@ -54,7 +54,7 @@ def _scoped_current_dishes(user):
 
 
 def _branch_name(dish):
-    return dish.branch_ref.name_en if dish.branch_ref_id else (dish.branch or '—')
+    return dish.branch_ref.name_en if dish.branch_ref_id else '—'
 
 
 def _movers(dishes, since):

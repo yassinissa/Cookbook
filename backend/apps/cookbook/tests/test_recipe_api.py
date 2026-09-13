@@ -9,7 +9,7 @@ from django.contrib.auth import get_user_model
 from django.test import override_settings
 from rest_framework.test import APIClient, APITestCase
 
-from apps.cookbook.models import DishRecipe, MenuCategory, Section
+from apps.cookbook.models import Branch, DishRecipe, MenuCategory, Section
 from .support import TABBOULEH_LINES, fake_inventory_items, make_tabbouleh_items, make_units
 
 # 1x1 transparent PNG
@@ -25,6 +25,7 @@ class DishRecipeApiTests(APITestCase):
         make_tabbouleh_items(self.units)
         self.section = Section.objects.create(name='Salad', avg_monthly_salary=Decimal('285.78'))
         self.category = MenuCategory.objects.create(name='Salad')
+        self.branch = Branch.objects.create(name_en='Dine', sort_order=1)
         user = get_user_model().objects.create_superuser('chef', password='x')
         # JSON only — the browsable-API renderer trips a Py3.14 bug in the test
         # client's template-capture instrumentation.
@@ -39,7 +40,7 @@ class DishRecipeApiTests(APITestCase):
         p = {
             'name_en': 'Tabbouleh Salad', 'name_ar': 'سلطة التبولة',
             'recipe_code': '1076.9', 'revision': 'Rev.01',
-            'branch': 'Dine', 'category': str(self.category.id), 'section': str(self.section.id),
+            'branch_ref': str(self.branch.id), 'category': str(self.category.id), 'section': str(self.section.id),
             'selling_price': '2.900', 'rating': '8', 'rating_status': 'attention',
             'prep_time_minutes': 3, 'expected_waste_pct': '1.00', 'include_labor_cost': True,
             'ingredients': lines,
@@ -158,13 +159,12 @@ class DishRecipeApiTests(APITestCase):
         listing = self.client.get('/api/cookbook/dish-recipes/')
         self.assertEqual(listing.data['count'], 1)
 
-    def test_list_resolves_branch_name_from_string_or_fk(self):
-        from apps.cookbook.models import Branch
-        wnr = Branch.objects.create(name_en='WnR', sort_order=1)
+    def test_list_resolves_branch_name_from_branch_ref(self):
+        wnr = Branch.objects.create(name_en='WnR', sort_order=2)
         with fake_inventory_items([]):
-            self.client.post('/api/cookbook/dish-recipes/', self._payload(), format='json')  # branch='Dine'
-        DishRecipe.objects.create(name_en='Wok Bowl', recipe_code='W1', branch_ref=wnr)  # FK, blank string
+            self.client.post('/api/cookbook/dish-recipes/', self._payload(), format='json')
+        DishRecipe.objects.create(name_en='Wok Bowl', recipe_code='W1', branch_ref=wnr)
 
         rows = {r['name_en']: r for r in self.client.get('/api/cookbook/dish-recipes/').data['results']}
         self.assertEqual(rows['Tabbouleh Salad']['branch_name'], 'Dine')
-        self.assertEqual(rows['Wok Bowl']['branch_name'], 'WnR')     # was '' before — unfilterable
+        self.assertEqual(rows['Wok Bowl']['branch_name'], 'WnR')

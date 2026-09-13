@@ -33,7 +33,7 @@ DEFAULT_PAGE_SIZE = 30
 def _entry(kind, log):
     recipe = log.recipe
     if kind == 'dish':
-        scope_name = (recipe.branch_ref.name_en if recipe.branch_ref_id else recipe.branch) or None
+        scope_name = recipe.branch_ref.name_en if recipe.branch_ref_id else None
         recipe_path = f'/recipes/dishes/{recipe.id}'
     else:
         scope_name = (recipe.prep_kitchen_ref.name_en if recipe.prep_kitchen_ref_id

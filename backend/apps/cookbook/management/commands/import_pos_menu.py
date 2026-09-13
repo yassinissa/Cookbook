@@ -24,7 +24,7 @@ import re
 from decimal import Decimal, InvalidOperation
 
 from django.core.management.base import BaseCommand, CommandError
-from django.db import models, transaction
+from django.db import transaction
 
 from apps.cookbook.models import (
     Branch, DishRecipe, Menu,
@@ -234,7 +234,7 @@ class Command(BaseCommand):
     def _find_dish(self, name_en, branch):
         qs = DishRecipe.objects.filter(is_current=True)
         if branch:
-            qs = qs.filter(models.Q(branch_ref=branch) | models.Q(branch__iexact=branch.name_en))
+            qs = qs.filter(branch_ref=branch)
         return (qs.filter(pos_item_name__iexact=name_en).first()
                 or qs.filter(name_en__iexact=name_en).first())
 

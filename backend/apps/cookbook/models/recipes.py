@@ -173,12 +173,8 @@ class DishRecipe(RecipeCardFields):
     service_style   = models.ForeignKey(ServiceStyle, on_delete=models.PROTECT, null=True, blank=True,
                         related_name='+')
     allergens       = models.ManyToManyField(Allergen, blank=True, related_name='dishes')
-    branch          = models.CharField(max_length=100, blank=True,
-                        help_text='Branch this dish belongs to, e.g. "Dine", "Luma", "Levant". '
-                                   'Free text for now; branch_ref is the structured version.')
     branch_ref      = models.ForeignKey(Branch, on_delete=models.PROTECT, null=True, blank=True,
-                        related_name='dishes',
-                        help_text='Structured branch. Takes over from the `branch` string in a later phase.')
+                        related_name='dishes', help_text='Branch this dish belongs to.')
     selling_price   = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
     rating          = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True,
                         help_text='0-10 customer/QA rating.')

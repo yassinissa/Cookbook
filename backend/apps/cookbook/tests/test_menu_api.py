@@ -34,7 +34,7 @@ class MenuApiTests(APITestCase):
         ]
         payload = {
             'name_en': name, 'recipe_code': code,
-            'branch': 'Dine', 'branch_ref': str(self.branch.id),
+            'branch_ref': str(self.branch.id),
             'category': str(self.category.id), 'section': str(self.section.id),
             'selling_price': price, 'prep_time_minutes': 3, 'expected_waste_pct': '1.00',
             'include_labor_cost': True, 'ingredients': lines, 'steps': [{'instruction': 'Mix.'}],

@@ -48,7 +48,7 @@ class ResolverTests(APITestCase):
 
     def _dish(self, name, price):
         return DishRecipe.objects.create(
-            name_en=name, recipe_code=name[:3].upper(), branch='Dine', branch_ref=self.branch,
+            name_en=name, recipe_code=name[:3].upper(), branch_ref=self.branch,
             category=self.mains, selling_price=Decimal(price),
         )
 
@@ -127,10 +127,10 @@ class MenuPeriodApiTests(APITestCase):
         self.menu = Menu.objects.create(branch=self.branch, name='Dine Menu', is_active=True)
         self.luma_menu = Menu.objects.create(branch=self.other, name='Luma Menu', is_active=True)
         self.tikka = DishRecipe.objects.create(name_en='Meat Tikka', recipe_code='TIK',
-                                               branch='Dine', branch_ref=self.branch, category=self.cat,
+                                               branch_ref=self.branch, category=self.cat,
                                                selling_price=Decimal('3.000'))
         self.halloumi = DishRecipe.objects.create(name_en='Halloumi', recipe_code='HAL',
-                                                  branch='Dine', branch_ref=self.branch, category=self.cat,
+                                                  branch_ref=self.branch, category=self.cat,
                                                   selling_price=Decimal('2.400'))
         MenuLine.objects.create(menu=self.menu, dish=self.tikka, sort_order=1)
 

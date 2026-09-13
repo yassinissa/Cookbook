@@ -34,7 +34,6 @@ interface FormState {
   name_ar: string
   recipe_code: string
   revision: string
-  branch: string
   branch_ref: string
   pos_item_name: string
   image_url: string
@@ -63,7 +62,6 @@ const BLANK: FormState = {
   name_ar: '',
   recipe_code: '',
   revision: '',
-  branch: '',
   branch_ref: '',
   pos_item_name: '',
   image_url: '',
@@ -125,7 +123,6 @@ export function DishEditorPage() {
       name_ar: r.name_ar,
       recipe_code: r.recipe_code,
       revision: r.revision,
-      branch: r.branch,
       branch_ref: r.branch_ref ?? '',
       pos_item_name: r.pos_item_name,
       image_url: r.image_url,
@@ -331,9 +328,6 @@ export function DishEditorPage() {
                 </Field>
                 <Field label={t('editor.field.revision')} error={err('revision')}>
                   <Input value={form.revision} onChange={(e) => set('revision', e.target.value)} />
-                </Field>
-                <Field label={t('editor.field.branch')} error={err('branch')}>
-                  <Input value={form.branch} onChange={(e) => set('branch', e.target.value)} />
                 </Field>
                 <Field label={t('editor.field.branchRef')} help={t('editor.help.branchRef')} error={err('branch_ref')}>
                   <Select value={form.branch_ref} onChange={(e) => set('branch_ref', e.target.value)}>

@@ -54,7 +54,7 @@ export function StandardsListPage() {
   }
 
   const branches = useMemo(
-    () => Array.from(new Set((rows ?? []).map((r) => r.branch).filter(Boolean))).sort(),
+    () => Array.from(new Set((rows ?? []).map((r) => r.branch_name).filter(Boolean))).sort(),
     [rows],
   )
 
@@ -81,7 +81,7 @@ export function StandardsListPage() {
           r.name_ar.includes(q) ||
           r.recipe_code.toLowerCase().includes(query),
       )
-    if (branch !== 'all') list = list.filter((r) => r.branch === branch)
+    if (branch !== 'all') list = list.filter((r) => r.branch_name === branch)
     if (status !== 'all') list = list.filter((r) => statusOf(r) === status)
     return list
   }, [rows, q, branch, status])
@@ -256,7 +256,7 @@ export function StandardsListPage() {
                               {r.recipe_code}
                             </span>
                           </td>
-                          <td className="px-3 py-2.5 text-ink-muted">{r.branch || '—'}</td>
+                          <td className="px-3 py-2.5 text-ink-muted">{r.branch_name || '—'}</td>
                           <td className="px-3 py-2.5">
                             <CoverageBar filled={r.spec_coverage.filled} total={r.spec_coverage.total} />
                           </td>
@@ -300,7 +300,7 @@ export function StandardsListPage() {
                       </div>
                       <div className="mt-2 flex items-center justify-between text-[13px]">
                         <span className="text-ink-subtle">
-                          {r.branch} · #{r.recipe_code}
+                          {r.branch_name} · #{r.recipe_code}
                         </span>
                         <CoverageBar
                           filled={r.spec_coverage.filled}

@@ -41,7 +41,7 @@ function stripCost<T>(obj: T): T {
 
 export function filterDishList(rows: DishRecipeListItem[]): DishRecipeListItem[] {
   const scope = branchScope()
-  const scoped = scope === 'all' ? rows : rows.filter((r) => scope.has(r.branch))
+  const scoped = scope === 'all' ? rows : rows.filter((r) => scope.has(r.branch_name))
   return scoped.map(stripCost)
 }
 
@@ -51,7 +51,7 @@ export function filterDishDetail(dish: DishRecipeDetail): DishRecipeDetail {
 
 export function filterStandardList(rows: DishStandardListItem[]): DishStandardListItem[] {
   const scope = branchScope()
-  return scope === 'all' ? rows : rows.filter((r) => scope.has(r.branch))
+  return scope === 'all' ? rows : rows.filter((r) => scope.has(r.branch_name))
 }
 
 /** Activity feed: hide production rows without `production.view`, and

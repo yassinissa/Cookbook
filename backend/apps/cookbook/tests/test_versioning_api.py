@@ -29,7 +29,7 @@ class VersioningApiTests(APITestCase):
         ]
         p = {
             'name_en': 'Tabbouleh Salad', 'name_ar': 'سلطة التبولة',
-            'recipe_code': '1076.9', 'revision': 'Rev.01', 'branch': 'Dine',
+            'recipe_code': '1076.9', 'revision': 'Rev.01',
             'category': str(self.category.id), 'section': str(self.section.id),
             'selling_price': '2.900', 'prep_time_minutes': 3, 'expected_waste_pct': '1.00',
             'include_labor_cost': True, 'ingredients': lines, 'steps': [{'instruction': 'Mix.'}],

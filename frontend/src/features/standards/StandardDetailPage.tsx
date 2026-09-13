@@ -66,7 +66,7 @@ export function StandardDetailPage() {
 
   const meta = [
     data.recipe_code && `#${data.recipe_code}`,
-    data.branch,
+    data.branch_name,
     data.category,
     data.section,
   ]

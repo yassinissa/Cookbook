@@ -18,8 +18,7 @@ User = get_user_model()
 
 def make_dish(name, code, branch=None, section=None, category=None):
     return DishRecipe.objects.create(
-        name_en=name, recipe_code=code,
-        branch=branch.name_en if branch else '', branch_ref=branch,
+        name_en=name, recipe_code=code, branch_ref=branch,
         section=section, category=category,
         selling_price=Decimal('3.000'), cost=Decimal('0.800'),
         cost_breakdown={'food_cost_pct': '26.67', 'per_serving': '0.800'},

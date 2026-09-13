@@ -47,10 +47,10 @@ class ActivityFeedTests(APITestCase):
         self.kg = make_units()['Kg']
 
         self.sal_dish = DishRecipe.objects.create(
-            name_en='Tabbouleh', recipe_code='T1', branch='Salmiya', branch_ref=self.salmiya,
+            name_en='Tabbouleh', recipe_code='T1', branch_ref=self.salmiya,
             section=self.section, cost=Decimal('0.8'))
         self.jab_dish = DishRecipe.objects.create(
-            name_en='Fattoush', recipe_code='F1', branch='Jabriya', branch_ref=self.jabriya,
+            name_en='Fattoush', recipe_code='F1', branch_ref=self.jabriya,
             section=self.section, cost=Decimal('0.9'))
         self.prod = ProductionRecipe.objects.create(
             name_en='Toum', recipe_code='P1', prep_kitchen_ref=self.sauce, section=self.section,

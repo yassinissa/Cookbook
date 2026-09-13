@@ -5,7 +5,6 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.core.cache import cache
-from django.db.models import Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -79,8 +78,7 @@ class MenuViewSet(viewsets.ModelViewSet):
         branch = menu.branch
         existing = set(menu.lines.values_list('dish_id', flat=True))
         candidates = (DishRecipe.objects
-                      .filter(is_current=True)
-                      .filter(Q(branch_ref=branch) | Q(branch__iexact=branch.name_en))
+                      .filter(is_current=True, branch_ref=branch)
                       .select_related('category'))
         added = 0
         for i, dish in enumerate(candidates):

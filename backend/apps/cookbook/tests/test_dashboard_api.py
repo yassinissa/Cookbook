@@ -26,7 +26,7 @@ class DashboardApiTests(APITestCase):
             for l in TABBOULEH_LINES
         ]
         payload = {
-            'name_en': name, 'recipe_code': code, 'branch': 'Dine',
+            'name_en': name, 'recipe_code': code,
             'branch_ref': str(self.branch.id), 'category': str(self.category.id),
             'section': str(self.section.id), 'selling_price': price,
             'prep_time_minutes': 3, 'expected_waste_pct': '1.00', 'include_labor_cost': True,

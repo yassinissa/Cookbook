@@ -241,7 +241,6 @@ export interface DishRecipeListItem {
   name_en: string
   name_ar: string
   recipe_code: string
-  branch: string
   branch_ref: ID | null
   branch_name: string
   category: ID | null
@@ -269,7 +268,6 @@ export interface DishRecipeDetail {
   recipe_code: string
   revision: string
   revision_date: string | null
-  branch: string
   branch_ref: ID | null
   branch_name: string
   category: MenuCategory | null
@@ -435,8 +433,8 @@ export interface DishStandardListItem {
   name_en: string
   name_ar: string
   recipe_code: string
-  branch: string
   branch_ref: ID | null
+  branch_name: string
   category: ID | null
   category_name: string | null
   rating_status: RatingStatus
@@ -458,8 +456,8 @@ export interface DishStandardDetail {
   name_ar: string
   recipe_code: string
   revision: string
-  branch: string
   branch_ref: ID | null
+  branch_name: string
   category: string | null
   section: string | null
   image_url: string
@@ -516,7 +514,6 @@ export interface PlatingGuideListItem {
   name_en: string
   name_ar: string
   recipe_code: string
-  branch: string
   branch_ref: ID | null
   category: ID | null
   category_name: string | null
@@ -533,7 +530,6 @@ export interface PlatingGuideDetail {
   name_ar: string
   recipe_code: string
   revision: string
-  branch: string
   branch_ref: ID | null
   category: string | null
   section: string | null
@@ -929,7 +925,6 @@ export interface DishModifierRow {
   name_en: string
   name_ar: string
   recipe_code: string
-  branch: string
   branch_ref: ID | null
   category: ID | null
   category_name: string | null

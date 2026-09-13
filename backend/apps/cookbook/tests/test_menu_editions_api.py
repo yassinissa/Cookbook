@@ -50,13 +50,13 @@ class PublishFlowTests(APITestCase):
 
         self.tikka = DishRecipe.objects.create(
             name_en='Meat Tikka', name_ar='تكة لحم', recipe_code='TIK',
-            branch='Dine', branch_ref=self.branch, category=self.cat,
+            branch_ref=self.branch, category=self.cat,
             selling_price=Decimal('3.500'), cost=Decimal('1.100'),
             pos_item_name='TIKKA', nutrition={'calories': '620.4', '_coverage': {'covered': 5, 'total': 6}},
         )
         self.tikka.allergens.add(self.nuts)
         self.salad = DishRecipe.objects.create(
-            name_en='Fattoush', recipe_code='FAT', branch='Dine', branch_ref=self.branch,
+            name_en='Fattoush', recipe_code='FAT', branch_ref=self.branch,
             category=self.cat, selling_price=Decimal('1.800'), cost=Decimal('0.400'),
         )
         MenuLine.objects.create(menu=self.menu, dish=self.tikka, sort_order=1,
@@ -167,7 +167,7 @@ class PublicMenuEndpointTests(APITestCase):
         self.branch = Branch.objects.create(name_en='Luma', sort_order=1)
         self.cat = MenuCategory.objects.create(name='Mezze', sort_order=1)
         self.menu = Menu.objects.create(branch=self.branch, name='Luma Menu', is_active=True)
-        d = DishRecipe.objects.create(name_en='Hummus', recipe_code='HUM', branch='Luma',
+        d = DishRecipe.objects.create(name_en='Hummus', recipe_code='HUM',
                                       branch_ref=self.branch, category=self.cat, selling_price=Decimal('2.200'))
         MenuLine.objects.create(menu=self.menu, dish=d, sort_order=1)
         self.admin = User.objects.create_superuser('boss', password='x', email='b@x.com')

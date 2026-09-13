@@ -81,7 +81,7 @@ class DashboardView(APIView):
                     'name_en': d.name_en,
                     'name_ar': d.name_ar,
                     'recipe_code': d.recipe_code,
-                    'branch': (d.branch_ref.name_en if d.branch_ref_id else d.branch),
+                    'branch': (d.branch_ref.name_en if d.branch_ref_id else ''),
                     'reasons': reasons,
                 })
 
@@ -90,7 +90,7 @@ class DashboardView(APIView):
             'id': str(d.id),
             'name_en': d.name_en,
             'name_ar': d.name_ar,
-            'branch': (d.branch_ref.name_en if d.branch_ref_id else d.branch),
+            'branch': (d.branch_ref.name_en if d.branch_ref_id else ''),
             'food_cost_pct': str(f),
             'cost': str(d.cost),
             'selling_price': str(d.selling_price) if d.selling_price is not None else None,

@@ -537,7 +537,7 @@ function seedPlatingDetail(dishId: string): PlatingGuideDetail {
   const d = seed.seedDishDetail(dishId)
   return {
     id: d.id, name_en: d.name_en, name_ar: d.name_ar, recipe_code: d.recipe_code,
-    revision: d.revision, branch: d.branch, branch_ref: d.branch_ref,
+    revision: d.revision, branch_ref: d.branch_ref,
     category: d.category?.name ?? null, section: d.section?.name ?? null,
     image_url: d.image_url, version: d.version, plating: null, updated_at: d.updated_at,
   }
@@ -548,7 +548,7 @@ export async function fetchPlatingGuides(): Promise<PlatingGuideListItem[]> {
     await delay()
     return seed.seedDishList().map((d) => ({
       id: d.id, name_en: d.name_en, name_ar: d.name_ar, recipe_code: d.recipe_code,
-      branch: d.branch, branch_ref: null, category: d.category, category_name: d.category_name,
+      branch_ref: null, category: d.category, category_name: d.category_name,
       has_plating: false, image_count: 0, pin_count: 0, plate_spec: '', pickup_window_seconds: null,
     }))
   }

@@ -29,8 +29,7 @@ _MEDIA = tempfile.mkdtemp()
 
 def make_dish(name, code, branch=None):
     return DishRecipe.objects.create(
-        name_en=name, recipe_code=code,
-        branch=branch.name_en if branch else '', branch_ref=branch,
+        name_en=name, recipe_code=code, branch_ref=branch,
         selling_price=Decimal('3.000'), cost=Decimal('0.800'),
     )
 

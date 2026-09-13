@@ -30,8 +30,7 @@ def make_dish(name, code, *, cost, price, branch=None, fcp=None, issues=None):
     if issues:
         bd['issues'] = issues
     return DishRecipe.objects.create(
-        name_en=name, recipe_code=code,
-        branch=branch.name_en if branch else '', branch_ref=branch,
+        name_en=name, recipe_code=code, branch_ref=branch,
         cost=Decimal(cost), selling_price=Decimal(price), cost_breakdown=bd,
     )
 

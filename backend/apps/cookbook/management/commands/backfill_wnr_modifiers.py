@@ -28,7 +28,6 @@ from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
-from django.db.models import Q
 
 from apps.cookbook.models import (
     DishRecipe, DishModifierGroup, ModifierGroup, ModifierOption,
@@ -96,8 +95,8 @@ class Command(BaseCommand):
         w = self.stdout.write
         by_item = parse_report(report_path)
 
-        wnr_dishes = list(DishRecipe.objects.filter(is_current=True).filter(
-            Q(branch_ref__name_en__iexact='WnR') | Q(branch__iexact='WnR')))
+        wnr_dishes = list(DishRecipe.objects.filter(
+            is_current=True, branch_ref__name_en__iexact='WnR'))
         dish_by_norm = {}
         for d in wnr_dishes:
             dish_by_norm.setdefault(_norm(d.name_en), d)
@@ -149,7 +148,7 @@ class Command(BaseCommand):
             # distinct groups on WnR dishes -> union of the Mods across those dishes
             group_mods = defaultdict(set)
             for dmg in DishModifierGroup.objects.select_related('group').filter(
-                    Q(dish__branch_ref__name_en__iexact='WnR') | Q(dish__branch__iexact='WnR')):
+                    dish__branch_ref__name_en__iexact='WnR'):
                 group_mods[dmg.group_id] |= dish_mods.get(dmg.dish_id, set())
             for gid, mods in group_mods.items():
                 g = ModifierGroup.objects.prefetch_related('options').get(pk=gid)
@@ -189,7 +188,7 @@ class Command(BaseCommand):
                 mod_by_norm.setdefault(_norm(m), m)
             for o in ModifierOption.objects.filter(pos_mods_string='').select_related('group'):
                 if not o.group.dish_uses.filter(
-                        Q(dish__branch_ref__name_en__iexact='WnR') | Q(dish__branch__iexact='WnR')).exists():
+                        dish__branch_ref__name_en__iexact='WnR').exists():
                     continue
                 hit = mod_by_norm.get(_norm(o.name_en))
                 if hit:

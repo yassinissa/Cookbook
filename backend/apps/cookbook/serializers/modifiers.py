@@ -199,7 +199,7 @@ class DishModifierListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model  = DishRecipe
-        fields = ['id', 'name_en', 'name_ar', 'recipe_code', 'branch', 'branch_ref',
+        fields = ['id', 'name_en', 'name_ar', 'recipe_code', 'branch_ref',
                   'category', 'category_name', 'pos_item_name', 'group_count',
                   'forced_count', 'needs_data_count']
 
@@ -224,7 +224,7 @@ class DishModifierDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model  = DishRecipe
-        fields = ['id', 'name_en', 'name_ar', 'recipe_code', 'branch', 'branch_ref',
+        fields = ['id', 'name_en', 'name_ar', 'recipe_code', 'branch_ref',
                   'category', 'pos_item_name', 'version', 'modifier_groups', 'updated_at']
 
 
