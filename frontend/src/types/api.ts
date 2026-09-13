@@ -21,7 +21,6 @@ export interface Branch {
   id: ID
   name_en: string
   name_ar: string
-  code: string
   slug: string
   sort_order: number
 }

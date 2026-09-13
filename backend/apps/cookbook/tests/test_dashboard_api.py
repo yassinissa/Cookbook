@@ -14,7 +14,7 @@ class DashboardApiTests(APITestCase):
         make_tabbouleh_items(self.units)
         self.section = Section.objects.create(name='Salad', avg_monthly_salary=Decimal('285.78'))
         self.category = MenuCategory.objects.create(name='Salad', menu_title_ar='سلطات')
-        self.branch = Branch.objects.create(name_en='Dine', name_ar='داين', code='DINE', sort_order=1)
+        self.branch = Branch.objects.create(name_en='Dine', name_ar='داين', sort_order=1)
 
         user = get_user_model().objects.create_superuser('chef', password='x')
         self.client = APIClient(HTTP_ACCEPT='application/json')

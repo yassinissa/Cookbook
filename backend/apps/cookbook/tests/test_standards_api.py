@@ -122,8 +122,8 @@ class StandardsApiTests(APITestCase):
 class StandardsScopeTests(APITestCase):
     def setUp(self):
         self.section = Section.objects.create(name='Salad', avg_monthly_salary=Decimal('285.78'))
-        self.salmiya = Branch.objects.create(name_en='Salmiya', code='SLM', sort_order=1)
-        self.jabriya = Branch.objects.create(name_en='Jabriya', code='JBR', sort_order=2)
+        self.salmiya = Branch.objects.create(name_en='Salmiya', sort_order=1)
+        self.jabriya = Branch.objects.create(name_en='Jabriya', sort_order=2)
         self.sal_dish = make_dish('Salmiya Tabbouleh', 'S1', branch=self.salmiya, section=self.section)
         self.jab_dish = make_dish('Jabriya Tabbouleh', 'J1', branch=self.jabriya, section=self.section)
         DishStandard.objects.create(dish_recipe=self.sal_dish, portion_weight_g=Decimal('180'))

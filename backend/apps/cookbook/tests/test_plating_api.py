@@ -140,8 +140,8 @@ class PlatingScopeTests(APITestCase):
         super().tearDownClass()
 
     def setUp(self):
-        self.salmiya = Branch.objects.create(name_en='Salmiya', code='SLM', sort_order=1)
-        self.jabriya = Branch.objects.create(name_en='Jabriya', code='JBR', sort_order=2)
+        self.salmiya = Branch.objects.create(name_en='Salmiya', sort_order=1)
+        self.jabriya = Branch.objects.create(name_en='Jabriya', sort_order=2)
         self.sal_dish = make_dish('Salmiya Tabbouleh', 'S1', branch=self.salmiya)
         self.jab_dish = make_dish('Jabriya Tabbouleh', 'J1', branch=self.jabriya)
 

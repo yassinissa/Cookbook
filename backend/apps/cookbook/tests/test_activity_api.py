@@ -41,8 +41,8 @@ def log_prod(recipe, action, by='karim', ago_hours=0):
 class ActivityFeedTests(APITestCase):
     def setUp(self):
         self.section = Section.objects.create(name='Salad', avg_monthly_salary=Decimal('285'))
-        self.salmiya = Branch.objects.create(name_en='Salmiya', code='SLM', sort_order=1)
-        self.jabriya = Branch.objects.create(name_en='Jabriya', code='JBR', sort_order=2)
+        self.salmiya = Branch.objects.create(name_en='Salmiya', sort_order=1)
+        self.jabriya = Branch.objects.create(name_en='Jabriya', sort_order=2)
         self.sauce = PrepKitchen.objects.get(name_en='Sauce')
         self.kg = make_units()['Kg']
 
@@ -120,8 +120,8 @@ class ActivityFeedTests(APITestCase):
 class ActivityScopeTests(APITestCase):
     def setUp(self):
         self.section = Section.objects.create(name='Salad', avg_monthly_salary=Decimal('285'))
-        self.salmiya = Branch.objects.create(name_en='Salmiya', code='SLM', sort_order=1)
-        self.jabriya = Branch.objects.create(name_en='Jabriya', code='JBR', sort_order=2)
+        self.salmiya = Branch.objects.create(name_en='Salmiya', sort_order=1)
+        self.jabriya = Branch.objects.create(name_en='Jabriya', sort_order=2)
         self.sauce = PrepKitchen.objects.get(name_en='Sauce')
         self.kg = make_units()['Kg']
 

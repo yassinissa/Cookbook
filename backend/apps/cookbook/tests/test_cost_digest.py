@@ -38,8 +38,8 @@ def make_dish(name, code, *, cost, price, branch=None, fcp=None, issues=None):
 
 class DigestBuilderTests(APITestCase):
     def setUp(self):
-        self.dine = Branch.objects.create(name_en='Dine', code='DINE', sort_order=1)
-        self.luma = Branch.objects.create(name_en='Luma', code='LUMA', sort_order=2)
+        self.dine = Branch.objects.create(name_en='Dine', sort_order=1)
+        self.luma = Branch.objects.create(name_en='Luma', sort_order=2)
         make_dish('Meat Tikka', 'T1', cost='5.6', price='7.0', branch=self.dine, fcp='80.0')
         make_dish('Tabbouleh', 'T2', cost='0.8', price='3.0', branch=self.dine, fcp='26.7')
         make_dish('Molokhia', 'T3', cost='1.5', price='6.0', branch=self.dine, fcp='25.0',
@@ -124,7 +124,7 @@ class DigestSubscriptionEndpointTests(APITestCase):
 
 class SendCostDigestCommandTests(APITestCase):
     def setUp(self):
-        self.dine = Branch.objects.create(name_en='Dine', code='DINE', sort_order=1)
+        self.dine = Branch.objects.create(name_en='Dine', sort_order=1)
         make_dish('Meat Tikka', 'T1', cost='5.6', price='7.0', branch=self.dine, fcp='80.0')
         self.cc = User.objects.create_user('cc', password='x', email='cc@x.com')
         self.cc.profile.role = Role.objects.get(name='Cost Controller')

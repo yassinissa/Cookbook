@@ -50,7 +50,6 @@ class Branch(BaseModel):
     """
     name_en    = models.CharField(max_length=100, unique=True)
     name_ar    = models.CharField(max_length=100, blank=True)
-    code       = models.CharField(max_length=20, blank=True)
     sort_order = models.PositiveIntegerField(default=0)
     # Public-menu URL segment — /m/<slug>. Auto-filled from name_en on first
     # save if left blank; a published MenuEdition is served from this.

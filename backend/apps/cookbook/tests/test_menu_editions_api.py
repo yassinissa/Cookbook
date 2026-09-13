@@ -43,7 +43,7 @@ def walk_keys(obj):
 class PublishFlowTests(APITestCase):
     def setUp(self):
         cache.clear()
-        self.branch = Branch.objects.create(name_en='Dine', name_ar='داين', code='DINE', sort_order=1)
+        self.branch = Branch.objects.create(name_en='Dine', name_ar='داين', sort_order=1)
         self.cat = MenuCategory.objects.create(name='Mains', menu_title_ar='رئيسية', sort_order=1)
         self.menu = Menu.objects.create(branch=self.branch, name='Dine Menu', is_active=True)
         self.nuts = Allergen.objects.create(name='Nuts')
@@ -164,7 +164,7 @@ class PublishFlowTests(APITestCase):
 class PublicMenuEndpointTests(APITestCase):
     def setUp(self):
         cache.clear()
-        self.branch = Branch.objects.create(name_en='Luma', code='LUMA', sort_order=1)
+        self.branch = Branch.objects.create(name_en='Luma', sort_order=1)
         self.cat = MenuCategory.objects.create(name='Mezze', sort_order=1)
         self.menu = Menu.objects.create(branch=self.branch, name='Luma Menu', is_active=True)
         d = DishRecipe.objects.create(name_en='Hummus', recipe_code='HUM', branch='Luma',

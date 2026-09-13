@@ -18,7 +18,7 @@ class MenuCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Branch)
 class BranchAdmin(admin.ModelAdmin):
-    list_display  = ['name_en', 'name_ar', 'code', 'sort_order']
+    list_display  = ['name_en', 'name_ar', 'slug', 'sort_order']
     search_fields = ['name_en']
 
 

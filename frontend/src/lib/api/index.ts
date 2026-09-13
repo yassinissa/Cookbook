@@ -118,7 +118,6 @@ export async function createBranch(payload: Partial<Branch>): Promise<Branch> {
       id: `branch-${Date.now()}`,
       name_en,
       name_ar: payload.name_ar ?? '',
-      code: payload.code ?? '',
       slug: slugifyForSeed(name_en),
       sort_order: payload.sort_order ?? 0,
     }
@@ -130,7 +129,7 @@ export async function updateBranch(id: ID, payload: Partial<Branch>): Promise<Br
   if (USE_SEED) {
     await delay()
     const existing = seed.seedReference().branches.find((b) => b.id === id)
-    return { ...(existing ?? { id, name_en: '', name_ar: '', code: '', slug: '', sort_order: 0 }), ...payload }
+    return { ...(existing ?? { id, name_en: '', name_ar: '', slug: '', sort_order: 0 }), ...payload }
   }
   const { data } = await http.patch(`/cookbook/reference/branches/${id}/`, payload)
   return data

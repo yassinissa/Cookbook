@@ -24,7 +24,7 @@ def _report(lines):
 
 class BackfillTests(APITestCase):
     def setUp(self):
-        self.wnr = Branch.objects.create(name_en='WnR', code='WNR', sort_order=1)
+        self.wnr = Branch.objects.create(name_en='WnR', sort_order=1)
         self.mongolian = DishRecipe.objects.create(name_en='Mongolian', recipe_code='M1',
                                                    branch_ref=self.wnr, pos_item_name='Mongolian')
         self.g = ModifierGroup.objects.create(name_en='WnR Protein Choice', selection='single', min_select=1)

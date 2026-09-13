@@ -55,7 +55,7 @@ class DeductionStatusTests(APITestCase):
         self.assertEqual(removal.deduction_status, 'ready')
 
     def test_type_needs_published_variant_or_deltas(self):
-        branch = Branch.objects.create(name_en='WnR', code='WNR', sort_order=1)
+        branch = Branch.objects.create(name_en='WnR', sort_order=1)
         variant = DishRecipe.objects.create(name_en='Kindo Beef', recipe_code='K1', branch_ref=branch)
         t = self._opt(name_en='Beef', kind='type', variant_recipe=variant)
         self.assertEqual(t.deduction_status, 'needs_data')            # variant not published
@@ -107,7 +107,7 @@ class ReadinessEndpointTests(APITestCase):
         self.client = APIClient(HTTP_ACCEPT='application/json')
         self.client.force_authenticate(self.admin)
 
-        self.branch = Branch.objects.create(name_en='WnR', code='WNR', sort_order=1)
+        self.branch = Branch.objects.create(name_en='WnR', sort_order=1)
         self.dish = DishRecipe.objects.create(name_en='Mongolian', recipe_code='M1',
                                               branch_ref=self.branch, pos_item_name='Mongolian')
         self.g = ModifierGroup.objects.create(name_en='Protein')
@@ -142,7 +142,7 @@ class ReadinessEndpointTests(APITestCase):
 
 class AuditCommandTests(APITestCase):
     def setUp(self):
-        self.branch = Branch.objects.create(name_en='WnR', code='WNR', sort_order=1)
+        self.branch = Branch.objects.create(name_en='WnR', sort_order=1)
         u = UnitScale.objects.create(code='g', description='g', dimension='mass', factor_to_canonical=1)
         base = DishRecipe.objects.create(name_en='Edamame', recipe_code='E1',
                                          branch_ref=self.branch, pos_item_name='Edamame')

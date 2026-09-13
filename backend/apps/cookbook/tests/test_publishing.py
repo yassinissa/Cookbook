@@ -72,7 +72,7 @@ class DishPublishTests(APITestCase):
         self.g = UnitScale.objects.create(code='g', description='g', dimension='mass', factor_to_canonical=1)
         self.ml = UnitScale.objects.create(code='ml', description='ml', dimension='volume', factor_to_canonical=1)
         self.section = Section.objects.create(name='Cold', avg_monthly_salary=Decimal('285'))
-        self.branch = Branch.objects.create(name_en='Salmiya', code='SLM', sort_order=1)
+        self.branch = Branch.objects.create(name_en='Salmiya', sort_order=1)
         self.dish = DishRecipe.objects.create(
             name_en='Toum Dip', recipe_code='D1', branch_ref=self.branch, section=self.section,
             selling_price=Decimal('2.500'), cost=Decimal('0.8'))

@@ -87,7 +87,7 @@ class POSImportTests(APITestCase):
         super().tearDownClass()
 
     def setUp(self):
-        self.branch = Branch.objects.create(name_en='Dine', code='DINE', sort_order=1)
+        self.branch = Branch.objects.create(name_en='Dine', sort_order=1)
         self.cat = MenuCategory.objects.create(name='Starters', sort_order=1)
         self.menu = Menu.objects.create(branch=self.branch, name='Dine Menu', is_active=True)
         # a dish matched by pos_item_name, and one by name_en

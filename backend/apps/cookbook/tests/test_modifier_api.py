@@ -97,8 +97,8 @@ class ModifierGroupApiTests(APITestCase):
 
 class DishModifierApiTests(APITestCase):
     def setUp(self):
-        self.dine = Branch.objects.create(name_en='Dine', code='DINE', sort_order=1)
-        self.luma = Branch.objects.create(name_en='Luma', code='LUMA', sort_order=2)
+        self.dine = Branch.objects.create(name_en='Dine', sort_order=1)
+        self.luma = Branch.objects.create(name_en='Luma', sort_order=2)
         self.cat = MenuCategory.objects.create(name='Grill', sort_order=1)
         self.tikka = DishRecipe.objects.create(
             name_en='Meat Tikka', recipe_code='TIK', branch='Dine', branch_ref=self.dine,

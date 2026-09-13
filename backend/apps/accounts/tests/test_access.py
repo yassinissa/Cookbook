@@ -20,8 +20,8 @@ class Base(APITestCase):
         make_tabbouleh_items(self.units)
         self.section = Section.objects.create(name='Salad', avg_monthly_salary=Decimal('285.78'))
         self.category = MenuCategory.objects.create(name='Salad')
-        self.salmiya = Branch.objects.create(name_en='Salmiya', code='SLM', sort_order=1)
-        self.jabriya = Branch.objects.create(name_en='Jabriya', code='JBR', sort_order=2)
+        self.salmiya = Branch.objects.create(name_en='Salmiya', sort_order=1)
+        self.jabriya = Branch.objects.create(name_en='Jabriya', sort_order=2)
 
         self.admin = User.objects.create_superuser('boss', password='x')
         self._seed_dish('Salmiya Tabbouleh', '100', self.salmiya)

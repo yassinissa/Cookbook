@@ -160,7 +160,7 @@ class DishRecipeApiTests(APITestCase):
 
     def test_list_resolves_branch_name_from_string_or_fk(self):
         from apps.cookbook.models import Branch
-        wnr = Branch.objects.create(name_en='WnR', code='WNR', sort_order=1)
+        wnr = Branch.objects.create(name_en='WnR', sort_order=1)
         with fake_inventory_items([]):
             self.client.post('/api/cookbook/dish-recipes/', self._payload(), format='json')  # branch='Dine'
         DishRecipe.objects.create(name_en='Wok Bowl', recipe_code='W1', branch_ref=wnr)  # FK, blank string

@@ -38,7 +38,7 @@ def line(resolved, name):
 
 class ResolverTests(APITestCase):
     def setUp(self):
-        self.branch = Branch.objects.create(name_en='Dine', code='DINE', sort_order=1)
+        self.branch = Branch.objects.create(name_en='Dine', sort_order=1)
         self.mains = MenuCategory.objects.create(name='Mains', sort_order=1)
         self.menu = Menu.objects.create(branch=self.branch, name='Dine Menu', is_active=True)
         self.tikka = self._dish('Meat Tikka', '3.000')
@@ -121,8 +121,8 @@ class ResolverTests(APITestCase):
 
 class MenuPeriodApiTests(APITestCase):
     def setUp(self):
-        self.branch = Branch.objects.create(name_en='Dine', code='DINE', sort_order=1)
-        self.other = Branch.objects.create(name_en='Luma', code='LUMA', sort_order=2)
+        self.branch = Branch.objects.create(name_en='Dine', sort_order=1)
+        self.other = Branch.objects.create(name_en='Luma', sort_order=2)
         self.cat = MenuCategory.objects.create(name='Mains', sort_order=1)
         self.menu = Menu.objects.create(branch=self.branch, name='Dine Menu', is_active=True)
         self.luma_menu = Menu.objects.create(branch=self.other, name='Luma Menu', is_active=True)

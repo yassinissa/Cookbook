@@ -61,7 +61,6 @@ export function BranchesPage() {
                     </div>
                     <p className="mt-0.5 font-mono text-2xs text-ink-subtle">{b.slug}</p>
                   </div>
-                  {b.code && <span className="tnum text-xs text-ink-subtle">{b.code}</span>}
                 </button>
               </li>
             ))}
@@ -81,12 +80,11 @@ function BranchDrawer({ branch, onClose }: { branch: Branch | null; onClose: () 
 
   const [nameEn, setNameEn] = useState(branch?.name_en ?? '')
   const [nameAr, setNameAr] = useState(branch?.name_ar ?? '')
-  const [code, setCode] = useState(branch?.code ?? '')
   const [sortOrder, setSortOrder] = useState(branch?.sort_order ?? 0)
 
   const save = useMutation({
     mutationFn: () => {
-      const payload = { name_en: nameEn, name_ar: nameAr, code, sort_order: sortOrder }
+      const payload = { name_en: nameEn, name_ar: nameAr, sort_order: sortOrder }
       return branch ? api.updateBranch(branch.id, payload) : api.createBranch(payload)
     },
     onSuccess: () => {
@@ -121,18 +119,13 @@ function BranchDrawer({ branch, onClose }: { branch: Branch | null; onClose: () 
         <Field label={t('branches.nameAr')}>
           <Input dir="rtl" value={nameAr} onChange={(e) => setNameAr(e.target.value)} />
         </Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label={t('branches.code')}>
-            <Input value={code} onChange={(e) => setCode(e.target.value)} />
-          </Field>
-          <Field label={t('branches.sortOrder')}>
-            <Input
-              type="number"
-              value={sortOrder}
-              onChange={(e) => setSortOrder(Number(e.target.value) || 0)}
-            />
-          </Field>
-        </div>
+        <Field label={t('branches.sortOrder')}>
+          <Input
+            type="number"
+            value={sortOrder}
+            onChange={(e) => setSortOrder(Number(e.target.value) || 0)}
+          />
+        </Field>
 
         <div className="rounded-lg border border-hairline p-3">
           <p className="mb-1 text-2xs font-semibold uppercase tracking-wide text-ink-subtle">

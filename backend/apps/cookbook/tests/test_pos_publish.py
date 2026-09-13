@@ -69,7 +69,7 @@ def _patch(fake):
 class PosPublishTests(APITestCase):
     def setUp(self):
         self.g = UnitScale.objects.create(code='g', description='g', dimension='mass', factor_to_canonical=1)
-        self.branch = Branch.objects.create(name_en='Dine', code='DINE', sort_order=1)
+        self.branch = Branch.objects.create(name_en='Dine', sort_order=1)
         self.dish = DishRecipe.objects.create(
             name_en='Meat Arayes', recipe_code='ARY', branch_ref=self.branch,
             pos_item_name='Meat Arayes', selling_price=Decimal('3.75'), cost=Decimal('1.0'))
