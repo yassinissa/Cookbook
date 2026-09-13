@@ -170,8 +170,8 @@ class InventoryClient:
     def update_dish_recipe(self, recipe_id, payload):
         return self._request('PATCH', f'/recipes/dish/{recipe_id}/', json=payload)
 
-    def find_dish_recipe(self, name_en):
-        rows = self._get_all_pages('/recipes/dish/', params={'search': name_en})
+    def find_dish_recipe(self, name_en, brand=''):
+        rows = self._get_all_pages('/recipes/dish/', params={'search': name_en, 'brand': brand})
         return next((r for r in rows
                      if r.get('name_en') == name_en and r.get('is_current')), None)
 
@@ -188,27 +188,34 @@ class InventoryClient:
     # and a POSAddonIngredient per paid add-on. Cookbook authors these beside
     # the recipe and pushes them here. Both keys are unique on the platform,
     # so these upsert: find by the key, PATCH if present else POST.
-    def upsert_pos_mapping(self, pos_item_name, pos_modifier, dish_recipe_id):
+    def upsert_pos_mapping(self, pos_item_name, pos_modifier, dish_recipe_id, brand):
+        """`brand` is Cookbook's Branch.slug for the dish's brand — scopes the
+        mapping so two brands publishing the same POS item name/modifier text
+        never resolve to each other's recipe (see inventory-platform's
+        POSItemMapping.brand)."""
         payload = {
+            'brand': brand,
             'pos_item_name': pos_item_name,
             'pos_modifier': pos_modifier or '',
             'dish_recipe': dish_recipe_id,
             'is_mapped': True,
         }
         existing = next(
-            (r for r in self._get_all_pages('/pos/mappings/', params={'search': pos_item_name})
+            (r for r in self._get_all_pages('/pos/mappings/', params={'search': pos_item_name, 'brand': brand})
              if r.get('pos_item_name') == pos_item_name
-             and (r.get('pos_modifier') or '') == (pos_modifier or '')),
+             and (r.get('pos_modifier') or '') == (pos_modifier or '')
+             and (r.get('brand') or '') == brand),
             None)
         if existing:
             return self._request('PATCH', f'/pos/mappings/{existing["id"]}/', json=payload)
         return self._request('POST', '/pos/mappings/', json=payload)
 
     def upsert_pos_modifier_ingredient(self, pos_item_name, pos_modifier, item_id,
-                                       quantity, unit_id=None, direction='add'):
+                                       quantity, unit_id, direction, brand):
         """One +/- ingredient delta for a (dish, modifier) pair. Keyed on
-        (pos_item_name, pos_modifier, item, direction) — find then POST/PATCH."""
+        (brand, pos_item_name, pos_modifier, item, direction) — find then POST/PATCH."""
         payload = {
+            'brand': brand,
             'pos_item_name': pos_item_name,
             'pos_modifier': pos_modifier or '',
             'item': item_id,
@@ -218,21 +225,23 @@ class InventoryClient:
         }
         existing = next(
             (r for r in self._get_all_pages('/pos/modifier-ingredients/',
-                                            params={'search': pos_item_name})
+                                            params={'search': pos_item_name, 'brand': brand})
              if r.get('pos_item_name') == pos_item_name
              and (r.get('pos_modifier') or '') == (pos_modifier or '')
              and str(r.get('item')) == str(item_id)
-             and (r.get('direction') or 'add') == direction),
+             and (r.get('direction') or 'add') == direction
+             and (r.get('brand') or '') == brand),
             None)
         if existing:
             return self._request('PATCH', f'/pos/modifier-ingredients/{existing["id"]}/', json=payload)
         return self._request('POST', '/pos/modifier-ingredients/', json=payload)
 
-    def delete_pos_modifier_ingredients(self, pos_item_name, pos_modifier):
-        """Drop every delta row for a (dish, modifier) pair — used before a
-        re-publish so removed deltas don't linger on inventory-platform."""
+    def delete_pos_modifier_ingredients(self, pos_item_name, pos_modifier, brand):
+        """Drop every delta row for a (brand, dish, modifier) pair — used before
+        a re-publish so removed deltas don't linger on inventory-platform."""
         for r in self._get_all_pages('/pos/modifier-ingredients/',
-                                     params={'search': pos_item_name}):
+                                     params={'search': pos_item_name, 'brand': brand}):
             if (r.get('pos_item_name') == pos_item_name
-                    and (r.get('pos_modifier') or '') == (pos_modifier or '')):
+                    and (r.get('pos_modifier') or '') == (pos_modifier or '')
+                    and (r.get('brand') or '') == brand):
                 self._request('DELETE', f'/pos/modifier-ingredients/{r["id"]}/')

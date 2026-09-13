@@ -56,7 +56,7 @@ class FakeClient:
     def create_production_recipe(self, payload):  return self._record('create_prod', payload)
     def update_production_recipe(self, rid, p):   return self._record(f'update_prod:{rid}', p)
 
-    def find_dish_recipe(self, name_en):
+    def find_dish_recipe(self, name_en, brand=''):
         return {'id': 'inv-999', 'name_en': name_en, 'is_current': True}
 
     def find_production_recipe(self, name_en, prep_kitchen_id):
@@ -97,6 +97,7 @@ class DishPublishTests(APITestCase):
         verb, payload = fake.calls[0]
         self.assertEqual(verb, 'create_dish')
         self.assertEqual(payload['name_en'], 'Toum Dip')
+        self.assertEqual(payload['brand'], 'salmiya')   # from branch_ref.slug
         self.assertEqual(payload['pos_item_name'], 'Toum Dip')
         self.assertEqual(payload['ingredients'], [
             {'item': 'itm-1', 'quantity': '500.000', 'unit': 'u-g'},
@@ -156,6 +157,19 @@ class DishPublishTests(APITestCase):
         self.assertEqual(r.status_code, 200)
         self.assertTrue(any('GHOST' in w for w in r.data['_publish']['warnings']))
         self.assertEqual(len(fake.calls[0][1]['ingredients']), 2)   # ghost line dropped
+
+    def test_publish_without_branch_is_rejected(self):
+        # inventory-platform scopes DishRecipe identity by (brand, name) — a
+        # dish with no branch_ref has no brand key to publish under, and
+        # publishing it anyway risks colliding with another brand's recipe.
+        self.dish.branch_ref = None
+        self.dish.save(update_fields=['branch_ref'])
+        fake = FakeClient()
+        with patch_client(fake):
+            r = self.client.post(f'/api/cookbook/dish-recipes/{self.dish.id}/publish/')
+        self.assertEqual(r.status_code, 502)
+        self.assertIn('branch', r.data['detail'].lower())
+        self.assertEqual(fake.calls, [])   # never reached the platform
 
     def test_platform_rejection_is_502_and_records_the_error(self):
         fake = FakeClient(fail=True)

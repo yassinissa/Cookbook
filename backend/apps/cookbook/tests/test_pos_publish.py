@@ -46,20 +46,20 @@ class FakeClient:
     def update_dish_recipe(self, rid, payload):
         return {'name_en': payload['name_en']}
 
-    def find_dish_recipe(self, name_en):
+    def find_dish_recipe(self, name_en, brand=''):
         return {'id': 'inv-dish-1', 'name_en': name_en, 'is_current': True}
 
-    def upsert_pos_mapping(self, pos_item_name, pos_modifier, dish_recipe_id):
-        self.mappings.append((pos_item_name, pos_modifier or '', dish_recipe_id))
+    def upsert_pos_mapping(self, pos_item_name, pos_modifier, dish_recipe_id, brand):
+        self.mappings.append((pos_item_name, pos_modifier or '', dish_recipe_id, brand))
         return {'id': 'map-1'}
 
     def upsert_pos_modifier_ingredient(self, pos_item_name, pos_modifier, item_id,
-                                       quantity, unit_id=None, direction='add'):
-        self.deltas.append((pos_item_name, pos_modifier or '', item_id, str(quantity), unit_id, direction))
+                                       quantity, unit_id, direction, brand):
+        self.deltas.append((pos_item_name, pos_modifier or '', item_id, str(quantity), unit_id, direction, brand))
         return {'id': 'delta-1'}
 
-    def delete_pos_modifier_ingredients(self, pos_item_name, pos_modifier):
-        self.pruned.append((pos_item_name, pos_modifier or ''))
+    def delete_pos_modifier_ingredients(self, pos_item_name, pos_modifier, brand):
+        self.pruned.append((pos_item_name, pos_modifier or '', brand))
 
 
 def _patch(fake):
@@ -107,11 +107,11 @@ class PosPublishTests(APITestCase):
             r = self._publish()
         self.assertEqual(r.status_code, 200, r.data)
         self.assertEqual(set(fake.mappings), {
-            ('Meat Arayes', '', 'inv-dish-1'),
-            ('Meat Arayes', '(C) CHICKEN', 'inv-chicken'),
+            ('Meat Arayes', '', 'inv-dish-1', 'dine'),
+            ('Meat Arayes', '(C) CHICKEN', 'inv-chicken', 'dine'),
         })
         self.assertEqual(fake.deltas, [
-            ('Meat Arayes', 'GARLIC SAUCE', 'itm-cheese', '15.000', 'u-g', 'add'),
+            ('Meat Arayes', 'GARLIC SAUCE', 'itm-cheese', '15.000', 'u-g', 'add', 'dine'),
         ])
         self.assertEqual(self._warnings(r), [])
 
@@ -124,7 +124,7 @@ class PosPublishTests(APITestCase):
         fake = FakeClient()
         with _patch(fake):
             r = self._publish()
-        self.assertIn(('Meat Arayes', 'NO CRAB', 'itm-crab', '40.000', 'u-g', 'remove'), fake.deltas)
+        self.assertIn(('Meat Arayes', 'NO CRAB', 'itm-crab', '40.000', 'u-g', 'remove', 'dine'), fake.deltas)
         self.assertEqual(self._warnings(r), [])
 
     def test_no_impact_option_publishes_nothing_and_does_not_warn(self):
@@ -149,7 +149,7 @@ class PosPublishTests(APITestCase):
         fake = FakeClient()
         with _patch(fake):
             self._publish()
-        self.assertIn(('Meat Arayes', 'GARLIC SAUCE'), fake.pruned)
+        self.assertIn(('Meat Arayes', 'GARLIC SAUCE', 'dine'), fake.pruned)
 
     def test_dish_with_no_modifiers_pushes_nothing(self):
         DishModifierGroup.objects.filter(dish=self.dish).delete()

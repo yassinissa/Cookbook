@@ -136,6 +136,18 @@ def _push(recipe, payload, *, create, update, relink):
 
 def publish_dish_recipe(recipe, *, client=None):
     client = client or InventoryClient()
+
+    # `brand` is Cookbook's Branch.slug for this dish (e.g. "wnr") — inventory-
+    # platform scopes DishRecipe/POSItemMapping identity by (brand, name), so
+    # two brands can each publish a same-named dish at their own price without
+    # overwriting each other. Every dish must be linked to a branch before it
+    # can be published; there is no safe default.
+    brand = getattr(recipe.branch_ref, 'slug', '') or ''
+    if not brand:
+        raise RecipePublishError(
+            'This dish has no branch set — link it to a branch (brand) before publishing, '
+            'so its recipe and POS mappings don\'t collide with another brand\'s.')
+
     sku_to_id, resolve_unit = _catalogue(client)
     lines, warnings = _ingredient_lines(recipe, sku_to_id, resolve_unit)
     if not lines:
@@ -143,6 +155,7 @@ def publish_dish_recipe(recipe, *, client=None):
             'None of this recipe’s ingredients match an inventory item — nothing to publish.')
 
     payload = {
+        'brand': brand,
         'name_en': recipe.name_en,
         'name_ar': recipe.name_ar,
         'pos_item_name': recipe.pos_item_name or recipe.name_en,
@@ -155,18 +168,18 @@ def publish_dish_recipe(recipe, *, client=None):
             recipe, payload,
             create=client.create_dish_recipe,
             update=client.update_dish_recipe,
-            relink=lambda: client.find_dish_recipe(recipe.name_en),
+            relink=lambda: client.find_dish_recipe(recipe.name_en, brand),
         )
     except InventoryAPIError as e:
         _finish_error(recipe, e)
         raise RecipePublishError(f'inventory-platform rejected the recipe: {e}')
 
     _finish_ok(recipe, remote_id)
-    warnings += _publish_pos_modifiers(recipe, client, sku_to_id, resolve_unit)
+    warnings += _publish_pos_modifiers(recipe, client, sku_to_id, resolve_unit, brand)
     return _result(recipe, warnings)
 
 
-def _publish_pos_modifiers(recipe, client, sku_to_id, resolve_unit):
+def _publish_pos_modifiers(recipe, client, sku_to_id, resolve_unit, brand):
     """After the dish recipe is on inventory-platform, push its POS deduction
     data:
       - a POSItemMapping for the base dish;
@@ -191,7 +204,7 @@ def _publish_pos_modifiers(recipe, client, sku_to_id, resolve_unit):
 
     def _push_mapping(mods, target_recipe_id, label):
         try:
-            client.upsert_pos_mapping(pos_name, mods, target_recipe_id)
+            client.upsert_pos_mapping(pos_name, mods, target_recipe_id, brand)
         except InventoryAPIError as e:
             warnings.append(f'POS mapping for {label} failed: {e}')
 
@@ -218,11 +231,11 @@ def _publish_pos_modifiers(recipe, client, sku_to_id, resolve_unit):
             if opt.kind == ModifierOptionKind.TYPE and opt.variant_recipe and opt.variant_recipe.inventory_recipe_id:
                 _push_mapping(opt.pos_mods_string, opt.variant_recipe.inventory_recipe_id, where)
                 # clear any stale delta rows from a previous delta-based publish
-                _prune_deltas(client, pos_name, opt.pos_mods_string, warnings, where)
+                _prune_deltas(client, pos_name, opt.pos_mods_string, brand, warnings, where)
                 continue
 
             # delta-based (add-on / removal / delta-modelled pick)
-            _prune_deltas(client, pos_name, opt.pos_mods_string, warnings, where)
+            _prune_deltas(client, pos_name, opt.pos_mods_string, brand, warnings, where)
             for d in opt.deltas.all():
                 item_id = sku_to_id.get(d.item_sku)
                 if item_id is None:
@@ -234,15 +247,15 @@ def _publish_pos_modifiers(recipe, client, sku_to_id, resolve_unit):
                 try:
                     client.upsert_pos_modifier_ingredient(
                         pos_name, opt.pos_mods_string, item_id,
-                        str(d.quantity), unit_id, d.direction)
+                        str(d.quantity), unit_id, d.direction, brand)
                 except InventoryAPIError as e:
                     warnings.append(f'POS modifier ingredient for {where} failed: {e}')
     return warnings
 
 
-def _prune_deltas(client, pos_name, pos_modifier, warnings, where):
+def _prune_deltas(client, pos_name, pos_modifier, brand, warnings, where):
     try:
-        client.delete_pos_modifier_ingredients(pos_name, pos_modifier)
+        client.delete_pos_modifier_ingredients(pos_name, pos_modifier, brand)
     except InventoryAPIError as e:
         warnings.append(f'could not prune old POS deltas for {where}: {e}')
 
