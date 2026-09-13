@@ -14,6 +14,7 @@ import { CapabilityChecklist } from './CapabilityChecklist'
 import * as accounts from '@/lib/api/accounts'
 import { useAccountUsers, useCapabilityGroups, useReference, useRoles } from '@/lib/queries'
 import { parseApiError } from '@/lib/parseApiError'
+import { cn } from '@/lib/cn'
 import { useI18n } from '@/i18n'
 import type { AccountUser, CapabilityCode, Role } from '@/types/access'
 
@@ -129,10 +130,29 @@ function UserDrawer({
   const [extra, setExtra] = useState<Set<CapabilityCode>>(new Set(user?.extra_capability_codes ?? []))
   const [denied, setDenied] = useState<Set<CapabilityCode>>(new Set(user?.denied_capability_codes ?? []))
 
-  const inherited = useMemo(
-    () => new Set(roles.find((r) => r.id === roleId)?.capability_codes ?? []),
-    [roles, roleId],
-  )
+  const selectedRole = useMemo(() => roles.find((r) => r.id === roleId), [roles, roleId])
+  const inherited = useMemo(() => new Set(selectedRole?.capability_codes ?? []), [selectedRole])
+
+  // A role scoped to one branch and/or one prep kitchen (grants_all_* false)
+  // has an empty *default* scope until someone assigns it — silently
+  // creating a user who can log in but sees nothing. For those roles the
+  // relevant assignment isn't optional, so skip the opt-in checkbox and
+  // require it outright; only show the picker(s) the role actually uses
+  // (a kitchen-only role has no use for a branch list, and vice versa).
+  const needsBranch =
+    !!selectedRole &&
+    !selectedRole.grants_all_branches &&
+    selectedRole.capability_codes.some((c) => c.startsWith('dish.') || c.startsWith('menu.'))
+  const needsKitchen =
+    !!selectedRole &&
+    !selectedRole.grants_all_prep_kitchens &&
+    selectedRole.capability_codes.some((c) => c.startsWith('production.'))
+  const mustAssignScope = needsBranch || needsKitchen
+  const effectiveOverride = override || mustAssignScope
+  const showBranchPicker = effectiveOverride && (mustAssignScope ? needsBranch : true)
+  const showKitchenPicker = effectiveOverride && (mustAssignScope ? needsKitchen : true)
+  const missingRequiredScope =
+    (needsBranch && branchIds.length === 0) || (needsKitchen && prepIds.length === 0)
 
   function toggleCap(code: CapabilityCode) {
     // inherited: on → denied → on ;  not inherited: off → granted → off
@@ -158,9 +178,9 @@ function UserDrawer({
         display_name: displayName,
         email,
         role_id: roleId || null,
-        scope_overridden: override,
-        branch_ids: override ? branchIds : [],
-        prep_kitchen_ids: override ? prepIds : [],
+        scope_overridden: effectiveOverride,
+        branch_ids: effectiveOverride ? branchIds : [],
+        prep_kitchen_ids: effectiveOverride ? prepIds : [],
         extra_capability_codes: [...extra],
         denied_capability_codes: [...denied],
       }
@@ -188,7 +208,13 @@ function UserDrawer({
           <Button size="sm" variant="ghost" onClick={onClose}>
             {t('action.cancel')}
           </Button>
-          <Button size="sm" variant="primary" loading={save.isPending} onClick={() => save.mutate()}>
+          <Button
+            size="sm"
+            variant="primary"
+            loading={save.isPending}
+            disabled={missingRequiredScope}
+            onClick={() => save.mutate()}
+          >
             {t('action.save')}
           </Button>
         </div>
@@ -223,33 +249,59 @@ function UserDrawer({
           </Field>
         </div>
 
-        <div className="rounded-lg border border-hairline p-3">
-          <label className="flex items-center gap-2 text-[13px] font-medium text-ink-muted">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-hairline-strong text-accent"
-              checked={override}
-              onChange={(e) => setOverride(e.target.checked)}
-            />
-            {t('users.overrideScope')}
-          </label>
-          {override && (
+        <div className={cn(
+          'rounded-lg border p-3',
+          missingRequiredScope ? 'border-danger-subtle bg-danger-subtle' : 'border-hairline',
+        )}>
+          {mustAssignScope ? (
+            <p className="text-[13px] font-medium text-ink">
+              {needsBranch && needsKitchen
+                ? t('users.scopeRequiredBoth')
+                : needsBranch
+                  ? t('users.scopeRequiredBranch')
+                  : t('users.scopeRequiredKitchen')}
+            </p>
+          ) : (
+            <label className="flex items-center gap-2 text-[13px] font-medium text-ink-muted">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-hairline-strong text-accent"
+                checked={override}
+                onChange={(e) => setOverride(e.target.checked)}
+              />
+              {t('users.overrideScope')}
+            </label>
+          )}
+          {(showBranchPicker || showKitchenPicker) && (
             <div className="mt-3 space-y-3">
-              <PillPicker
-                label={t('dishes.filter.branch')}
-                options={(ref?.branches ?? []).map((b) => ({ id: b.id, label: b.name_en }))}
-                selected={branchIds}
-                onChange={setBranchIds}
-              />
-              <PillPicker
-                label={t('editor.field.station')}
-                options={(ref?.prepKitchens ?? []).map((p) => ({ id: p.id, label: p.name_en }))}
-                selected={prepIds}
-                onChange={setPrepIds}
-              />
+              {showBranchPicker && (
+                <PillPicker
+                  label={t('dishes.filter.branch')}
+                  options={(ref?.branches ?? []).map((b) => ({ id: b.id, label: b.name_en }))}
+                  selected={branchIds}
+                  onChange={setBranchIds}
+                />
+              )}
+              {showKitchenPicker && (
+                <PillPicker
+                  label={t('editor.field.station')}
+                  options={(ref?.prepKitchens ?? []).map((p) => ({ id: p.id, label: p.name_en }))}
+                  selected={prepIds}
+                  onChange={setPrepIds}
+                />
+              )}
             </div>
           )}
-          {!override && (
+          {missingRequiredScope && (
+            <p className="mt-2 text-xs font-medium text-danger-ink">
+              {needsBranch && branchIds.length === 0 && needsKitchen && prepIds.length === 0
+                ? t('users.scopeMissingBoth')
+                : needsBranch && branchIds.length === 0
+                  ? t('users.scopeMissingBranch')
+                  : t('users.scopeMissingKitchen')}
+            </p>
+          )}
+          {!effectiveOverride && (
             <p className="mt-1.5 text-xs text-ink-subtle">{t('users.scopeInherited')}</p>
           )}
         </div>
