@@ -69,9 +69,27 @@ before calling anything done — not just "the happy path returns 200."
     (the local dev account `cookbook-service@greenhills.local` already is;
     a Render deploy needs the same), and each `PrepKitchen.inventory_store_id`
     must map to a production store there for production publishes.
+    **Brand scoping** (2026-09-13): every publish sends `brand` = the dish's
+    `Branch.slug` — inventory-platform keys `DishRecipe`/`POSItemMapping`
+    identity by `(brand, name)`, so two branches can each publish a
+    same-named dish at their own price without colliding. A dish with no
+    `branch_ref` refuses to publish rather than risk a cross-brand collision.
+    `manage.py publish_branch_dishes <slug> [--commit]` bulk-publishes every
+    unpublished dish for one branch through the same `publish_dish_recipe`
+    path (one shared `InventoryClient` for the batch, to stay under
+    inventory-platform's login rate limit) — dry-run by default.
   - **Gotcha**: point `INVENTORY_API_BASE_URL` at `127.0.0.1`, never
     `localhost` — on Windows the `::1` attempt stalls for seconds before the
     IPv4 fallback, turning a 0.3s proxy call into 4-13s.
+  - **Gotcha**: `InventoryClient` retries a connection failure once, but
+    (fixed 2026-09-13) both attempts are now wrapped — every caller only
+    ever catches `InventoryAPIError`, so a fully-down inventory-platform
+    used to leak a raw `requests.exceptions.ConnectionError`/`Timeout` and
+    500 the *whole* request. Since `apply_cost()` runs on every dish/
+    production save, that turned an inventory-platform outage into a
+    broken photo upload / broken save unrelated to costing. Now it degrades
+    the same way a bad SKU does — cost shows $0 with a "not costed"
+    warning instead of failing the save.
 - **Frontend**: rebuilt 2026-08-26 as a routed TypeScript app (React 19 +
   Vite + Tailwind 3.4 + react-router 7 + @tanstack/react-query). Structure:
   `src/{components}` (design-system primitives), `src/shell` (AppShell /
@@ -79,7 +97,8 @@ before calling anything done — not just "the happy path returns 200."
   `NAV` for the desktop Sidebar, `BOTTOM_NAV` for the mobile bar whose
   last tab, "More", opens `src/features/more` = the whole capability-
   filtered nav as a screen), `src/features/{dashboard,dishes,menus,auth,
-  more,placeholder,production,standards,activity}`, `src/lib/{api,queries,http,format,seed}`,
+  more,placeholder,production,standards,activity,pos,inventory,labels,
+  documents,settings,admin,kitchen}`, `src/lib/{api,queries,http,format,seed}`,
   `src/i18n` (bespoke EN/AR provider, full RTL via `dir` + logical
   `ms-*/pe-*` utils), `src/theme` (light/dark via `data-theme`), `src/pwa`
   (`UpdatePrompt` reload pill + `OfflineBanner`). **PWA/offline**: `vite.config.ts`
@@ -249,6 +268,22 @@ before calling anything done — not just "the happy path returns 200."
     `styles/base.css` next to `.print-sheet`. Verified end-to-end 2026-09-08.
   - **POS** route: see the POS modifiers entry above (shipped). The old
     `ComingSoonPage` placeholder is gone (no `ready: false` nav items remain).
+  - **Kitchen** (`src/features/kitchen/`, `/kitchen`) — the staff floor
+    screen: photo-forward, search-first, read-only (no cost, no price, no
+    admin chrome; full CRUD stays on the regular Dish/Production screens).
+    `KitchenPage` self-gates on `can('dish.view')`/`can('production.view')`
+    rather than a route-level capability, so it shows whichever of the
+    Dishes/Production tab(s) the caller can see (both → a tab switch) or an
+    access-denied empty state if neither; grouped-by-category card grid that
+    collapses to a flat relevance list once the big search box has a query.
+    `KitchenDishPage`/`KitchenProductionPage` are the per-recipe guide —
+    hero photo, allergens banner (never buried), ingredients, method,
+    quick-glance facts, the QA standard (`StandardCard`, reused from
+    `standards/StandardView.tsx`), and — for dishes — the plating guide
+    (`<PlatingPanel canEdit={false}>`) as the finale. Redesigned same day
+    (2026-09-13) from a first pass into this shape. Added alongside two new
+    scoped roles (below) that exist specifically to read this screen and
+    nothing else.
 
   **Labour cost is deferred** until a separate HR app exists — the
   Production editor hides labour fields and sends `include_labor_cost:
@@ -289,20 +324,54 @@ before calling anything done — not just "the happy path returns 200."
   Serializers strip cost/price fields when the caller lacks `costing.view`
   (`serializers/mixins.py::HidesCostingFields`). `recipe.publish` (added
   2026-08-28) gates the inventory-platform push; `menu.publish` (added
-  2026-09-02) gates the public QR-menu publish — both Administrator +
-  Executive Chef, each with an accounts migration (`0003`, `0004`) that
-  re-syncs role grants. Add a capability then bump a migration like them. `/api/auth/me/` returns the
-  resolved capabilities + scope; `/api/accounts/{roles,users,capabilities}/`
+  2026-09-02) gates the public QR-menu publish; `admin.branches` (added
+  2026-09-13) gates the Branches (brand) admin screen — Administrator +
+  Executive Chef, each with an accounts migration (`0003`, `0004`, `0005`)
+  that re-syncs role grants. Add a capability then bump a migration like
+  them. **2026-09-13**: a data-migration bug meant every edit-capable role
+  (Restaurant Cook, Prep Cook, Branch Manager, Prep Kitchen Manager) had
+  never been granted `costing.view` — saving a recipe as one of those roles
+  silently wiped its price fields, since the write serializer round-trips
+  through `HidesCostingFields`; migration `0007` fixes the grant. `/api/auth/me/`
+  returns the resolved capabilities + scope; `/api/accounts/{roles,users,capabilities}/`
   is the admin API (gated on `admin.roles` / `admin.users`). Superuser
   bypasses everything. Frontend: `src/auth/AuthProvider` + `guards.tsx`
   (`RequireCapability`), nav + action buttons gated by `can(cap)`,
-  `src/features/admin/` screens. Seed builds carry a TopBar **identity
-  switcher** (`src/shell/IdentitySwitcher.tsx`) to demo scoped users.
-- **Testing**: `backend/apps/{cookbook,accounts}/tests/` — 164 `APITestCase`
-  tests. The older cookbook suites use superuser clients (RBAC bypassed —
-  `apps/accounts/tests/` covers enforcement broadly), but the newer ones
-  (`test_{production,standards,plating,activity,publishing}_api.py`) exercise
-  scoped non-superusers and capability gates directly. `test_item_conversion_api.py`
+  `src/features/admin/` screens (`BranchesPage.tsx`, added 2026-09-13, is
+  create/edit-only — no delete, since `Branch.slug` is the brand key every
+  publish keys off and branches are referenced too widely to remove
+  safely). Two dead fields were removed the same day as cleanup:
+  `Branch.code` (unused, never seeded) and `DishRecipe.branch` (a legacy
+  duplicate of `DishRecipe.branch_ref`, which is the only branch FK now).
+  Seed builds carry a TopBar **identity switcher**
+  (`src/shell/IdentitySwitcher.tsx`) to demo scoped users.
+  - **Per-brand/per-kitchen floor roles** (2026-09-13, migration `0006`):
+    four roles narrower than Restaurant/Prep Cook, added for the Kitchen
+    screen — **Branch Staff** and **Prep Kitchen Staff** get just
+    `dish.view`/`production.view` + `nutrition.view` (no edit, no pricing)
+    scoped to their own branch/prep-kitchen; **Branch Manager** and **Prep
+    Kitchen Manager** get full add/edit/delete on their own branch/prep-
+    kitchen only — the admin experience narrowed to one location. All four
+    ship with
+    `grants_all_branches`/`grants_all_prep_kitchens: False`, so every user
+    assigned one of these **must** get an explicit scope (`UsersPage` now
+    requires and surfaces that — see below) or they can see nothing.
+  - **`UsersPage` scope enforcement** (2026-09-13): a user on a
+    narrowly-scoped role (`grants_all_branches`/`grants_all_prep_kitchens:
+    False`, including the pre-existing Restaurant Cook/Prep Cook) now can't
+    be saved without an explicit branch/prep-kitchen assignment — the admin
+    UI surfaces the requirement instead of silently producing a user who
+    can't see any data.
+- **Testing**: `backend/apps/{cookbook,accounts,integrations}/tests*` — 200+
+  test methods. The older cookbook suites use superuser clients (RBAC
+  bypassed — `apps/accounts/tests/` covers enforcement broadly), but the
+  newer ones (`test_{production,standards,plating,activity,publishing}_api.py`,
+  `test_branches_api.py`, `test_kitchen_and_branch_roles.py`) exercise
+  scoped non-superusers and capability gates directly. `apps/integrations/tests.py`
+  (added 2026-09-13) pins `InventoryClient`'s retry-wrapping — both the
+  first- and second-attempt connection failure on `_login`/`_request`/the
+  401-relogin path surface as `InventoryAPIError`, never a raw
+  `requests` exception. `test_item_conversion_api.py`
   / `test_item_storage_api.py` pin the per-SKU supplement write paths (and the
   conversion one's effect on costing).
   `test_plating_api.py` pins the dish-id upsert (no recipe version bump) and
@@ -319,7 +388,10 @@ before calling anything done — not just "the happy path returns 200."
   Grow both suites alongside new work.
 - **Auth**: JWT via default Django `User` (+ `accounts.UserProfile`), one
   superuser (`cookadmin`). Roles: Administrator / Executive Chef / QA Manager
-  / Cost Controller / Restaurant Cook / Prep Cook, seeded and admin-editable.
+  / Cost Controller / Restaurant Cook / Prep Cook / **Branch Staff / Branch
+  Manager / Prep Kitchen Staff / Prep Kitchen Manager** (the last four added
+  2026-09-13 for the Kitchen screen — see the per-brand/per-kitchen floor
+  roles note above), seeded and admin-editable.
 
 ## Non-negotiables
 
