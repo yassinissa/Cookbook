@@ -135,20 +135,65 @@ export function listData<T>(data: T[] | { results: T[] }): T[] {
   return Array.isArray(data) ? data : data.results
 }
 
+type PagedResponse<T> = { results: T[]; next: string | null; count?: number }
+
+// Cap concurrent page fetches so a big list (fetchAllPages is used for
+// client-side search screens) doesn't flood the backend's single gunicorn
+// worker (render.yaml: one process, 8 threads) — see the "why parallel"
+// note on fetchAllPages below.
+const PAGE_FETCH_CONCURRENCY = 6
+
+async function mapWithConcurrency<In, Out>(
+  items: In[],
+  limit: number,
+  fn: (item: In) => Promise<Out>,
+): Promise<Out[]> {
+  const out: Out[] = new Array(items.length)
+  let next = 0
+  async function worker() {
+    while (next < items.length) {
+      const i = next++
+      out[i] = await fn(items[i])
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+  return out
+}
+
 /**
- * Fetch every page of a DRF-paginated list (walking `next`) and return the
- * flat array. Screens that filter/search client-side need the whole set, not
- * just page 1 (PAGE_SIZE is 25). A bare-array response passes straight through.
+ * Fetch every page of a DRF-paginated list and return the flat array.
+ * Screens that filter/search client-side need the whole set, not just page 1
+ * (PAGE_SIZE is 25). A bare-array response passes straight through.
+ *
+ * Page 1 is fetched first (to learn `count`), then every remaining page is
+ * fetched in parallel (bounded — see PAGE_FETCH_CONCURRENCY) instead of
+ * walking `next` one page at a time: for a dish/production list already
+ * past a couple hundred rows, that turned page-load into several seconds of
+ * serial round-trips (the global header search box pulls this list on every
+ * screen), which read as the whole app being slow to become usable.
  */
 export async function fetchAllPages<T>(path: string): Promise<T[]> {
-  const out: T[] = []
-  let url: string | null = path
-  // hard stop so a pagination bug can't spin forever
-  for (let guard = 0; url && guard < 200; guard++) {
-    const { data }: { data: T[] | { results: T[]; next: string | null } } = await http.get(url)
-    if (Array.isArray(data)) return data
-    out.push(...data.results)
-    url = data.next
+  const { data: first }: { data: T[] | PagedResponse<T> } = await http.get(path)
+  if (Array.isArray(first)) return first
+  if (!first.next || first.count == null) {
+    // no `count` to plan around (or already done) — fall back to walking `next`
+    const out = [...first.results]
+    let url = first.next
+    for (let guard = 0; url && guard < 200; guard++) {
+      const { data }: { data: PagedResponse<T> } = await http.get(url)
+      out.push(...data.results)
+      url = data.next
+    }
+    return out
   }
-  return out
+
+  const pageSize = first.results.length
+  const totalPages = Math.min(Math.ceil(first.count / pageSize), 200) // guard: pagination bugs can't spin forever
+  const sep = path.includes('?') ? '&' : '?'
+  const restPages = Array.from({ length: totalPages - 1 }, (_, i) => i + 2)
+  const rest = await mapWithConcurrency(restPages, PAGE_FETCH_CONCURRENCY, async (page) => {
+    const { data } = await http.get<PagedResponse<T>>(`${path}${sep}page=${page}`)
+    return data.results
+  })
+  return [...first.results, ...rest.flat()]
 }
