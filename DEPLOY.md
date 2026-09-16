@@ -5,10 +5,10 @@ Tick items off and delete them as they're done — this file should only ever
 describe work that is still outstanding. Architecture and the build commands
 live in [`README.md`](README.md#deployment-render) and [`render.yaml`](render.yaml).
 
-Last reviewed: **2026-09-14** (SMTP env vars set on `cookbook-shared` —
-see below; modifier pipeline + PWA reload prompt merged, migrations +
-backfill still to run in prod; Documents module merged — PR #12,
-frontend-only, nothing to do on deploy).
+Last reviewed: **2026-09-16** (SMTP is broken from Render, not just
+unconfirmed — see below; modifier pipeline + PWA reload prompt merged,
+migrations + backfill still to run in prod; Documents module merged —
+PR #12, frontend-only, nothing to do on deploy).
 
 ---
 
@@ -20,7 +20,7 @@ The blueprint is adopted (services `cookbook-api` / `cookbook-frontend` /
 
 | Where | Keys | Notes |
 |---|---|---|
-| **`cookbook-shared` env group** | `EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL` | **Set 2026-09-14** via the Render API, reusing inventory-platform's working Gmail app-password (`smtp.gmail.com` / `yassinissa479@gmail.com`) — the cron had been failing every Monday since PR #20 made an empty `EMAIL_HOST` a hard error instead of a quiet skip. Confirm the next `cookbook-cost-digest` run (scheduled `0 4 * * 1` UTC, or trigger one manually) actually sends before treating this as fully closed. Also confirm **Render → Settings → Notifications → Failed** is on. |
+| **`cookbook-shared` env group** | `EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL` | **Set 2026-09-14**, values confirmed correct (`smtp.gmail.com` / port `587` / `EMAIL_USE_TLS=True` — the standard Gmail STARTTLS combo, no port/TLS mismatch) — the cron no longer hard-fails with `EMAIL_HOST is not set`. **Actual delivery is confirmed broken, root cause identified 2026-09-16**: `python manage.py sendtestemail <addr>` run twice from the `cookbook-api` Render Shell both failed identically with `smtplib.SMTPServerDisconnected: please run connect() first` mid-`STARTTLS`. This same account/app-password previously sent Cookbook's digest mail successfully **from local dev** (confirmed with the user) — so this is Gmail actively dropping SMTP AUTH from Render's Oregon datacenter IP range, a known restriction on personal Gmail accounts used as an SMTP relay from cloud hosts (looks like automated/bot traffic to Google's abuse detection), not a credentials or config problem. **Personal Gmail SMTP will not work reliably from Render — decided to switch to SendGrid** (free tier, 100/day, plenty for a weekly digest). Not yet done: sign up, verify a single sender (`yassinissa479@gmail.com`, so `DEFAULT_FROM_EMAIL` doesn't need to change), create a Mail-Send-only API key, then swap in `EMAIL_HOST=smtp.sendgrid.net` / `EMAIL_HOST_USER=apikey` / `EMAIL_HOST_PASSWORD=<the API key>` on `cookbook-shared` and re-verify with `sendtestemail`. Low urgency — this is an opt-out convenience digest, not a core workflow, and the command fails loudly (cron goes red) rather than silently dropping mail when there's real content to send. Also confirm **Render → Settings → Notifications → Failed** is on. |
 | **`cookbook-shared` env group** | `INVENTORY_API_BASE_URL`, `INVENTORY_API_EMAIL`, `INVENTORY_API_PASSWORD` | **Set** on `cookbook-api` (confirmed 2026-09-08). The service account **must be SUPER_ADMIN** on inventory-platform (recipe publish, POS-mapping publish, modifier-ingredient publish). |
 | **`cookbook-api`** | `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, `FRONTEND_URL`, `PUBLIC_MENU_BASE_URL` | `PUBLIC_MENU_BASE_URL` is the host a QR code encodes — usually the same as `FRONTEND_URL`. Without it, QR codes point at `http://localhost:5180`. |
 | **`cookbook-frontend`** | `VITE_API_BASE_URL` | `https://<api host>/api`. |
