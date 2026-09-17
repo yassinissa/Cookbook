@@ -44,6 +44,7 @@ export const NAV: NavSection[] = [
       { to: '/admin/users', labelKey: 'nav.users', icon: 'users', ready: true, capability: 'admin.users' },
       { to: '/admin/roles', labelKey: 'nav.roles', icon: 'shield', ready: true, capability: 'admin.roles' },
       { to: '/admin/branches', labelKey: 'nav.branches', icon: 'store', ready: true, capability: 'admin.branches' },
+      { to: '/admin/prep-kitchens', labelKey: 'nav.prepKitchens', icon: 'production', ready: true, capability: 'admin.prep_kitchens' },
     ],
   },
 ]

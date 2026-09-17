@@ -25,6 +25,7 @@ import { MenuDetailPage } from '@/features/menus/MenuDetailPage'
 import { UsersPage } from '@/features/admin/UsersPage'
 import { RolesPage } from '@/features/admin/RolesPage'
 import { BranchesPage } from '@/features/admin/BranchesPage'
+import { PrepKitchensPage } from '@/features/admin/PrepKitchensPage'
 import { MorePage } from '@/features/more/MorePage'
 import { InventoryListPage } from '@/features/inventory/InventoryListPage'
 import { LabelSheetPage } from '@/features/labels/LabelSheetPage'
@@ -82,6 +83,7 @@ export const router = createBrowserRouter([
           { path: '/admin/users', ...cap('admin.users', <UsersPage />) },
           { path: '/admin/roles', ...cap('admin.roles', <RolesPage />) },
           { path: '/admin/branches', ...cap('admin.branches', <BranchesPage />) },
+          { path: '/admin/prep-kitchens', ...cap('admin.prep_kitchens', <PrepKitchensPage />) },
 
           { path: '/more', element: <MorePage /> },
           { path: '/settings', element: <SettingsPage /> },

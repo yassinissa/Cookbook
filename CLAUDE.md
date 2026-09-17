@@ -327,8 +327,10 @@ before calling anything done — not just "the happy path returns 200."
   2026-09-02) gates the public QR-menu publish; `admin.branches` (added
   2026-09-13) gates the Branches (brand) admin screen — Administrator +
   Executive Chef, each with an accounts migration (`0003`, `0004`, `0005`)
-  that re-syncs role grants. Add a capability then bump a migration like
-  them. **2026-09-13**: a data-migration bug meant every edit-capable role
+  that re-syncs role grants; `admin.prep_kitchens` (added 2026-09-17,
+  migration `0008`, Administrator only — mirrors `admin.branches`) gates
+  the equivalent Prep Kitchens admin screen. Add a capability then bump a
+  migration like them. **2026-09-13**: a data-migration bug meant every edit-capable role
   (Restaurant Cook, Prep Cook, Branch Manager, Prep Kitchen Manager) had
   never been granted `costing.view` — saving a recipe as one of those roles
   silently wiped its price fields, since the write serializer round-trips
@@ -340,7 +342,10 @@ before calling anything done — not just "the happy path returns 200."
   `src/features/admin/` screens (`BranchesPage.tsx`, added 2026-09-13, is
   create/edit-only — no delete, since `Branch.slug` is the brand key every
   publish keys off and branches are referenced too widely to remove
-  safely). Two dead fields were removed the same day as cleanup:
+  safely; `PrepKitchensPage.tsx`, added 2026-09-17 on the same pattern —
+  until then `PrepKitchen` had no in-product create/edit path at all,
+  despite `PrepKitchen.inventory_store_id` being a hard-required field for
+  production-recipe publish, see `publishing.py`). Two dead fields were removed the same day as cleanup:
   `Branch.code` (unused, never seeded) and `DishRecipe.branch` (a legacy
   duplicate of `DishRecipe.branch_ref`, which is the only branch FK now).
   Seed builds carry a TopBar **identity switcher**

@@ -9,7 +9,7 @@ export type CapabilityCode =
   | 'costing.view' | 'costing.recalculate'
   | 'inventory.view' | 'nutrition.view'
   | 'document.export' | 'pos.manage' | 'activity.view'
-  | 'admin.users' | 'admin.roles' | 'admin.branches'
+  | 'admin.users' | 'admin.roles' | 'admin.branches' | 'admin.prep_kitchens'
 
 export interface ScopeEntry {
   id: string

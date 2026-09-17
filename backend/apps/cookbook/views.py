@@ -57,9 +57,23 @@ class BranchViewSet(
     })]
 
 
-class PrepKitchenViewSet(ReadOnlyReferenceViewSet):
+class PrepKitchenViewSet(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin, mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Mirrors BranchViewSet: PrepKitchen.inventory_store_id is the join key
+    a production recipe needs to publish to inventory-platform (see
+    apps.cookbook.publishing), so — unlike the rest of reference data, which
+    stays Django-admin-only — this one earns an in-product create/edit
+    screen, gated by admin.prep_kitchens. No delete — prep kitchens are
+    referenced by production recipes too widely to remove safely."""
     queryset = PrepKitchen.objects.all()
     serializer_class = PrepKitchenSerializer
+    pagination_class = None
+    permission_classes = [capability_required(default=None, by_action={
+        'create': 'admin.prep_kitchens', 'update': 'admin.prep_kitchens', 'partial_update': 'admin.prep_kitchens',
+    })]
 
 
 class SectionViewSet(ReadOnlyReferenceViewSet):

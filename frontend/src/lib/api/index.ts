@@ -50,6 +50,7 @@ import type {
   ModifierRole,
   ModifierSelection,
   Paginated,
+  PrepKitchen,
   PublicMenu,
   PlatingGuideDetail,
   PlatingGuideInput,
@@ -132,6 +133,34 @@ export async function updateBranch(id: ID, payload: Partial<Branch>): Promise<Br
     return { ...(existing ?? { id, name_en: '', name_ar: '', slug: '', sort_order: 0 }), ...payload }
   }
   const { data } = await http.patch(`/cookbook/reference/branches/${id}/`, payload)
+  return data
+}
+
+export async function createPrepKitchen(payload: Partial<PrepKitchen>): Promise<PrepKitchen> {
+  if (USE_SEED) {
+    await delay()
+    return {
+      id: `prep-kitchen-${Date.now()}`,
+      name_en: payload.name_en ?? '',
+      name_ar: payload.name_ar ?? '',
+      code: payload.code ?? '',
+      sort_order: payload.sort_order ?? 0,
+      inventory_store_id: payload.inventory_store_id ?? '',
+    }
+  }
+  const { data } = await http.post('/cookbook/reference/prep-kitchens/', payload)
+  return data
+}
+export async function updatePrepKitchen(id: ID, payload: Partial<PrepKitchen>): Promise<PrepKitchen> {
+  if (USE_SEED) {
+    await delay()
+    const existing = seed.seedReference().prepKitchens.find((k) => k.id === id)
+    return {
+      ...(existing ?? { id, name_en: '', name_ar: '', code: '', sort_order: 0, inventory_store_id: '' }),
+      ...payload,
+    }
+  }
+  const { data } = await http.patch(`/cookbook/reference/prep-kitchens/${id}/`, payload)
   return data
 }
 
