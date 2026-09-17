@@ -203,6 +203,19 @@ const PREP_KITCHENS = [
   { id: 'pk-pastry', name_en: 'Pastry', name_ar: 'الحلويات', code: 'PAS', sort_order: 6, inventory_store_id: '' },
 ]
 
+// inventory-platform's production Stores — the picker PrepKitchensPage uses
+// to link a prep kitchen. None of the seed PREP_KITCHENS reference one yet,
+// mirroring prod (see CLAUDE.md): the point of the picker is closing that gap.
+export const SEED_INVENTORY_PRODUCTION_STORES = [
+  { id: 'store-bread-01', name_en: 'Bread Production', name_ar: 'إنتاج المخبز', is_active: true },
+  { id: 'store-sauce-01', name_en: 'Sauce Kitchen', name_ar: 'مطبخ الصلصات', is_active: true },
+  { id: 'store-hot-01', name_en: 'Hot Line Prep', name_ar: 'تحضير الطبخ الساخن', is_active: true },
+  { id: 'store-meat-01', name_en: 'Meat Butchery', name_ar: 'مسلخ اللحوم', is_active: true },
+  { id: 'store-poultry-01', name_en: 'Poultry Prep', name_ar: 'تحضير الدواجن', is_active: true },
+  { id: 'store-cold-01', name_en: 'Cold Prep Kitchen', name_ar: 'مطبخ التحضير البارد', is_active: true },
+  { id: 'store-pastry-01', name_en: 'Pastry Kitchen', name_ar: 'مطبخ الحلويات', is_active: true },
+]
+
 export function seedReference(): ReferenceData {
   return {
     categories: CATEGORIES,

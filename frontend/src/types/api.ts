@@ -1034,6 +1034,16 @@ export interface InventoryItem {
   is_active?: boolean
 }
 
+/** A production Store on inventory-platform — what PrepKitchen.inventory_store_id
+ * points at (inventory-platform models prep kitchens as Stores with
+ * store_type='production', not a separate entity). */
+export interface InventoryProductionStore {
+  id: ID
+  name_en: string
+  name_ar?: string
+  is_active?: boolean
+}
+
 export interface InventoryItemDetail extends InventoryItem {
   unit_detail?: { code: string; name_en: string; name_ar?: string; category_display?: string }
   selling_price?: string | null

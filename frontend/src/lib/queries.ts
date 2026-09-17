@@ -15,6 +15,14 @@ export function useInventoryItems() {
     staleTime: 10 * 60_000,
   })
 }
+export function useInventoryProductionStores() {
+  return useQuery({
+    queryKey: qk.inventoryProductionStores,
+    queryFn: api.fetchInventoryProductionStores,
+    staleTime: 5 * 60_000,
+    retry: 0,
+  })
+}
 export function useInventoryItemsPage(search: string, page: number, pageSize = 25) {
   return useQuery({
     queryKey: [...qk.inventoryPage(search, page), pageSize],

@@ -29,6 +29,7 @@ export const qk = {
   itemNutrition: (sku: string) => ['inventory', 'nutrition', sku] as const,
   itemConversion: (sku: string) => ['inventory', 'conversion', sku] as const,
   itemStorage: (sku: string) => ['inventory', 'storage', sku] as const,
+  inventoryProductionStores: ['inventory', 'production-stores'] as const,
   dashboard: ['dashboard'] as const,
   digestSubscription: ['digest-subscription'] as const,
   dishes: ['dishes'] as const,

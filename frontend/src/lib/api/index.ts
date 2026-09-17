@@ -26,6 +26,7 @@ import type {
   DishStandardListItem,
   InventoryItem,
   InventoryItemDetail,
+  InventoryProductionStore,
   ItemConversion,
   ItemNutrition,
   ItemStorage,
@@ -162,6 +163,17 @@ export async function updatePrepKitchen(id: ID, payload: Partial<PrepKitchen>): 
   }
   const { data } = await http.patch(`/cookbook/reference/prep-kitchens/${id}/`, payload)
   return data
+}
+
+// The picker on PrepKitchensPage — inventory-platform's production stores,
+// so linking a prep kitchen is a pick from real data, not a pasted id.
+export async function fetchInventoryProductionStores(): Promise<InventoryProductionStore[]> {
+  if (USE_SEED) {
+    await delay()
+    return seed.SEED_INVENTORY_PRODUCTION_STORES
+  }
+  const { data } = await http.get('/inventory/prep-kitchens/')
+  return listData<InventoryProductionStore>(data)
 }
 
 export async function fetchInventoryItems(): Promise<InventoryItem[]> {

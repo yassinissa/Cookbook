@@ -5,12 +5,12 @@ import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 import { Drawer } from '@/components/Drawer'
 import { Field } from '@/components/Field'
-import { Input } from '@/components/Input'
+import { Input, Select } from '@/components/Input'
 import { Page, PageHeader } from '@/components/Page'
 import { EmptyState, ErrorState, Skeleton } from '@/components/States'
 import { useToast } from '@/components/Toast'
 import * as api from '@/lib/api'
-import { useReference } from '@/lib/queries'
+import { useInventoryProductionStores, useReference } from '@/lib/queries'
 import { qk } from '@/lib/queryClient'
 import { parseApiError } from '@/lib/parseApiError'
 import { useI18n } from '@/i18n'
@@ -86,12 +86,17 @@ function PrepKitchenDrawer({ prepKitchen, onClose }: { prepKitchen: PrepKitchen 
   const { t } = useI18n()
   const toast = useToast()
   const qc = useQueryClient()
+  const stores = useInventoryProductionStores()
 
   const [nameEn, setNameEn] = useState(prepKitchen?.name_en ?? '')
   const [nameAr, setNameAr] = useState(prepKitchen?.name_ar ?? '')
   const [code, setCode] = useState(prepKitchen?.code ?? '')
   const [sortOrder, setSortOrder] = useState(prepKitchen?.sort_order ?? 0)
   const [inventoryStoreId, setInventoryStoreId] = useState(prepKitchen?.inventory_store_id ?? '')
+  // The picker needs a manual-entry escape hatch — inventory-platform can be
+  // slow/cold (see apps/integrations/inventory_client.py) or briefly down,
+  // and a saved-but-deactivated store id must stay visible/editable either way.
+  const [manualEntry, setManualEntry] = useState(false)
 
   const save = useMutation({
     mutationFn: () => {
@@ -148,16 +153,65 @@ function PrepKitchenDrawer({ prepKitchen, onClose }: { prepKitchen: PrepKitchen 
         </Field>
 
         <div className="rounded-lg border border-hairline p-3">
-          <p className="mb-1 text-2xs font-semibold uppercase tracking-wide text-ink-subtle">
-            {t('prepKitchens.inventoryLink')}
-          </p>
-          <Field label={t('prepKitchens.inventoryStoreId')}>
-            <Input
-              value={inventoryStoreId}
-              onChange={(e) => setInventoryStoreId(e.target.value)}
-              className="font-mono"
-            />
-          </Field>
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <p className="text-2xs font-semibold uppercase tracking-wide text-ink-subtle">
+              {t('prepKitchens.inventoryLink')}
+            </p>
+            {!stores.isError && (
+              <button
+                type="button"
+                className="text-2xs font-medium text-accent hover:underline"
+                onClick={() => setManualEntry((v) => !v)}
+              >
+                {manualEntry ? t('prepKitchens.inventoryPickFromList') : t('prepKitchens.inventoryEnterManually')}
+              </button>
+            )}
+          </div>
+
+          {stores.isError || manualEntry ? (
+            <Field
+              label={t('prepKitchens.inventoryStoreId')}
+              help={stores.isError ? t('prepKitchens.inventoryStoreIdOffline') : undefined}
+            >
+              <Input
+                value={inventoryStoreId}
+                onChange={(e) => setInventoryStoreId(e.target.value)}
+                className="font-mono"
+              />
+            </Field>
+          ) : (
+            <Field label={t('prepKitchens.inventoryStoreId')}>
+              <Select
+                disabled={stores.isLoading}
+                value={inventoryStoreId}
+                onChange={(e) => setInventoryStoreId(e.target.value)}
+              >
+                <option value="">
+                  {stores.isLoading ? t('prepKitchens.inventoryStoreIdLoading') : t('prepKitchens.inventoryStoreIdNone')}
+                </option>
+                {inventoryStoreId && !stores.data?.some((s) => s.id === inventoryStoreId) && (
+                  <option value={inventoryStoreId}>{t('prepKitchens.inventoryStoreIdUnknown')} ({inventoryStoreId})</option>
+                )}
+                {stores.data?.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name_en}
+                    {s.name_ar ? ` · ${s.name_ar}` : ''}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
+
+          {stores.isError && (
+            <button
+              type="button"
+              className="mt-1 text-2xs font-medium text-accent hover:underline"
+              onClick={() => stores.refetch()}
+            >
+              {t('action.retry')}
+            </button>
+          )}
+
           <p className="mt-1 text-xs text-ink-subtle">
             {inventoryStoreId ? t('prepKitchens.inventoryStoreIdHint') : t('prepKitchens.inventoryStoreIdMissing')}
           </p>
