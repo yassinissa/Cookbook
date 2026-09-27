@@ -186,8 +186,14 @@ export interface ItemConversion {
   pieces_per_pack: string | null
   pieces_per_kg: string | null
   pieces_or_pack_per_box: string | null
+  base_unit?: ID | null
   base_unit_detail?: UnitScale | null
   cost_per_base_unit?: string | null
+  /** "1 <order_unit> = <pack_qty> <base_unit>" — when order_unit is the
+      item's inventory stock unit, this is what one stock unit holds */
+  order_unit?: string
+  order_cost?: string | null
+  pack_qty?: string | null
   updated_at: string
 }
 

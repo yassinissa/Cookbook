@@ -309,7 +309,7 @@ function ItemDrawer({ id, onClose }: { id: string | null; onClose: () => void })
           <p className="text-xs text-ink-subtle">{t('inv.source')}</p>
 
           <ItemNutritionSection sku={data.sku} />
-          <ItemMeasuresSection sku={data.sku} />
+          <ItemMeasuresSection sku={data.sku} stockUnit={data.unit_detail?.code ?? data.unit_code ?? ''} />
           <ItemStorageSection sku={data.sku} itemId={data.id} />
           <ItemAllergenSection sku={data.sku} />
         </div>

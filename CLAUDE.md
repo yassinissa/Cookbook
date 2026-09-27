@@ -78,6 +78,21 @@ before calling anything done — not just "the happy path returns 200."
     unpublished dish for one branch through the same `publish_dish_recipe`
     path (one shared `InventoryClient` for the batch, to stay under
     inventory-platform's login rate limit) — dry-run by default.
+  - **Unit conversions to the stock unit** (`stock_units.py`, 2026-09-27):
+    inventory-platform deducts stock (POS, voids, production batches) in each
+    item's STOCK unit. `ItemUnits` works out "1 <recipe unit> = x stock
+    units" per SKU: one stock unit is anchored by its measure size (KG, LTR)
+    or by `ItemConversion` "1 <order_unit> = <pack_qty> <base_unit>" when
+    order_unit IS the inventory stock unit (PKT, PCS, BOX); the item's own
+    lines ("1 Tbs = 50 ml") beat generic unit sizes (`CostContext.own_amounts`
+    — costing uses the same). Publish first checks every ingredient/delta line
+    converts (else `RecipePublishError` listing them — nothing is pushed),
+    then POSTs the per-item tables to `/items/recipe-conversions/sync/`
+    (inventory `ItemUnitConversion`, replaced per SKU), then the recipe. A
+    recipe "Pc" of a multi-piece PCS pack is re-sent in g. Conversion edits
+    sync on save (`inventory_sync` in the response); bulk:
+    `manage.py sync_recipe_conversions [--commit]`. Purchasing / ordering
+    units are inventory-only (its pack sizes), never modelled here.
   - **Gotcha**: point `INVENTORY_API_BASE_URL` at `127.0.0.1`, never
     `localhost` — on Windows the `::1` attempt stalls for seconds before the
     IPv4 fallback, turning a 0.3s proxy call into 4-13s.
@@ -218,12 +233,11 @@ before calling anything done — not just "the happy path returns 200."
     editable Cookbook-local supplement panels — `ItemSupplementPanels.tsx`,
     each a view/inline-form section hitting `/cookbook/item-{nutrition,
     conversions,storage}/<sku>/`: **Nutrition facts**, **Measurement conversions**
-    (the source sheet's 5 per-item figures — Grams in 1 Tbs / 1 Piece,
-    Pieces in 1 Pkt / 1 Kg / Box; the tbsp weight is expanded to the full
-    `ItemConversionLine` tsp/cup ladder on save the way the sheet formulas
-    do [`ladderLines()`], the rest map to `ItemConversion` scalars — this is
-    the data the recipe-costing bridges need, so a tbsp/piece recipe line
-    stops being `no_conversion`), **Storage & shelf life** (`ItemStorage` —
+    (what one inventory stock unit holds — "1 PKT = 500 g", skipped for a
+    measure stock unit — plus free per-item lines "1 Tbs = 50 ml / 50 g",
+    and the piece counts; saving syncs to inventory-platform, see
+    `stock_units.py` above. Imported sheet data keeps its tsp/cup ladder
+    lines), **Storage & shelf life** (`ItemStorage` —
     band + hours-from-prep + after-opening life + handling text + a label
     line; inventory-platform's own shelf life is receipt-based, this is the
     prep-kitchen number), and **Allergens**).

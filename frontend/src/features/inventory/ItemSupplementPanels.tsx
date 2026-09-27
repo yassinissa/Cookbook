@@ -426,65 +426,74 @@ export function ItemAllergenSection({ sku }: { sku: string }) {
 
 /* ── Measurement conversions ─────────────────────────────────────────── */
 
-/* The 5 per-item figures the source "Store Items" sheet holds — "Grams In 1
-   Tbs / 1 Piece", "Pieces In 1 Pkt / 1 Kg", "Pieces or Pkt In Box". Only the
-   tablespoon weight is a cooking-measure conversion; the sheet derives the
-   whole tsp/cup ladder from it (1 Tbs = 3 Ts, 1 Cup = 16 Tbs), and so do we —
-   costing needs just one volume→mass line per SKU. The other four map to
-   scalar fields on ItemConversion. */
-const TBS_LADDER: [string, number][] = [
-  ['1 Tbs', 1],
-  ['1 Ts', 1 / 3],
-  ['1/2 Ts', 1 / 6],
-  ['1/4 Ts', 1 / 12],
-  ['1/8 Ts', 1 / 24],
-  ['1 Cup', 16],
-  ['3/4 Cup', 12],
-  ['2/3 Cup', 32 / 3],
-  ['1/2 Cup', 8],
-  ['1/3 Cup', 16 / 3],
-  ['1/4 Cup', 4],
-  ['1/8 Cup', 2],
-]
+/* Everything a recipe needs to use this item in any unit, for THIS item only
+   ("1 Tbs of this sauce = 50 g" says nothing about another sauce):
+     - what one inventory stock unit holds ("1 PKT = 500 g") — inventory
+       deducts stock in that unit, so every other unit is worked out from it;
+     - its own measures ("1 Tbs = 50 ml", "1 Tbs = 50 g", "1 Pc = 60 g");
+     - piece counts.
+   Saving pushes the whole table to inventory-platform (the response's
+   `inventory_sync` says how that went), so POS sales there deduct with the
+   new numbers straight away. */
 
-/** leading word of a label like "1 Tbs" / "1/4 Cup" -> "tbs" / "cup" */
-function labelWord(label: string): string {
-  const m = label.trim().match(/^(?:\d+(?:\.\d+)?|\d+\/\d+)\s+(.+?)\s*$/)
-  return (m?.[1] ?? '').toLowerCase()
+/* inventory stock units that are a fixed measure: nothing to fill in */
+const MEASURE_STOCK_UNITS = ['g', 'gm', 'kg', 'kgs', 'ml', 'cl', 'l', 'ltr', 'liter', 'litre', 'ton', 'oz', 'lb', 'gal']
+const isMeasureUnit = (code: string) => MEASURE_STOCK_UNITS.includes(code.trim().toLowerCase())
+
+/* same spelling rules as the backend's stock_units.same_unit */
+const SAME: Record<string, string> = {
+  pc: 'pcs', pcs: 'pcs', ea: 'pcs', each: 'pcs', piece: 'pcs', pieces: 'pcs',
+  pkt: 'pack', pack: 'pack', packet: 'pack', pkts: 'pack',
+  ltr: 'l', l: 'l', liter: 'l', litre: 'l', kg: 'kg', kgs: 'kg', kilo: 'kg',
+}
+function sameUnit(a?: string | null, b?: string | null): boolean {
+  const x = (a ?? '').trim().toLowerCase()
+  const y = (b ?? '').trim().toLowerCase()
+  return !!x && (SAME[x] ?? x) === (SAME[y] ?? y)
 }
 
-/** grams-per-tablespoon read back from an existing "1 Tbs = x g" line */
-function gramsPerTbsOf(conv: ItemConversion | null): string {
-  const line = conv?.lines?.find((l) => ['tbs', 'tbsp'].includes(labelWord(l.label)))
-  return line ? tidy(line.quantity) : ''
+/* measures a line can start from — the words the backend reads in a label */
+const LINE_FROM = ['Tbs', 'Ts', 'Cup', 'Pinch', 'Pc']
+/* what one can equal / what one stock unit can hold */
+const LINE_TO = ['g', 'ml', 'Kg', 'Ltr', 'Pc']
+
+type LineRow = { mult: string; from: string; qty: string; to: string; grams: string }
+
+const LABEL_WORD: Record<string, string> = {
+  tbs: 'Tbs', tbsp: 'Tbs', ts: 'Ts', tsp: 'Ts', cup: 'Cup', pinch: 'Pinch',
+  pc: 'Pc', pcs: 'Pc', piece: 'Pc',
 }
 
-function ladderLines(gramsPerTbs: number, gramUnitId: string): ItemConversionLine[] {
-  return TBS_LADDER.map(([label, mult]) => ({
-    label,
-    quantity: String(Math.round(gramsPerTbs * mult * 1000) / 1000),
-    unit: gramUnitId,
-    gram_equivalent: null,
-  }))
+/** "1/4 Cup" -> { mult: '1/4', from: 'Cup' } */
+function splitLabel(label: string): { mult: string; from: string } {
+  const m = label.trim().match(/^(\d+(?:\.\d+)?(?:\/\d+)?|\d+\s*-\s*\d+\/\d+)\s+(.+?)\s*$/)
+  return { mult: m?.[1] ?? '1', from: LABEL_WORD[(m?.[2] ?? '').toLowerCase()] ?? 'Tbs' }
 }
 
-type MeasureField =
-  | 'grams_per_tbs'
-  | 'grams_per_piece'
-  | 'pieces_per_pack'
-  | 'pieces_per_kg'
-  | 'pieces_or_pack_per_box'
+function rowOf(line: ItemConversionLine): LineRow {
+  const { mult, from } = splitLabel(line.label)
+  return {
+    mult,
+    from,
+    qty: tidy(line.quantity),
+    to: line.unit_detail?.code ?? 'g',
+    grams: line.gram_equivalent ? tidy(line.gram_equivalent) : '',
+  }
+}
 
-export function ItemMeasuresSection({ sku }: { sku: string }) {
+type SyncOutcome = { ok: boolean; error?: string; problems?: string[] }
+
+type MeasureField = 'grams_per_piece' | 'pieces_per_pack' | 'pieces_per_kg' | 'pieces_or_pack_per_box'
+
+export function ItemMeasuresSection({ sku, stockUnit }: { sku: string; stockUnit: string }) {
   const { t } = useI18n()
   const toast = useToast()
   const qc = useQueryClient()
   const { data, isLoading, isError, refetch } = useItemConversion(sku)
   const { data: ref } = useReference()
   const [editing, setEditing] = useState(false)
-
-  const gramUnitId = useMemo(
-    () => (ref?.units ?? []).find((u) => u.code === 'g')?.id ?? '',
+  const unitsByCode = useMemo(
+    () => Object.fromEntries((ref?.units ?? []).map((u) => [u.code, u])),
     [ref],
   )
 
@@ -494,7 +503,10 @@ export function ItemMeasuresSection({ sku }: { sku: string }) {
       qc.setQueryData(qk.itemConversion(sku), saved)
       qc.invalidateQueries({ queryKey: qk.dishes })
       setEditing(false)
-      toast.success(t('inv.supp.measures.saved'))
+      const sync = (saved as ItemConversion & { inventory_sync?: SyncOutcome }).inventory_sync
+      if (sync && !sync.ok) toast.error(t('inv.supp.measures.syncFailed', { detail: sync.error ?? '' }))
+      else if (sync?.problems?.length) toast.info(t('inv.supp.measures.syncProblem', { detail: sync.problems[0] }))
+      else toast.success(t(sync ? 'inv.supp.measures.savedSynced' : 'inv.supp.measures.saved'))
     },
     onError: (err) =>
       toast.error(t('inv.supp.saveFailed', { detail: parseApiError(err).message })),
@@ -503,15 +515,8 @@ export function ItemMeasuresSection({ sku }: { sku: string }) {
   if (isLoading) return <SectionSkeleton />
   if (isError)
     return (
-      <SectionShell
-        title={t('inv.supp.measures.title')}
-        subtitle={t('inv.supp.measures.subtitle')}
-      >
-        <button
-          type="button"
-          onClick={() => refetch()}
-          className="text-[13px] text-accent-ink hover:underline"
-        >
+      <SectionShell title={t('inv.supp.measures.title')} subtitle={t('inv.supp.measures.subtitle')}>
+        <button type="button" onClick={() => refetch()} className="text-[13px] text-accent-ink hover:underline">
           {t('inv.supp.loadError')}
         </button>
       </SectionShell>
@@ -521,7 +526,8 @@ export function ItemMeasuresSection({ sku }: { sku: string }) {
     return (
       <MeasuresForm
         initial={data ?? null}
-        gramUnitId={gramUnitId}
+        stockUnit={stockUnit}
+        unitsByCode={unitsByCode}
         saving={mutation.isPending}
         onCancel={() => setEditing(false)}
         onSave={(payload) => mutation.mutate(payload)}
@@ -529,17 +535,19 @@ export function ItemMeasuresSection({ sku }: { sku: string }) {
     )
   }
 
-  const rows: [string, string | null | undefined][] = [
-    [t('inv.supp.measures.gramsPerTbs'), gramsPerTbsOf(data ?? null) || null],
+  const measureStock = isMeasureUnit(stockUnit)
+  const anchored = measureStock || (!!data?.pack_qty && sameUnit(data?.order_unit, stockUnit))
+  const lines = data?.lines ?? []
+  const pieces: [string, string | null | undefined][] = [
     [t('inv.supp.measures.gramsPerPiece'), data?.grams_per_piece],
     [t('inv.supp.measures.perPack'), data?.pieces_per_pack],
     [t('inv.supp.measures.perKg'), data?.pieces_per_kg],
     [t('inv.supp.measures.perBox'), data?.pieces_or_pack_per_box],
   ]
-  const shown = rows.filter(
-    (r): r is [string, string] =>
-      r[1] != null && String(r[1]).trim() !== '' && Number(r[1]) > 0,
+  const shownPieces = pieces.filter(
+    (r): r is [string, string] => r[1] != null && String(r[1]).trim() !== '' && Number(r[1]) > 0,
   )
+  const empty = !data || (lines.length === 0 && shownPieces.length === 0 && !data.pack_qty)
 
   return (
     <SectionShell
@@ -547,16 +555,41 @@ export function ItemMeasuresSection({ sku }: { sku: string }) {
       subtitle={t('inv.supp.measures.subtitle')}
       action={
         <Button size="sm" variant="secondary" icon="edit" onClick={() => setEditing(true)}>
-          {shown.length === 0 ? t('inv.supp.measures.add') : t('inv.supp.edit')}
+          {empty ? t('inv.supp.measures.add') : t('inv.supp.edit')}
         </Button>
       }
     >
-      {shown.length === 0 ? (
+      {stockUnit && !measureStock && (
+        <div
+          className={cn(
+            'mb-3 rounded-md px-2.5 py-2 text-[13px]',
+            anchored ? 'bg-surface-sunken text-ink' : 'bg-warning-subtle text-warning-ink',
+          )}
+        >
+          {anchored ? (
+            <span className="font-mono">
+              1 {stockUnit} = {tidy(data?.pack_qty)} {data?.base_unit_detail?.code ?? ''}
+            </span>
+          ) : (
+            t('inv.supp.measures.stockMissing', { unit: stockUnit })
+          )}
+        </div>
+      )}
+      {empty ? (
         <p className="text-[13px] text-ink-subtle">{t('inv.supp.measures.empty')}</p>
       ) : (
         <table className="w-full text-[13px]">
           <tbody className="divide-y divide-hairline">
-            {shown.map(([label, v]) => (
+            {lines.map((l, i) => (
+              <tr key={l.id ?? i}>
+                <td className="py-1.5 pe-3 text-ink-muted">{l.label}</td>
+                <td className="tnum py-1.5 ps-3 text-end font-mono text-ink">
+                  {tidy(l.quantity)} {l.unit_detail?.code ?? ''}
+                  {l.gram_equivalent ? ` · ${tidy(l.gram_equivalent)} g` : ''}
+                </td>
+              </tr>
+            ))}
+            {shownPieces.map(([label, v]) => (
               <tr key={label}>
                 <td className="py-1.5 pe-3 text-ink-muted">{label}</td>
                 <td className="tnum py-1.5 ps-3 text-end font-mono text-ink">{tidy(v)}</td>
@@ -565,34 +598,42 @@ export function ItemMeasuresSection({ sku }: { sku: string }) {
           </tbody>
         </table>
       )}
-      <p className="mt-3 text-2xs text-ink-subtle">{t('inv.supp.localNote')}</p>
+      <p className="mt-3 text-2xs text-ink-subtle">{t('inv.supp.measures.syncNote')}</p>
     </SectionShell>
   )
 }
 
 function MeasuresForm({
   initial,
-  gramUnitId,
+  stockUnit,
+  unitsByCode,
   saving,
   onCancel,
   onSave,
 }: {
   initial: ItemConversion | null
-  gramUnitId: string
+  stockUnit: string
+  unitsByCode: Record<string, { id: string; code: string }>
   saving: boolean
   onCancel: () => void
   onSave: (payload: Partial<ItemConversion>) => void
 }) {
   const { t } = useI18n()
+  const measureStock = isMeasureUnit(stockUnit)
+  const anchoredToStock = sameUnit(initial?.order_unit, stockUnit)
 
+  const [packQty, setPackQty] = useState(
+    anchoredToStock && initial?.pack_qty ? tidy(initial.pack_qty) : '',
+  )
+  const [packUnit, setPackUnit] = useState(
+    (anchoredToStock && initial?.base_unit_detail?.code) || 'g',
+  )
+  const [rows, setRows] = useState<LineRow[]>(() => (initial?.lines ?? []).map(rowOf))
   const [v, setV] = useState<Record<MeasureField, string>>(() => ({
-    grams_per_tbs: gramsPerTbsOf(initial),
     grams_per_piece: initial?.grams_per_piece ? tidy(initial.grams_per_piece) : '',
     pieces_per_pack: initial?.pieces_per_pack ? tidy(initial.pieces_per_pack) : '',
     pieces_per_kg: initial?.pieces_per_kg ? tidy(initial.pieces_per_kg) : '',
-    pieces_or_pack_per_box: initial?.pieces_or_pack_per_box
-      ? tidy(initial.pieces_or_pack_per_box)
-      : '',
+    pieces_or_pack_per_box: initial?.pieces_or_pack_per_box ? tidy(initial.pieces_or_pack_per_box) : '',
   }))
 
   function num(s: string): string | null {
@@ -602,20 +643,35 @@ function MeasuresForm({
     return Number.isFinite(n) ? String(n) : null
   }
 
+  const setRow = (i: number, patch: Partial<LineRow>) =>
+    setRows((rs) => rs.map((r, x) => (x === i ? { ...r, ...patch } : r)))
+
   function submit(e: FormEvent) {
     e.preventDefault()
-    const tbs = num(v.grams_per_tbs)
-    onSave({
+    const payload: Partial<ItemConversion> = {
       grams_per_piece: num(v.grams_per_piece),
       pieces_per_pack: num(v.pieces_per_pack),
       pieces_per_kg: num(v.pieces_per_kg),
       pieces_or_pack_per_box: num(v.pieces_or_pack_per_box),
-      lines: tbs != null && Number(tbs) > 0 ? ladderLines(Number(tbs), gramUnitId) : [],
-    })
+      lines: rows
+        .filter((r) => Number(r.qty) > 0 && unitsByCode[r.to])
+        .map((r) => ({
+          label: `${r.mult.trim() || '1'} ${r.from}`,
+          quantity: String(Number(r.qty)),
+          unit: unitsByCode[r.to].id,
+          gram_equivalent: num(r.grams),
+        })),
+    }
+    const pq = num(packQty)
+    if (!measureStock && stockUnit && pq && Number(pq) > 0 && unitsByCode[packUnit]) {
+      payload.order_unit = stockUnit
+      payload.pack_qty = pq
+      payload.base_unit = unitsByCode[packUnit].id
+    }
+    onSave(payload)
   }
 
-  const fields: [MeasureField, string, string?][] = [
-    ['grams_per_tbs', t('inv.supp.measures.gramsPerTbs'), t('inv.supp.measures.gramsPerTbs.help')],
+  const pieceFields: [MeasureField, string][] = [
     ['grams_per_piece', t('inv.supp.measures.gramsPerPiece')],
     ['pieces_per_pack', t('inv.supp.measures.perPack')],
     ['pieces_per_kg', t('inv.supp.measures.perKg')],
@@ -623,24 +679,69 @@ function MeasuresForm({
   ]
 
   return (
-    <SectionShell
-      title={t('inv.supp.measures.title')}
-      subtitle={t('inv.supp.measures.subtitle')}
-    >
+    <SectionShell title={t('inv.supp.measures.title')} subtitle={t('inv.supp.measures.subtitle')}>
       <form onSubmit={submit} className="space-y-4">
+        {stockUnit && !measureStock && (
+          <fieldset className="space-y-1">
+            <legend className="text-xs font-medium text-ink-muted">
+              {t('inv.supp.measures.stockUnit', { unit: stockUnit })}
+            </legend>
+            <div className="flex items-center gap-2">
+              <span className="flex-none font-mono text-[13px] text-ink">1 {stockUnit} =</span>
+              <Input
+                type="number" inputMode="decimal" step="any" min="0" className="w-28"
+                aria-label={t('inv.supp.measures.stockQty', { unit: stockUnit })}
+                value={packQty}
+                onChange={(e) => setPackQty(e.target.value)}
+              />
+              <Select className="w-24" value={packUnit} onChange={(e) => setPackUnit(e.target.value)}
+                aria-label={t('inv.supp.measures.unit')}>
+                {LINE_TO.map((c) => <option key={c} value={c}>{c}</option>)}
+              </Select>
+            </div>
+            <p className="text-2xs text-ink-subtle">{t('inv.supp.measures.stockHelp', { unit: stockUnit })}</p>
+          </fieldset>
+        )}
+
+        <fieldset className="space-y-2">
+          <legend className="text-xs font-medium text-ink-muted">{t('inv.supp.measures.lines')}</legend>
+          {rows.map((r, i) => (
+            <div key={i} className="flex flex-wrap items-center gap-2">
+              <Input className="w-14" value={r.mult} aria-label={t('inv.supp.measures.amount')}
+                onChange={(e) => setRow(i, { mult: e.target.value })} />
+              <Select className="w-24" value={r.from} aria-label={t('inv.supp.measures.measure')}
+                onChange={(e) => setRow(i, { from: e.target.value })}>
+                {LINE_FROM.map((c) => <option key={c} value={c}>{c}</option>)}
+              </Select>
+              <span className="text-ink-muted">=</span>
+              <Input type="number" inputMode="decimal" step="any" min="0" className="w-24" value={r.qty}
+                aria-label={t('inv.supp.measures.equals')}
+                onChange={(e) => setRow(i, { qty: e.target.value })} />
+              <Select className="w-20" value={r.to} aria-label={t('inv.supp.measures.unit')}
+                onChange={(e) => setRow(i, { to: e.target.value })}>
+                {LINE_TO.map((c) => <option key={c} value={c}>{c}</option>)}
+              </Select>
+              <Button type="button" size="sm" variant="ghost" icon="trash"
+                aria-label={t('inv.supp.measures.removeLine')}
+                onClick={() => setRows((rs) => rs.filter((_, x) => x !== i))} />
+            </div>
+          ))}
+          <Button type="button" size="sm" variant="secondary" icon="plus"
+            onClick={() => setRows((rs) => [...rs, { mult: '1', from: 'Tbs', qty: '', to: 'g', grams: '' }])}>
+            {t('inv.supp.measures.addLine')}
+          </Button>
+          <p className="text-2xs text-ink-subtle">{t('inv.supp.measures.linesHelp')}</p>
+        </fieldset>
+
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {fields.map(([key, label, help]) => (
+          {pieceFields.map(([key, label]) => (
             <label key={key} className="flex flex-col gap-1">
               <span className="text-xs font-medium text-ink-muted">{label}</span>
               <Input
-                type="number"
-                inputMode="decimal"
-                step="any"
-                min="0"
+                type="number" inputMode="decimal" step="any" min="0"
                 value={v[key]}
                 onChange={(e) => setV((s) => ({ ...s, [key]: e.target.value }))}
               />
-              {help && <span className="text-2xs text-ink-subtle">{help}</span>}
             </label>
           ))}
         </div>

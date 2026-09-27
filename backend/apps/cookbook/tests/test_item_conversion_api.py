@@ -7,6 +7,7 @@ and prove that once a conversion is saved, a recipe line expressed in that
 measure actually costs (rather than falling to `no_conversion`).
 """
 from decimal import Decimal
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient, APITestCase
@@ -27,6 +28,11 @@ class ItemConversionApiTests(APITestCase):
         self.admin = User.objects.create_superuser('boss', password='x')
         self.client = APIClient(HTTP_ACCEPT='application/json')
         self.client.force_authenticate(self.admin)
+        # saves push to inventory-platform (see test_stock_units); keep these offline
+        patcher = mock.patch('apps.cookbook.publishing.sync_item_conversions',
+                             return_value={'updated': [], 'skipped': [], 'problems': []})
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_create_with_lines_and_packaging(self):
         res = self.client.post(URL, {

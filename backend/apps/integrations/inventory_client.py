@@ -153,6 +153,13 @@ class InventoryClient:
         ItemConversionLine data."""
         return self._request('GET', '/items/conversions/')
 
+    # ── write: per-item recipe conversions (apps.cookbook.publishing) ────
+    def sync_recipe_conversions(self, items):
+        """items: [{"sku", "conversions": [{"unit", "factor", "label"}]}] —
+        "1 <unit> of this item = factor stock units". The platform replaces
+        each sent SKU's rows; returns {"updated": [...], "skipped": [...]}."""
+        return self._request('POST', '/items/recipe-conversions/sync/', json={'items': items})
+
     def get_stores(self, params=None):
         return self._get_all_pages('/stores/', params=params)
 

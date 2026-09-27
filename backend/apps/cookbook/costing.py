@@ -64,6 +64,13 @@ class RecipeCost:
         return [l.sku for l in self.lines if l.status == UNKNOWN_SKU]
 
 
+def _fmt_qty(d):
+    """50.000 -> "50", 0.0004761904 -> "0.0004762" (4 significant digits below 1)."""
+    d = Decimal(d)
+    q = d.quantize(Decimal('0.001')) if abs(d) >= 1 else Decimal(f'{d:.4g}')
+    return f'{q.normalize():f}'
+
+
 # ── context ─────────────────────────────────────────────────────────────────
 
 class CostContext:
@@ -86,6 +93,7 @@ class CostContext:
             ItemNutrition.objects.filter(item_sku__in=skus).select_related('unit_scale')
         }
         self._bridge_cache = {}
+        self._own_cache = {}
 
     # -- price + base unit -------------------------------------------------
     def price_for(self, sku):
@@ -120,7 +128,12 @@ class CostContext:
             label_unit = self.units_by_code.get(LABEL_UNIT_CODE.get((word or '').lower()))
             if mult is None or label_unit is None or line.unit is None or mult == 0:
                 continue
-            src_canon = mult * Decimal(label_unit.factor_to_canonical)          # e.g. ml
+            # the measure's size for THIS item when it has its own line for it
+            # ("1 Tbs = 50 ml"), else the standard size (15 ml)
+            own_size = next((a for a, dim, _t in self.own_amounts(sku, label_unit.code)
+                             if dim == label_unit.dimension), None)
+            src_canon = mult * (own_size if own_size is not None
+                                else Decimal(label_unit.factor_to_canonical))   # e.g. ml
             dst_canon = Decimal(line.quantity) * Decimal(line.unit.factor_to_canonical)  # e.g. g
             if src_canon == 0:
                 continue
@@ -130,6 +143,15 @@ class CostContext:
             inv = invert_bridge(*key, factor)
             if inv:
                 bridges.setdefault(inv[0], inv[1])
+            # "1 Tbs = 50 ml" with a gram equivalent of 50 g is this item's
+            # density too (ml <-> g), not just the size of its tablespoon
+            if line.gram_equivalent and line.unit.dimension != 'mass' and dst_canon:
+                key = (line.unit.dimension, 'mass')
+                factor = Decimal(line.gram_equivalent) / dst_canon
+                bridges.setdefault(key, factor)
+                inv = invert_bridge(*key, factor)
+                if inv:
+                    bridges.setdefault(inv[0], inv[1])
         gpp = supp.grams_per_piece or (
             Decimal(1000) / supp.pieces_per_kg if supp.pieces_per_kg else None
         )
@@ -138,6 +160,44 @@ class CostContext:
             bridges.setdefault(('mass', 'count'), Decimal(1) / Decimal(gpp))
         self._bridge_cache[sku] = bridges
         return bridges
+
+    # -- this SKU's own size for a unit ------------------------------------
+    def own_amounts(self, sku, unit_code):
+        """[(canonical amount, dimension, text)] for ONE `unit_code` of this
+        SKU, from its own conversion lines — e.g. "1 Tbs = 50 ml" gives
+        (50, 'volume', ...). The item's own line beats the unit's generic
+        size (a standard Tbs is 15 ml), so every recipe that uses this item
+        in that unit gets the item's number. Empty when it has no such line."""
+        if sku not in self._own_cache:
+            own = {}
+            supp = self.supplements.get(sku)
+            for line in (supp.lines.all() if supp else []):
+                mult, word = label_parts(line.label)
+                code = LABEL_UNIT_CODE.get((word or '').lower())
+                if not code or not mult or line.unit is None:
+                    continue
+                per_one = Decimal(line.quantity) / mult
+                own.setdefault(code, []).append((
+                    per_one * Decimal(line.unit.factor_to_canonical), line.unit.dimension,
+                    f'1 {code} = {_fmt_qty(per_one)} {line.unit.code}'))
+                if line.gram_equivalent:
+                    g = Decimal(line.gram_equivalent) / mult
+                    own[code].append((g, 'mass', f'1 {code} = {_fmt_qty(g)} g'))
+            self._own_cache[sku] = own
+        return self._own_cache[sku].get(unit_code, [])
+
+    def convert_for(self, sku, qty, unit, to_unit):
+        """qty of `unit` of this SKU -> `to_unit`, the SKU's own lines first,
+        then the generic unit sizes + bridges. Raises ConversionError."""
+        bridges = self.bridges_for(sku)
+        for amount, dim, _text in self.own_amounts(sku, unit.code):
+            if dim != to_unit.dimension:
+                bridge = bridges.get((dim, to_unit.dimension))
+                if bridge is None:
+                    continue
+                amount = amount * Decimal(bridge)
+            return qty * amount / Decimal(to_unit.factor_to_canonical)
+        return convert(qty, unit, to_unit, bridges)
 
     def resolve_unit(self, raw):
         """A recipe line's `unit` can be a UnitScale, an id, a code, or blank."""
@@ -179,7 +239,7 @@ def cost_line(line, ctx):
         return LineCost(sku, qty, unit_code, Decimal(0), NO_CONVERSION, 'line has no unit')
 
     try:
-        base_qty = convert(qty, unit, base_unit, ctx.bridges_for(sku))
+        base_qty = ctx.convert_for(sku, qty, unit, base_unit)
     except ConversionError as e:
         return LineCost(sku, qty, unit_code, Decimal(0), NO_CONVERSION, str(e))
 

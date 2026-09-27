@@ -344,6 +344,34 @@ class ItemConversionViewSet(
     lookup_field = 'item_sku'
     lookup_value_regex = '[^/]+'
 
+    # Every change is pushed to inventory-platform straight away, so POS
+    # deductions there use the new numbers without re-publishing recipes.
+    # The save never fails on it: the outcome rides along as
+    # `inventory_sync`, and the next publish syncs again.
+    def _sync(self, sku):
+        from apps.integrations.inventory_client import InventoryAPIError
+        from .publishing import sync_item_conversions
+        try:
+            r = sync_item_conversions([sku])
+        except InventoryAPIError as e:
+            return {'ok': False, 'error': str(e)[:300]}
+        return {'ok': True, 'problems': r['problems'], 'skipped': r['skipped']}
+
+    def create(self, request, *args, **kwargs):
+        resp = super().create(request, *args, **kwargs)
+        resp.data['inventory_sync'] = self._sync(resp.data['item_sku'])
+        return resp
+
+    def update(self, request, *args, **kwargs):
+        resp = super().update(request, *args, **kwargs)
+        resp.data['inventory_sync'] = self._sync(resp.data['item_sku'])
+        return resp
+
+    def perform_destroy(self, instance):
+        sku = instance.item_sku
+        super().perform_destroy(instance)
+        self._sync(sku)
+
 
 class ItemNutritionViewSet(
     mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,

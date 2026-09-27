@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
@@ -71,10 +73,35 @@ class ItemConversionSerializer(serializers.ModelSerializer):
         self._save_lines(instance, lines_data)
         return instance
 
+    def _keep_cost_on_unit_change(self, instance, validated_data):
+        """order_cost is the price of ONE order_unit. When the order unit
+        itself changes (e.g. Box -> PKT, set from the inventory stock unit)
+        and no new price comes with it, that price no longer means anything:
+        keep the item's cost per base unit instead, so recipe costs don't
+        jump. A pack-size correction alone keeps the pack price, and the cost
+        per gram follows it — that's the point of correcting it."""
+        from apps.cookbook.stock_units import same_unit
+        new_unit = validated_data.get('order_unit')
+        if (new_unit is None or 'order_cost' in validated_data or not instance.order_unit
+                or same_unit(new_unit, instance.order_unit)):
+            return
+        if instance.order_cost and instance.pack_qty:
+            per_old_base = Decimal(instance.order_cost) / Decimal(instance.pack_qty)
+        else:
+            per_old_base = instance.cost_per_base_unit
+        old_base, new_base = instance.base_unit, validated_data.get('base_unit', instance.base_unit)
+        per_new_base = None
+        if per_old_base is not None and old_base and new_base and old_base.dimension == new_base.dimension:
+            per_new_base = (Decimal(per_old_base) * Decimal(new_base.factor_to_canonical)
+                            / Decimal(old_base.factor_to_canonical)).quantize(Decimal('1e-10'))
+        validated_data['order_cost'] = None
+        validated_data['cost_per_base_unit'] = per_new_base
+
     @transaction.atomic
     def update(self, instance, validated_data):
         lines_data = validated_data.pop('lines', None)
         allergens = validated_data.pop('allergens', None)
+        self._keep_cost_on_unit_change(instance, validated_data)
         self._stamp_cost(validated_data)
         for attr, val in validated_data.items():
             setattr(instance, attr, val)
