@@ -27,6 +27,8 @@ WORKING_MINUTES_PER_MONTH = Decimal(settings.COOKBOOK_WORKING_HOURS_PER_MONTH) *
 LABEL_UNIT_CODE = {
     'tbs': 'Tbs', 'tbsp': 'Tbs', 'ts': 'Ts', 'tsp': 'Ts', 'cup': 'Cup',
     'piece': 'Pc', 'pc': 'Pc', 'pcs': 'Pcs', 'pinch': 'Pinch',
+    # an item's own weight per litre / volume per kilo ("1 Ltr = 1.05 Kg")
+    'ltr': 'Ltr', 'l': 'Ltr', 'litre': 'Ltr', 'liter': 'Ltr', 'kg': 'Kg',
 }
 # inventory-platform unit_code -> Cookbook UnitScale code (for the fallback price path)
 INVENTORY_UNIT_CODE = {

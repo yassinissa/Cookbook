@@ -453,7 +453,7 @@ function sameUnit(a?: string | null, b?: string | null): boolean {
 }
 
 /* measures a line can start from — the words the backend reads in a label */
-const LINE_FROM = ['Tbs', 'Ts', 'Cup', 'Pinch', 'Pc']
+const LINE_FROM = ['Tbs', 'Ts', 'Cup', 'Pinch', 'Pc', 'Ltr', 'Kg']
 /* what one can equal / what one stock unit can hold */
 const LINE_TO = ['g', 'ml', 'Kg', 'Ltr', 'Pc']
 
@@ -462,6 +462,7 @@ type LineRow = { mult: string; from: string; qty: string; to: string; grams: str
 const LABEL_WORD: Record<string, string> = {
   tbs: 'Tbs', tbsp: 'Tbs', ts: 'Ts', tsp: 'Ts', cup: 'Cup', pinch: 'Pinch',
   pc: 'Pc', pcs: 'Pc', piece: 'Pc',
+  ltr: 'Ltr', l: 'Ltr', litre: 'Ltr', liter: 'Ltr', kg: 'Kg',
 }
 
 /** "1/4 Cup" -> { mult: '1/4', from: 'Cup' } */

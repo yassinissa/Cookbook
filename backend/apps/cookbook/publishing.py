@@ -404,14 +404,19 @@ def publish_production_recipe(recipe, *, client=None):
 
     units = _Units(cat, [i.item_sku for i in recipe.ingredients.all()])
     lines, warnings, issues = _ingredient_lines(recipe, cat, units)
+    output_qty, output_note, output_issue = _output_qty(recipe, cat)
+    if output_issue:
+        issues.append(output_issue)
     _raise_issues(issues)
+    if output_note:
+        warnings.append(output_note)
     warnings += _sync_units(client, units)
     payload = {
         'name_en': recipe.name_en,
         'name_ar': recipe.name_ar,
         'prep_kitchen': prep_kitchen_id,
         'output_item': output_id,
-        'output_qty': str(recipe.output_qty),
+        'output_qty': str(output_qty),
         'notes': recipe.notes,
         'ingredients': lines,
     }
@@ -428,6 +433,40 @@ def publish_production_recipe(recipe, *, client=None):
 
     _finish_ok(recipe, remote_id)
     return _result(recipe, warnings)
+
+
+def _output_qty(recipe, cat):
+    """(quantity, note, issue) for the batch yield in the output item's stock
+    unit. inventory-platform has no yield unit — it reads `output_qty` in the
+    output item's stock unit and scales every batch's inputs from it — so a
+    yield written as "5 Ltr" of a sauce stocked in KG is converted with that
+    item's own conversions (its density / pack size), never sent as 5 KG."""
+    from .costing import CostContext
+    from .stock_units import ItemUnits, same_unit
+    qty, unit = recipe.output_qty, recipe.output_unit
+    sku = recipe.output_item_sku
+    stock_code = cat.stock_code.get(sku)
+    if unit is None or not stock_code or same_unit(unit.code, stock_code):
+        return qty, None, None
+    iu = ItemUnits(sku, stock_code, CostContext([sku]))
+    label = f'Yield {_fmt(qty)} {unit.code} of {sku}'
+    f = iu.factor(unit)
+    if f is None:
+        if iu.anchor is None:
+            return qty, None, f'{label}: {iu.problem}'
+        return qty, None, (
+            f'{label}: no conversion from {unit.code} to its stock unit {stock_code}; '
+            f'add one in this item\'s conversions (e.g. "1 {unit.code} = 1.05 {stock_code}")')
+    if f == 1:
+        return qty, None, None
+    converted = (Decimal(qty) * f).quantize(Decimal('0.001'))
+    how = iu.label(unit)
+    return converted, (f'{label} published as {_fmt(converted)} {stock_code}'
+                       + (f' ({how})' if how else '')), None
+
+
+def _fmt(qty):
+    return format(Decimal(qty).normalize(), 'f')
 
 
 def _result(recipe, warnings):
