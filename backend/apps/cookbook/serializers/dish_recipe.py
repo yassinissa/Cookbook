@@ -21,6 +21,7 @@ from .reference import (
     ApproverSerializer, AllergenSerializer, UnitScaleSerializer,
 )
 from .mixins import HidesCostingFields
+from .ingredient_lines import clean_ingredient_lines
 
 
 _IMAGE_EXT = {'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png',
@@ -241,6 +242,8 @@ class DishRecipeWriteSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         """A scoped user can only write dishes within their branch scope; a
         singly-scoped user's new dishes default to that branch."""
+        if 'ingredients' in attrs:
+            attrs['ingredients'] = clean_ingredient_lines(attrs['ingredients'])
         request = self.context.get('request')
         if not request:
             return attrs

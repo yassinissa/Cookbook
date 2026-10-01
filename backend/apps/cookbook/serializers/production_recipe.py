@@ -9,6 +9,7 @@ from apps.cookbook.services import apply_cost
 from apps.cookbook.versioning import archive_current_version, edit_is_a_new_version
 from .reference import SectionSerializer, ApproverSerializer, UnitScaleSerializer
 from .mixins import HidesCostingFields
+from .ingredient_lines import clean_ingredient_lines
 
 
 class ProductionRecipeIngredientSerializer(serializers.ModelSerializer):
@@ -116,6 +117,8 @@ class ProductionRecipeWriteSerializer(serializers.ModelSerializer):
         # labor_cost is recomputed on save, not accepted from the client
 
     def validate(self, attrs):
+        if 'ingredients' in attrs:
+            attrs['ingredients'] = clean_ingredient_lines(attrs['ingredients'])
         request = self.context.get('request')
         if not request:
             return attrs
