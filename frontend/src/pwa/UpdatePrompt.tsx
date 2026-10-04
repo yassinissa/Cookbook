@@ -7,28 +7,53 @@ import { IconButton } from '@/components/IconButton'
 import { useI18n } from '@/i18n'
 
 /**
- * Service-worker update prompt. The SW is registered in `prompt` mode, so a new
- * build waits instead of taking over silently. We nudge it along:
+ * Service-worker updates. The SW is registered in `prompt` mode so *we* decide
+ * when a new build takes over — and the answer is "straight away, unless
+ * someone is in the middle of typing something":
  *   - re-check for an update whenever the tab regains focus (an installed PWA
  *     that only ever gets backgrounded would otherwise never check), and hourly
  *     for a tab left open;
- *   - when one is waiting, show a dismissible pill — "Reload" calls
- *     `updateSW(true)`, which activates the new SW and reloads.
+ *   - when one is waiting, apply it (`updateSW(true)` activates the new SW and
+ *     reloads) — a kitchen iPad should never sit on last week's build waiting
+ *     for a cook to notice a pill;
+ *   - except on an editor route or with a drawer/dialog open, where a reload
+ *     would throw away unsaved work: there the dismissible "Reload" pill shows
+ *     instead, and the update applies itself the next time the app is
+ *     backgrounded or re-opened somewhere safe.
  */
 const CHECK_INTERVAL_MS = 60 * 60 * 1000
+
+/** A reload right now could lose something the user is in the middle of. */
+function midEdit() {
+  return (
+    /\/(new|edit|plating)\/?$/.test(window.location.pathname) ||
+    document.querySelector('[role="dialog"]') !== null
+  )
+}
 
 export function UpdatePrompt() {
   const { t } = useI18n()
   const [waiting, setWaiting] = useState(false)
   const updateRef = useRef<((reload?: boolean) => Promise<void>) | undefined>(undefined)
+  const pendingRef = useRef(false)
 
   useEffect(() => {
+    const applyOrPrompt = () => {
+      if (!pendingRef.current) return
+      if (midEdit()) setWaiting(true)
+      else updateRef.current?.(true)
+    }
+    // a deferred update gets another go whenever the app is left or returned to
+    document.addEventListener('visibilitychange', applyOrPrompt)
+
     updateRef.current = registerSW({
       // In dev the SW is regenerated on every server tick, so `onNeedRefresh`
       // fires constantly — register it (installability still testable) but don't
       // nag. In a production build a waiting SW is a real new deploy.
       onNeedRefresh: () => {
-        if (import.meta.env.PROD) setWaiting(true)
+        if (!import.meta.env.PROD) return
+        pendingRef.current = true
+        applyOrPrompt()
       },
       onRegisteredSW: (_url, registration) => {
         if (!registration) return
