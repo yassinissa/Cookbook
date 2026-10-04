@@ -1,7 +1,5 @@
-import type { ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import { Button } from '@/components/Button'
 import { DishImage } from '@/components/DishImage'
 import { Icon } from '@/components/Icon'
 import { Page } from '@/components/Page'
@@ -15,19 +13,20 @@ import { useDishRecipe } from '@/lib/queries'
 import { useI18n } from '@/i18n'
 import type { NutritionRollup } from '@/types/api'
 
-/* The cook's station sheet for one dish — the paper recipe card, on the
- * iPad: name + photo + rev/station/prep-time + ingredients (qty, item code)
- * on one side, preparation & method on the other, so nothing needs a scroll
- * to cross-check. The QA standard and plating guide follow underneath.
- * Read-only: no cost, no price, no edit/delete/publish controls — those
- * live on the regular Dish detail page. */
+import { StationSheet, type SheetFact } from './StationSheet'
+
+/* The cook's station sheet for one dish (see StationSheet) — name, photo,
+ * rev/station/prep-time, allergens and ingredients beside the method, fitted
+ * to one screen. The QA standard, plating guide and nutrition follow
+ * underneath. Read-only: no cost, no price, no edit/delete/publish controls —
+ * those live on the regular Dish detail page. */
 export function KitchenDishPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { t, locale } = useI18n()
   const { data: dish, isLoading, isError, refetch } = useDishRecipe(id)
 
-  if (isLoading) return <DetailSkeleton />
+  if (isLoading) return <SheetSkeleton />
   if (isError || !dish) {
     return (
       <Page>
@@ -41,171 +40,89 @@ export function KitchenDishPage() {
   ) as NutritionRollup | null
   const allergens = dish.allergen_rollup?.all ?? []
 
-  // the sheet's "Rev.No.0 - Date - Section - Category" line
-  const meta = [
-    // free text — some cards already carry the "Rev." themselves
-    dish.revision
-      ? /^rev/i.test(dish.revision)
-        ? dish.revision
-        : t('kitchen.sheet.rev', { n: dish.revision })
-      : null,
-    dish.revision_date ? shortDate(dish.revision_date, locale) : null,
-    dish.section?.name,
-    dish.category?.name,
-    dish.service_style?.name,
-  ].filter(Boolean) as string[]
+  const facts: SheetFact[] = []
+  if (dish.prep_time_minutes)
+    facts.push({
+      label: t('kitchen.sheet.prepTime'),
+      value: t('kitchen.glance.minutes', { n: dish.prep_time_minutes }),
+    })
 
   return (
-    <Sheet>
-      <div className="mb-3 no-print">
-        <Button variant="ghost" size="sm" icon="arrowLeft" onClick={() => navigate('/kitchen')}>
-          {t('kitchen.title')}
-        </Button>
-      </div>
-
-      <div className="grid gap-4 min-[680px]:grid-cols-2 min-[680px]:items-start lg:gap-5">
-        {/* left — what it is and what goes in it */}
-        <section className="overflow-hidden rounded-card border border-hairline bg-surface shadow-e2">
-          {/* the card's black title band — fixed colours, same in both themes */}
-          <header className="flex flex-wrap items-baseline justify-between gap-x-5 gap-y-1 bg-[#14110f] px-4 py-3.5 sm:px-5">
-            <h1 className="font-display text-[1.6rem] font-medium leading-tight tracking-tight text-white lg:text-[1.85rem]">
-              {dish.name_en}
-            </h1>
-            {dish.name_ar && (
-              <p dir="rtl" className="text-xl text-white/90 lg:text-2xl">
-                {dish.name_ar}
-              </p>
-            )}
-          </header>
-
-          <div className="aspect-[3/2] w-full bg-[#14110f]">
-            <DishImage src={dish.image_url} name={dish.name_en} rounded="rounded-none" />
-          </div>
-
-          <div className="space-y-1 border-b border-hairline px-4 py-3 sm:px-5">
-            {meta.length > 0 && (
-              <p className="text-[13px] font-semibold text-ink">{meta.join('  ·  ')}</p>
-            )}
-            {dish.prep_time_minutes ? (
-              <p className="flex items-baseline gap-2 text-[13px] font-semibold text-ink-muted">
-                {t('kitchen.sheet.prepTime')}
-                <span className="tnum font-mono text-lg font-semibold text-ink">
-                  {t('kitchen.glance.minutes', { n: dish.prep_time_minutes })}
-                </span>
-              </p>
-            ) : null}
-          </div>
-
-          {/* safety — never buried, always right under the photo */}
-          {allergens.length > 0 ? (
-            <div className="flex flex-wrap items-center gap-2 border-b border-danger-subtle bg-danger-subtle px-4 py-2.5 sm:px-5">
-              <Icon name="alert" size={16} className="flex-none text-danger-ink" />
-              <span className="text-sm font-semibold text-danger-ink">{t('allergens.title')}:</span>
-              <div className="flex flex-wrap gap-1.5">
-                {allergens.map((a) => (
-                  <Pill key={a} tone="danger">
-                    {a}
-                  </Pill>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 border-b border-hairline px-4 py-2.5 sm:px-5">
-              <Icon name="check" size={16} className="flex-none text-success-ink" />
-              <span className="text-sm text-ink-muted">{t('kitchen.allergens.none')}</span>
-            </div>
-          )}
-
-          {dish.ingredients.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-ink-subtle sm:px-5">{t('kitchen.sheet.noIngredients')}</p>
-          ) : (
-            <table className="w-full text-[15px] lg:text-base">
-              <thead>
-                <tr className="text-[11px] uppercase tracking-[0.08em] text-ink-subtle">
-                  <th scope="col" className="px-4 pb-2 pt-3.5 text-start font-semibold sm:ps-5">
-                    {t('editor.section.ingredients')}
-                  </th>
-                  <th scope="col" className="px-3 pb-2 pt-3.5 text-end font-semibold">
-                    {t('editor.ing.qty')}
-                  </th>
-                  <th scope="col" className="px-4 pb-2 pt-3.5 text-start font-semibold sm:pe-5">
-                    {t('dishes.col.code')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hairline border-t border-hairline">
-                {dish.ingredients.map((i) => (
-                  <tr key={i.id ?? i.item_sku}>
-                    <td className="px-4 py-2 text-ink sm:ps-5">
-                      {i.item_name_snapshot}
-                      {i.prep_note && <span className="text-ink-subtle"> · {i.prep_note}</span>}
-                    </td>
-                    <td className="tnum whitespace-nowrap px-3 py-2 text-end font-mono font-semibold text-ink">
-                      {i.quantity} {i.unit_detail?.code ?? ''}
-                    </td>
-                    <td className="tnum whitespace-nowrap px-4 py-2 font-mono text-[13px] text-ink-muted sm:pe-5">
-                      {i.item_sku}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </section>
-
-        {/* right — how to make it */}
-        <section className="rounded-card border border-hairline bg-surface-raised px-5 py-5 shadow-e2 lg:px-7 lg:py-6">
-          <h2 className="mb-4 border-b border-hairline pb-3 font-display text-xl font-medium tracking-tight text-ink lg:text-[1.4rem]">
-            {t('kitchen.sheet.method')}
-          </h2>
-          {dish.steps.length === 0 ? (
-            <p className="text-sm text-ink-subtle">{t('kitchen.sheet.noSteps')}</p>
-          ) : (
-            <ol className="space-y-3.5">
-              {dish.steps.map((s) => (
-                <li key={s.id ?? s.step_number} className="flex gap-3.5">
-                  <span className="spice-rail flex h-7 w-7 flex-none items-center justify-center rounded-full font-mono text-xs font-semibold text-white">
-                    {s.step_number}
-                  </span>
-                  <p className="pt-0.5 text-base leading-relaxed text-ink lg:text-[17px]">{s.instruction}</p>
-                </li>
+    <StationSheet
+      backLabel={t('kitchen.title')}
+      onBack={() => navigate('/kitchen')}
+      nameEn={dish.name_en}
+      nameAr={dish.name_ar}
+      photo={<DishImage src={dish.image_url} name={dish.name_en} rounded="rounded-none" />}
+      meta={sheetMeta(
+        t,
+        dish.revision,
+        dish.revision_date ? shortDate(dish.revision_date, locale) : null,
+        dish.section?.name,
+        dish.category?.name,
+        dish.service_style?.name,
+      )}
+      facts={facts}
+      banner={
+        // safety — never buried, always right under the photo
+        allergens.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2 border-b border-danger-subtle bg-danger-subtle px-5 py-2">
+            <Icon name="alert" size={16} className="flex-none text-danger-ink" />
+            <span className="text-sm font-semibold text-danger-ink">{t('allergens.title')}:</span>
+            <div className="flex flex-wrap gap-1.5">
+              {allergens.map((a) => (
+                <Pill key={a} tone="danger">
+                  {a}
+                </Pill>
               ))}
-            </ol>
-          )}
-        </section>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 border-b border-hairline px-5 py-2">
+            <Icon name="check" size={16} className="flex-none text-success-ink" />
+            <span className="text-sm text-ink-muted">{t('kitchen.allergens.none')}</span>
+          </div>
+        )
+      }
+      ingredients={dish.ingredients}
+      steps={dish.steps}
+    >
+      {dish.standard && hasStandardContent(dish.standard) && (
+        <StandardCard std={dish.standard} t={t} title={t('kitchen.standard.title')} />
+      )}
+      {id && <PlatingPanel dishId={id} canEdit={false} />}
+      <div className="min-[680px]:w-1/2 min-[680px]:pe-2.5">
+        <NutritionPanel nutrition={nutrition} />
       </div>
-
-      {/* below the sheet — full width for the standard + the plating photo(s) */}
-      <div className="mt-5 space-y-5">
-        {dish.standard && hasStandardContent(dish.standard) && (
-          <StandardCard std={dish.standard} t={t} title={t('kitchen.standard.title')} />
-        )}
-        {id && <PlatingPanel dishId={id} canEdit={false} />}
-        <div className="min-[680px]:w-1/2 min-[680px]:pe-2.5">
-          <NutritionPanel nutrition={nutrition} />
-        </div>
-      </div>
-    </Sheet>
+    </StationSheet>
   )
 }
 
-/* Edge-to-edge page frame: the shell drops its sidebar on this route, and the
- * sheet uses the width — `Page`'s reading-width cap would waste a landscape
- * iPad. */
-function Sheet({ children }: { children: ReactNode }) {
-  return <div className="stagger mx-auto w-full max-w-[1500px] px-3 py-3 sm:px-5 sm:py-4">{children}</div>
+/** The card's "Rev.No.0 - Date - Section - Category" line. */
+export function sheetMeta(
+  t: (key: 'kitchen.sheet.rev', vars: { n: string }) => string,
+  revision: string | null | undefined,
+  ...rest: (string | null | undefined)[]
+): string[] {
+  // free text — some cards already carry the "Rev." themselves
+  const rev = revision
+    ? /^rev/i.test(revision)
+      ? revision
+      : t('kitchen.sheet.rev', { n: revision })
+    : null
+  return [rev, ...rest].filter(Boolean) as string[]
 }
 
-function DetailSkeleton() {
+export function SheetSkeleton() {
   return (
-    <Sheet>
-      <div className="grid gap-4 min-[680px]:grid-cols-2 min-[680px]:items-start lg:gap-5">
+    <div className="mx-auto w-full max-w-[1700px] px-3 py-3 sm:px-5">
+      <div className="grid gap-4 min-[680px]:grid-cols-2 min-[680px]:gap-5">
         <div className="space-y-4">
-          <Skeleton className="aspect-[4/3] w-full rounded-card" />
+          <Skeleton className="aspect-[3/2] w-full rounded-card" />
           <Skeleton className="h-64" />
         </div>
         <Skeleton className="h-96" />
       </div>
-    </Sheet>
+    </div>
   )
 }
