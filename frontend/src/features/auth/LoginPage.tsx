@@ -69,14 +69,22 @@ export function LoginPage() {
     setError('')
     setBusy(true)
     try {
-      await login(username, password)
+      // usernames are case-sensitive server-side; a stray space from the
+      // on-screen keyboard's autocomplete shouldn't fail a sign-in
+      await login(username.trim(), password)
       // AuthProvider sits above the router, so navigating here won't make it
       // re-read the just-stored token. Prime the /me query first so the route
       // guards see the caps immediately instead of flashing "no access".
       await qc.prefetchQuery({ queryKey: AUTH_QUERY_KEY, queryFn: fetchMe, staleTime: 5 * 60_000 })
       navigate('/', { replace: true })
-    } catch {
-      setError(t('login.error'))
+    } catch (err) {
+      // only a 401 means the credentials were wrong — don't blame the
+      // password for a dropped connection or the login rate limit
+      const status = (err as { response?: { status?: number } }).response?.status
+      if (status === 401) setError(t('login.error'))
+      else if (status === 429) setError(t('login.throttled'))
+      else if (status === undefined) setError(t('login.unreachable'))
+      else setError(t('state.errorGeneric'))
     } finally {
       setBusy(false)
     }
@@ -177,6 +185,11 @@ export function LoginPage() {
                     <Input
                       autoFocus
                       autoComplete="username"
+                      // iPad keyboards capitalise the first letter and
+                      // "correct" the rest — both break a case-sensitive username
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                     />

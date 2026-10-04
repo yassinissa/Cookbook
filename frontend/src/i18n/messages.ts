@@ -101,6 +101,8 @@ export const en = {
   'login.cardHint': 'Use your Green Hills account.',
   'login.help': 'Trouble signing in? Contact your kitchen systems admin.',
   'login.error': 'Invalid username or password.',
+  'login.throttled': 'Too many sign-in attempts. Wait a minute, then try again.',
+  'login.unreachable': "Can't reach the server. Check the connection and try again.",
 
   'dash.title': 'Dashboard',
   'dash.subtitle': 'What needs attention across {branches} branches',
@@ -1013,6 +1015,8 @@ export const ar: Record<MessageKey, string> = {
   'login.cardHint': 'استخدم حساب غرين هيلز الخاص بك.',
   'login.help': 'تواجه مشكلة في تسجيل الدخول؟ تواصل مع مسؤول أنظمة المطبخ.',
   'login.error': 'اسم المستخدم أو كلمة المرور غير صحيحة.',
+  'login.throttled': 'محاولات تسجيل دخول كثيرة. انتظر دقيقة ثم حاول مرة أخرى.',
+  'login.unreachable': 'تعذّر الوصول إلى الخادم. تحقّق من الاتصال وحاول مرة أخرى.',
 
   'dash.title': 'لوحة المعلومات',
   'dash.subtitle': 'ما الذي يحتاج إلى انتباه عبر {branches} فروع',
