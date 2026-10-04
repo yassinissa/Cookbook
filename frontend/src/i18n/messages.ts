@@ -154,7 +154,8 @@ export const en = {
   'kitchen.glance.minutes': '{n} min',
   'kitchen.plating.finale': 'Plating guide',
   'kitchen.sheet.rev': 'Rev. {n}',
-  'kitchen.sheet.method': 'Preparation & method',
+  'kitchen.sheet.method': 'Preparation & Method',
+  'kitchen.sheet.prepTime': 'Time of preparation',
   'kitchen.sheet.noIngredients': 'No ingredients listed for this dish yet.',
   'kitchen.sheet.noSteps': 'No method written for this dish yet.',
 
@@ -1069,6 +1070,7 @@ export const ar: Record<MessageKey, string> = {
   'kitchen.plating.finale': 'دليل التقديم',
   'kitchen.sheet.rev': 'مراجعة {n}',
   'kitchen.sheet.method': 'التحضير والطريقة',
+  'kitchen.sheet.prepTime': 'وقت التحضير',
   'kitchen.sheet.noIngredients': 'لا توجد مكوّنات مدرجة لهذا الطبق بعد.',
   'kitchen.sheet.noSteps': 'لم تُكتب طريقة التحضير لهذا الطبق بعد.',
 

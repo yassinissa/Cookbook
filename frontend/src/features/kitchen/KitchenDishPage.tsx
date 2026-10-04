@@ -1,7 +1,7 @@
+import type { ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import { Button } from '@/components/Button'
-import { Card, CardBody, CardHeader } from '@/components/Card'
 import { DishImage } from '@/components/DishImage'
 import { Icon } from '@/components/Icon'
 import { Page } from '@/components/Page'
@@ -56,40 +56,40 @@ export function KitchenDishPage() {
   ].filter(Boolean) as string[]
 
   return (
-    <Page stagger>
-      <div className="mb-4 no-print">
+    <Sheet>
+      <div className="mb-3 no-print">
         <Button variant="ghost" size="sm" icon="arrowLeft" onClick={() => navigate('/kitchen')}>
           {t('kitchen.title')}
         </Button>
       </div>
 
-      <div className="grid gap-5 min-[680px]:grid-cols-2 min-[680px]:items-start">
+      <div className="grid gap-4 min-[680px]:grid-cols-2 min-[680px]:items-start lg:gap-5">
         {/* left — what it is and what goes in it */}
-        <section className="card-lit relative overflow-hidden rounded-card border border-hairline">
-          <span aria-hidden className="spice-rail-h absolute inset-x-0 top-0 h-1" />
-          <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 pb-3 pt-4 sm:px-5">
-            <h1 className="font-display text-[1.6rem] font-medium leading-tight tracking-tight text-ink">
+        <section className="overflow-hidden rounded-card border border-hairline bg-surface shadow-e2">
+          {/* the card's black title band — fixed colours, same in both themes */}
+          <header className="flex flex-wrap items-baseline justify-between gap-x-5 gap-y-1 bg-[#14110f] px-4 py-3.5 sm:px-5">
+            <h1 className="font-display text-[1.6rem] font-medium leading-tight tracking-tight text-white lg:text-[1.85rem]">
               {dish.name_en}
             </h1>
             {dish.name_ar && (
-              <p dir="rtl" className="text-lg text-ink-muted">
+              <p dir="rtl" className="text-xl text-white/90 lg:text-2xl">
                 {dish.name_ar}
               </p>
             )}
           </header>
 
-          <div className="aspect-[3/2] w-full bg-surface-sunken">
+          <div className="aspect-[3/2] w-full bg-[#14110f]">
             <DishImage src={dish.image_url} name={dish.name_en} rounded="rounded-none" />
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-hairline px-4 py-3 sm:px-5">
+          <div className="space-y-1 border-b border-hairline px-4 py-3 sm:px-5">
             {meta.length > 0 && (
-              <p className="text-xs font-medium text-ink-muted">{meta.join(' · ')}</p>
+              <p className="text-[13px] font-semibold text-ink">{meta.join('  ·  ')}</p>
             )}
             {dish.prep_time_minutes ? (
-              <p className="flex items-baseline gap-2 text-xs text-ink-subtle">
-                {t('kitchen.glance.prepTime')}
-                <span className="tnum font-mono text-base font-semibold text-ink">
+              <p className="flex items-baseline gap-2 text-[13px] font-semibold text-ink-muted">
+                {t('kitchen.sheet.prepTime')}
+                <span className="tnum font-mono text-lg font-semibold text-ink">
                   {t('kitchen.glance.minutes', { n: dish.prep_time_minutes })}
                 </span>
               </p>
@@ -119,7 +119,7 @@ export function KitchenDishPage() {
           {dish.ingredients.length === 0 ? (
             <p className="px-4 py-6 text-sm text-ink-subtle sm:px-5">{t('kitchen.sheet.noIngredients')}</p>
           ) : (
-            <table className="w-full text-[15px]">
+            <table className="w-full text-[15px] lg:text-base">
               <thead>
                 <tr className="text-[11px] uppercase tracking-[0.08em] text-ink-subtle">
                   <th scope="col" className="px-4 pb-2 pt-3.5 text-start font-semibold sm:ps-5">
@@ -136,14 +136,14 @@ export function KitchenDishPage() {
               <tbody className="divide-y divide-hairline border-t border-hairline">
                 {dish.ingredients.map((i) => (
                   <tr key={i.id ?? i.item_sku}>
-                    <td className="px-4 py-2.5 text-ink sm:ps-5">
+                    <td className="px-4 py-2 text-ink sm:ps-5">
                       {i.item_name_snapshot}
                       {i.prep_note && <span className="text-ink-subtle"> · {i.prep_note}</span>}
                     </td>
-                    <td className="tnum whitespace-nowrap px-3 py-2.5 text-end font-mono font-medium text-ink">
+                    <td className="tnum whitespace-nowrap px-3 py-2 text-end font-mono font-semibold text-ink">
                       {i.quantity} {i.unit_detail?.code ?? ''}
                     </td>
-                    <td className="tnum whitespace-nowrap px-4 py-2.5 font-mono text-[13px] text-ink-subtle sm:pe-5">
+                    <td className="tnum whitespace-nowrap px-4 py-2 font-mono text-[13px] text-ink-muted sm:pe-5">
                       {i.item_sku}
                     </td>
                   </tr>
@@ -154,51 +154,58 @@ export function KitchenDishPage() {
         </section>
 
         {/* right — how to make it */}
-        <div className="space-y-5">
-          <Card elevated>
-            <CardHeader title={t('kitchen.sheet.method')} />
-            <CardBody>
-              {dish.steps.length === 0 ? (
-                <p className="text-sm text-ink-subtle">{t('kitchen.sheet.noSteps')}</p>
-              ) : (
-                <ol className="space-y-4">
-                  {dish.steps.map((s) => (
-                    <li key={s.id ?? s.step_number} className="flex gap-3.5">
-                      <span className="spice-rail flex h-7 w-7 flex-none items-center justify-center rounded-full font-mono text-xs font-semibold text-white">
-                        {s.step_number}
-                      </span>
-                      <p className="pt-0.5 text-base leading-relaxed text-ink">{s.instruction}</p>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </CardBody>
-          </Card>
-          <NutritionPanel nutrition={nutrition} />
-        </div>
+        <section className="rounded-card border border-hairline bg-surface-raised px-5 py-5 shadow-e2 lg:px-7 lg:py-6">
+          <h2 className="mb-4 border-b border-hairline pb-3 font-display text-xl font-medium tracking-tight text-ink lg:text-[1.4rem]">
+            {t('kitchen.sheet.method')}
+          </h2>
+          {dish.steps.length === 0 ? (
+            <p className="text-sm text-ink-subtle">{t('kitchen.sheet.noSteps')}</p>
+          ) : (
+            <ol className="space-y-3.5">
+              {dish.steps.map((s) => (
+                <li key={s.id ?? s.step_number} className="flex gap-3.5">
+                  <span className="spice-rail flex h-7 w-7 flex-none items-center justify-center rounded-full font-mono text-xs font-semibold text-white">
+                    {s.step_number}
+                  </span>
+                  <p className="pt-0.5 text-base leading-relaxed text-ink lg:text-[17px]">{s.instruction}</p>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
       </div>
 
-      {/* the finale — full width for the standard + the plating photo(s) */}
-      <div className="mt-6 space-y-6">
+      {/* below the sheet — full width for the standard + the plating photo(s) */}
+      <div className="mt-5 space-y-5">
         {dish.standard && hasStandardContent(dish.standard) && (
           <StandardCard std={dish.standard} t={t} title={t('kitchen.standard.title')} />
         )}
         {id && <PlatingPanel dishId={id} canEdit={false} />}
+        <div className="min-[680px]:w-1/2 min-[680px]:pe-2.5">
+          <NutritionPanel nutrition={nutrition} />
+        </div>
       </div>
-    </Page>
+    </Sheet>
   )
+}
+
+/* Edge-to-edge page frame: the shell drops its sidebar on this route, and the
+ * sheet uses the width — `Page`'s reading-width cap would waste a landscape
+ * iPad. */
+function Sheet({ children }: { children: ReactNode }) {
+  return <div className="stagger mx-auto w-full max-w-[1500px] px-3 py-3 sm:px-5 sm:py-4">{children}</div>
 }
 
 function DetailSkeleton() {
   return (
-    <Page>
-      <div className="grid gap-5 min-[680px]:grid-cols-2 min-[680px]:items-start">
+    <Sheet>
+      <div className="grid gap-4 min-[680px]:grid-cols-2 min-[680px]:items-start lg:gap-5">
         <div className="space-y-4">
           <Skeleton className="aspect-[4/3] w-full rounded-card" />
           <Skeleton className="h-64" />
         </div>
         <Skeleton className="h-96" />
       </div>
-    </Page>
+    </Sheet>
   )
 }
