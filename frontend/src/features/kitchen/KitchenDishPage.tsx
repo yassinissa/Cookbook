@@ -63,7 +63,7 @@ export function KitchenDishPage() {
         </Button>
       </div>
 
-      <div className="grid gap-5 md:grid-cols-2 md:items-start">
+      <div className="grid gap-5 min-[680px]:grid-cols-2 min-[680px]:items-start">
         {/* left — what it is and what goes in it */}
         <section className="card-lit relative overflow-hidden rounded-card border border-hairline">
           <span aria-hidden className="spice-rail-h absolute inset-x-0 top-0 h-1" />
@@ -192,7 +192,7 @@ export function KitchenDishPage() {
 function DetailSkeleton() {
   return (
     <Page>
-      <div className="grid gap-5 md:grid-cols-2 md:items-start">
+      <div className="grid gap-5 min-[680px]:grid-cols-2 min-[680px]:items-start">
         <div className="space-y-4">
           <Skeleton className="aspect-[4/3] w-full rounded-card" />
           <Skeleton className="h-64" />
