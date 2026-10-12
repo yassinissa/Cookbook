@@ -56,6 +56,28 @@ def _entry(kind, log):
     }
 
 
+def scoped_log_querysets(access, kind=None):
+    """[(kind, queryset)] of the log rows this caller may see: dish activity
+    within their branches, production activity within their prep kitchens and
+    only with `production.view`. Shared with the recipe change feed."""
+    out = []
+    if kind in (None, 'dish'):
+        dish_qs = DishRecipeActivityLog.objects.select_related('recipe', 'recipe__branch_ref')
+        if not access.is_superuser and access.scope.branch_ids is not ALL:
+            ids = list(access.scope.branch_ids)
+            dish_qs = dish_qs.filter(recipe__branch_ref_id__in=ids) if ids else dish_qs.none()
+        out.append(('dish', dish_qs))
+    if kind in (None, 'production') and access.can('production.view'):
+        prod_qs = ProductionRecipeActivityLog.objects.select_related(
+            'recipe', 'recipe__prep_kitchen_ref')
+        if not access.is_superuser and access.scope.prep_kitchen_ids is not ALL:
+            ids = list(access.scope.prep_kitchen_ids)
+            prod_qs = (prod_qs.filter(recipe__prep_kitchen_ref_id__in=ids) if ids
+                       else prod_qs.none())
+        out.append(('production', prod_qs))
+    return out
+
+
 class ActivityFeedView(APIView):
     permission_classes = [capability_required(default='activity.view')]
 
@@ -103,25 +125,10 @@ class ActivityFeedView(APIView):
         rows = []
         actors = set()
 
-        if kind in (None, 'dish'):
-            dish_qs = DishRecipeActivityLog.objects.select_related('recipe', 'recipe__branch_ref')
-            if not access.is_superuser and access.scope.branch_ids is not ALL:
-                ids = list(access.scope.branch_ids)
-                dish_qs = dish_qs.filter(recipe__branch_ref_id__in=ids) if ids else dish_qs.none()
-            dish_qs = apply_common(dish_qs)
-            actors |= set(dish_qs.exclude(changed_by='').values_list('changed_by', flat=True))
-            rows += [('dish', log) for log in dish_qs]
-
-        if kind in (None, 'production') and access.can('production.view'):
-            prod_qs = ProductionRecipeActivityLog.objects.select_related(
-                'recipe', 'recipe__prep_kitchen_ref')
-            if not access.is_superuser and access.scope.prep_kitchen_ids is not ALL:
-                ids = list(access.scope.prep_kitchen_ids)
-                prod_qs = (prod_qs.filter(recipe__prep_kitchen_ref_id__in=ids) if ids
-                           else prod_qs.none())
-            prod_qs = apply_common(prod_qs)
-            actors |= set(prod_qs.exclude(changed_by='').values_list('changed_by', flat=True))
-            rows += [('production', log) for log in prod_qs]
+        for kind_, qs in scoped_log_querysets(access, kind):
+            qs = apply_common(qs)
+            actors |= set(qs.exclude(changed_by='').values_list('changed_by', flat=True))
+            rows += [(kind_, log) for log in qs]
 
         rows.sort(key=lambda t: t[1].created_at, reverse=True)
 

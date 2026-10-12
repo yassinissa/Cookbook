@@ -41,6 +41,7 @@ export const qk = {
   plating: ['plating'] as const,
   platingGuide: (dishId: string) => ['plating', dishId] as const,
   activity: (params: Record<string, unknown>) => ['activity', params] as const,
+  recipeChanges: (params: Record<string, unknown>) => ['recipe-changes', params] as const,
   production: ['production'] as const,
   productionRecipe: (id: string) => ['production', id] as const,
   productionVersions: (id: string) => ['production', id, 'versions'] as const,

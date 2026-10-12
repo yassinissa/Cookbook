@@ -164,8 +164,14 @@ class RecipeViewSetBase(
     def recalculate(self, request, pk=None):
         """Recompute cost from current item prices + conversions and persist."""
         recipe = self.get_object()
+        old = {'cost': recipe.cost, 'labor_cost': recipe.labor_cost}
         apply_cost(recipe)
         recipe.save(update_fields=['cost', 'labor_cost', 'cost_breakdown'])
+        # an adjustment, never a version: the recipe is the same, its cost moved
+        recipe._recalc_changes = {'fields': [
+            {'field': f, 'from': str(old[f]), 'to': str(getattr(recipe, f))}
+            for f in old if old[f] != getattr(recipe, f)
+        ]}
         self._snapshot_and_log_recalculate(recipe, request)
         return self._response_with_warnings(recipe)
 
@@ -210,6 +216,9 @@ class RecipeViewSetBase(
     def versions(self, request, pk=None):
         recipe = self.get_object()
         rows = self._lineage(recipe)
+        # who made each version, and when — the change log sits on the live row
+        live = next((r for r in rows if r.is_current), recipe)
+        made = {l.version: l for l in live.activity_log.filter(is_new_version=True).order_by('-created_at')}
         out = []
         for i, row in enumerate(rows):
             entry = {
@@ -224,6 +233,8 @@ class RecipeViewSetBase(
                 'output_qty': str(row.output_qty) if getattr(row, 'output_qty', None) is not None else None,
                 'created_at': row.created_at,
                 'updated_at': row.updated_at,
+                'changed_by': made[row.version].changed_by if row.version in made else None,
+                'changed_at': made[row.version].created_at if row.version in made else None,
                 'changes_from_previous': diff_summary(rows[i - 1], row) if i else None,
             }
             out.append(entry)
@@ -281,6 +292,7 @@ class DishRecipeViewSet(ScopedQuerySetMixin, RecipeViewSetBase):
         DishPriceHistory.objects.create(dish_recipe=recipe, cost=recipe.cost, selling_price=recipe.selling_price)
         DishRecipeActivityLog.objects.create(
             recipe=recipe, action_type=ActivityActionType.RECALCULATED, changed_by=request.user.username,
+            changes=recipe._recalc_changes, version=recipe.version,
         )
 
     def _publish_to_inventory(self, recipe):
@@ -290,6 +302,7 @@ class DishRecipeViewSet(ScopedQuerySetMixin, RecipeViewSetBase):
         DishRecipeActivityLog.objects.create(
             recipe=recipe, action_type=ActivityActionType.PUBLISHED, changed_by=request.user.username,
             description=f'Pushed to inventory-platform (#{recipe.inventory_recipe_id})',
+            version=recipe.version,
         )
 
 
@@ -320,6 +333,7 @@ class ProductionRecipeViewSet(ScopedQuerySetMixin, RecipeViewSetBase):
         ProductionCostHistory.objects.create(production_recipe=recipe, cost=recipe.cost, output_qty=recipe.output_qty)
         ProductionRecipeActivityLog.objects.create(
             recipe=recipe, action_type=ActivityActionType.RECALCULATED, changed_by=request.user.username,
+            changes=recipe._recalc_changes, version=recipe.version,
         )
 
     def _publish_to_inventory(self, recipe):
@@ -329,6 +343,7 @@ class ProductionRecipeViewSet(ScopedQuerySetMixin, RecipeViewSetBase):
         ProductionRecipeActivityLog.objects.create(
             recipe=recipe, action_type=ActivityActionType.PUBLISHED, changed_by=request.user.username,
             description=f'Pushed to inventory-platform (#{recipe.inventory_recipe_id})',
+            version=recipe.version,
         )
 
 

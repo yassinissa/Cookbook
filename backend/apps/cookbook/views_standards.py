@@ -19,6 +19,7 @@ from apps.accounts.permissions import ScopedQuerySetMixin, capability_required
 from .models import (
     Approver, DishRecipe, DishStandard, DishRecipeActivityLog, ActivityActionType,
 )
+from .versioning import model_values, side_record_changes
 from .serializers.standards import (
     DishStandardListSerializer, DishStandardDetailSerializer, DishStandardWriteSerializer,
 )
@@ -52,16 +53,17 @@ class DishStandardViewSet(
     def _changed_by(self):
         return getattr(getattr(self.request, 'user', None), 'username', '') or ''
 
-    def _log(self, dish, action_type, description=''):
+    def _log(self, dish, action_type, description='', changes=None):
         DishRecipeActivityLog.objects.create(
             recipe=dish, action_type=action_type, description=description,
-            changed_by=self._changed_by(),
+            changed_by=self._changed_by(), changes=changes or {}, version=dish.version,
         )
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         dish = self.get_object()
         existing = getattr(dish, 'standard', None)
+        before = model_values(existing)
         serializer = self.get_serializer(existing, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         std = serializer.save(dish_recipe=dish)
@@ -70,6 +72,7 @@ class DishStandardViewSet(
         self._log(
             dish, ActivityActionType.STANDARD_UPDATED,
             'QA standard created' if created else 'QA standard revised',
+            changes=side_record_changes('standard', before, model_values(std)),
         )
         dish.refresh_from_db()
         out = DishStandardDetailSerializer(dish, context=self.get_serializer_context())

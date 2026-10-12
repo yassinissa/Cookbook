@@ -315,11 +315,8 @@ export function ProductionEditorPage() {
                     onChange={(e) => set('recipe_code', e.target.value)}
                   />
                 </Field>
-                <Field label={t('editor.field.revision')} error={err('revision')}>
-                  <Input
-                    value={form.revision}
-                    onChange={(e) => set('revision', e.target.value)}
-                  />
+                <Field label={t('editor.field.revision')} help={t('editor.help.revision')} error={err('revision')}>
+                  <Input value={form.revision || 'Rev.01'} readOnly className="font-mono text-ink-muted" />
                 </Field>
                 <Field
                   label={t('production.field.kitchen')}

@@ -58,6 +58,15 @@ class DishRecipeActivityLog(BaseModel):
     action_type = models.CharField(max_length=20, choices=ActivityActionType.choices)
     description = models.TextField(blank=True)
     changed_by  = models.CharField(max_length=255, blank=True, help_text='Cookbook username who made the change.')
+    # What the action actually changed — a `versioning.diff_states()` record
+    # (fields from/to, ingredient lines added/removed/changed, steps,
+    # allergens). Empty for actions with nothing to itemise (publish, QA).
+    changes     = models.JSONField(default=dict, blank=True)
+    # The recipe's version once this action was applied, and whether the
+    # action is what created that version. An edit that leaves the version
+    # alone is an *adjustment* (price, name, notes ...).
+    version        = models.PositiveIntegerField(null=True, blank=True)
+    is_new_version = models.BooleanField(default=False)
 
     def __str__(self):
         return f'{self.recipe.name_en}: {self.get_action_type_display()} @ {self.created_at:%Y-%m-%d %H:%M}'
@@ -68,6 +77,15 @@ class ProductionRecipeActivityLog(BaseModel):
     action_type = models.CharField(max_length=20, choices=ActivityActionType.choices)
     description = models.TextField(blank=True)
     changed_by  = models.CharField(max_length=255, blank=True, help_text='Cookbook username who made the change.')
+    # What the action actually changed — a `versioning.diff_states()` record
+    # (fields from/to, ingredient lines added/removed/changed, steps,
+    # allergens). Empty for actions with nothing to itemise (publish, QA).
+    changes     = models.JSONField(default=dict, blank=True)
+    # The recipe's version once this action was applied, and whether the
+    # action is what created that version. An edit that leaves the version
+    # alone is an *adjustment* (price, name, notes ...).
+    version        = models.PositiveIntegerField(null=True, blank=True)
+    is_new_version = models.BooleanField(default=False)
 
     def __str__(self):
         return f'{self.recipe.name_en}: {self.get_action_type_display()} @ {self.created_at:%Y-%m-%d %H:%M}'

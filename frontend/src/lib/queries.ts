@@ -110,6 +110,18 @@ export function useActivity(params: import('@/types/api').ActivityQuery) {
   })
 }
 
+/** Recipe change history. Always refetched on mount — it is an audit trail,
+ *  and a save elsewhere must show up the next time it is opened. */
+export function useRecipeChanges(params: import('@/types/api').RecipeChangeQuery, enabled = true) {
+  return useQuery({
+    queryKey: qk.recipeChanges(params as Record<string, unknown>),
+    queryFn: () => api.fetchRecipeChanges(params),
+    placeholderData: (prev) => prev,
+    staleTime: 0,
+    enabled,
+  })
+}
+
 export function useDishStandards(enabled = true) {
   return useQuery({ queryKey: qk.standards, queryFn: api.fetchDishStandards, enabled })
 }

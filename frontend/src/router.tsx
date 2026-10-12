@@ -20,6 +20,7 @@ import { StandardsListPage } from '@/features/standards/StandardsListPage'
 import { StandardDetailPage } from '@/features/standards/StandardDetailPage'
 import { StandardEditorPage } from '@/features/standards/StandardEditorPage'
 import { ActivityPage } from '@/features/activity/ActivityPage'
+import { RecipeChangesPage } from '@/features/changes/RecipeChangesPage'
 import { MenuListPage } from '@/features/menus/MenuListPage'
 import { MenuDetailPage } from '@/features/menus/MenuDetailPage'
 import { UsersPage } from '@/features/admin/UsersPage'
@@ -98,6 +99,7 @@ export const router = createBrowserRouter([
           { path: '/inventory', ...cap('inventory.view', <InventoryListPage />) },
           { path: '/labels/:itemId', ...cap('inventory.view', <LabelSheetPage />) },
           { path: '/activity', ...cap('activity.view', <ActivityPage />) },
+          { path: '/recipe-changes', ...cap('recipe.history', <RecipeChangesPage />) },
           { path: '/documents', ...cap('document.export', <DocumentsHubPage />) },
           { path: '/documents/recipe-card', ...cap('document.export', <RecipeCardPage />) },
           { path: '/documents/station-pack', ...cap('document.export', <StationPackPage />) },

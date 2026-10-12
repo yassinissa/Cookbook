@@ -326,8 +326,8 @@ export function DishEditorPage() {
                 <Field label={t('editor.field.code')} help={t('editor.help.code')} error={err('recipe_code')}>
                   <Input value={form.recipe_code} onChange={(e) => set('recipe_code', e.target.value)} />
                 </Field>
-                <Field label={t('editor.field.revision')} error={err('revision')}>
-                  <Input value={form.revision} onChange={(e) => set('revision', e.target.value)} />
+                <Field label={t('editor.field.revision')} help={t('editor.help.revision')} error={err('revision')}>
+                  <Input value={form.revision || 'Rev.01'} readOnly className="font-mono text-ink-muted" />
                 </Field>
                 <Field label={t('editor.field.branchRef')} help={t('editor.help.branchRef')} error={err('branch_ref')}>
                   <Select value={form.branch_ref} onChange={(e) => set('branch_ref', e.target.value)}>

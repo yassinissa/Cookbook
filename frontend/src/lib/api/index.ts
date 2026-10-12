@@ -17,6 +17,8 @@ import {
 import type {
   ActivityFeed,
   ActivityQuery,
+  RecipeChangeFeed,
+  RecipeChangeQuery,
   Branch,
   Dashboard,
   DigestSubscription,
@@ -523,6 +525,20 @@ export async function fetchActivity(params: ActivityQuery): Promise<ActivityFeed
     if (v !== undefined && v !== '' && v !== null) clean[k] = v as string | number
   }
   const { data } = await http.get<ActivityFeed>('/cookbook/activity/', { params: clean })
+  return data
+}
+
+/* ── recipe change history ────────────────────────────────────────── */
+export async function fetchRecipeChanges(params: RecipeChangeQuery): Promise<RecipeChangeFeed> {
+  if (USE_SEED) {
+    await delay(200)
+    return seed.seedRecipeChanges(params)
+  }
+  const clean: Record<string, string | number> = {}
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== '' && v !== null) clean[k] = v as string | number
+  }
+  const { data } = await http.get<RecipeChangeFeed>('/cookbook/recipe-changes/', { params: clean })
   return data
 }
 

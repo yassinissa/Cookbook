@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import serializers
 
 from apps.accounts.access import ALL, access_for
@@ -6,7 +7,10 @@ from apps.cookbook.models import (
     ProductionCostHistory, ProductionRecipeActivityLog, ActivityActionType,
 )
 from apps.cookbook.services import apply_cost
-from apps.cookbook.versioning import archive_current_version, edit_is_a_new_version
+from apps.cookbook.versioning import (
+    EMPTY_STATE, archive_current_version, diff_states, edit_is_a_new_version, has_changes,
+    recipe_state, version_code,
+)
 from .reference import SectionSerializer, ApproverSerializer, UnitScaleSerializer
 from .mixins import HidesCostingFields
 from .ingredient_lines import clean_ingredient_lines
@@ -166,22 +170,27 @@ class ProductionRecipeWriteSerializer(serializers.ModelSerializer):
     def _snapshot_cost(self, recipe):
         ProductionCostHistory.objects.create(production_recipe=recipe, cost=recipe.cost, output_qty=recipe.output_qty)
 
-    def _log(self, recipe, action_type, description=''):
+    def _log(self, recipe, action_type, description='', changes=None, is_new_version=False):
         ProductionRecipeActivityLog.objects.create(
             recipe=recipe, action_type=action_type, description=description, changed_by=self._changed_by(),
+            changes=changes or {}, version=recipe.version, is_new_version=is_new_version,
         )
 
     def create(self, validated_data):
         ingredient_data = validated_data.pop('ingredients', [])
         step_data       = validated_data.pop('steps', [])
 
-        recipe = ProductionRecipe(**validated_data)
+        # the version code is the system's to assign, never the client's
+        validated_data.pop('revision_date', None)
+        validated_data['revision'] = version_code(1)
+        recipe = ProductionRecipe(revision_date=timezone.localdate(), **validated_data)
         apply_cost(recipe, ingredient_data)
         recipe.save()
         self._save_ingredients(recipe, ingredient_data)
         self._save_steps(recipe, step_data)
         self._snapshot_cost(recipe)
-        self._log(recipe, ActivityActionType.CREATED)
+        self._log(recipe, ActivityActionType.CREATED, is_new_version=True,
+                  changes=diff_states(EMPTY_STATE, recipe_state(recipe)))
         return recipe
 
     def update(self, instance, validated_data):
@@ -189,11 +198,16 @@ class ProductionRecipeWriteSerializer(serializers.ModelSerializer):
         step_data       = validated_data.pop('steps', None)
 
         old_cost, old_qty = instance.cost, instance.output_qty
+        before = recipe_state(instance)
 
         versioned = edit_is_a_new_version(instance, validated_data, ingredient_data, step_data)
+        validated_data.pop('revision', None)
+        validated_data.pop('revision_date', None)
         if versioned:
             archive_current_version(instance)
             instance.version = (instance.version or 1) + 1
+            instance.revision = version_code(instance.version)
+            instance.revision_date = timezone.localdate()
 
         for attr, val in validated_data.items():
             setattr(instance, attr, val)
@@ -212,6 +226,14 @@ class ProductionRecipeWriteSerializer(serializers.ModelSerializer):
 
         if instance.cost != old_cost or instance.output_qty != old_qty:
             self._snapshot_cost(instance)
-        self._log(instance, ActivityActionType.UPDATED,
-                  f'Revised to v{instance.version}' if versioned else '')
+
+        # the view's prefetch predates this save — drop it so the response
+        # (and the change record) read the lines as they are now
+        instance._prefetched_objects_cache = {}
+        changes = diff_states(before, recipe_state(instance))
+        # a save that changed nothing leaves no entry in the change log
+        if versioned or has_changes(changes):
+            self._log(instance, ActivityActionType.UPDATED,
+                      f'Revised to v{instance.version}' if versioned else '',
+                      changes=changes, is_new_version=versioned)
         return instance

@@ -618,6 +618,7 @@ export interface VersionSummary {
   ingredients_changed: number
   steps_added: number
   steps_removed: number
+  steps_changed?: number
 }
 export interface VersionRow {
   id: ID
@@ -631,18 +632,33 @@ export interface VersionRow {
   output_qty: string | null
   created_at: string
   updated_at: string
+  /** who made this version, from the change log (null for pre-log versions) */
+  changed_by?: string | null
+  changed_at?: string | null
   changes_from_previous: VersionSummary | null
 }
-export interface VersionDiff {
-  from: { id: ID; version: number }
-  to: { id: ID; version: number }
+/** An itemised before → after record: what one save (or one version step)
+ *  changed. Side-record edits (QA standard, plating) carry `fields` only. */
+export interface RecipeChangeSet {
   fields: { field: string; from: string | null; to: string | null }[]
-  ingredients: {
+  ingredients?: {
     added: IngredientSummary[]
     removed: IngredientSummary[]
-    changed: { label: string; from: IngredientSummary; to: IngredientSummary }[]
+    changed: { label: string; from: IngredientSummary; to: IngredientSummary; changed?: string[] }[]
+    reordered?: boolean
   }
-  steps: { added: string[]; removed: string[]; count_from: number; count_to: number }
+  steps?: {
+    added: string[]
+    removed: string[]
+    changed?: { n: number; from: string; to: string }[]
+    count_from: number
+    count_to: number
+  }
+  allergens?: { added: string[]; removed: string[] }
+}
+export interface VersionDiff extends RecipeChangeSet {
+  from: { id: ID; version: number }
+  to: { id: ID; version: number }
 }
 export interface IngredientSummary {
   item_sku: string
@@ -650,6 +666,44 @@ export interface IngredientSummary {
   prep_note: string
   quantity: string
   unit: string | null
+  alt_item_sku?: string
+  alt_item_name_snapshot?: string
+}
+
+/* ── recipe change history ──────────────────────────────────────────── */
+export interface RecipeChangeEntry extends ActivityEntry {
+  changed_by_name: string | null
+  /** the recipe's version once this change was applied */
+  version: number | null
+  /** true → this change created that version; false → an adjustment */
+  is_new_version: boolean
+  changes: RecipeChangeSet | null
+  /** rebuilt from archived snapshots (entry predates the itemised log) */
+  changes_reconstructed: boolean
+  summary: VersionSummary
+}
+export interface RecipeChangeFeed {
+  count: number
+  page: number
+  page_size: number
+  num_pages: number
+  /** how many of the matching entries are new versions */
+  versions: number
+  results: RecipeChangeEntry[]
+  actors: { username: string; name: string }[]
+}
+export interface RecipeChangeQuery {
+  page?: number
+  page_size?: number
+  kind?: string
+  type?: string
+  actor?: string
+  recipe?: string
+  q?: string
+  date_from?: string
+  date_to?: string
+  /** '1' → include publish / QA / plating events (per-recipe timeline) */
+  all?: string
 }
 
 /* ── menus ─────────────────────────────────────────────────────────── */

@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from apps.accounts.permissions import ScopedQuerySetMixin, capability_required
 
 from .models import DishRecipe, DishRecipeActivityLog, ActivityActionType
+from .versioning import model_values, side_record_changes
 from .serializers.plating import (
     PlatingGuideListSerializer, PlatingGuideDetailSerializer, PlatingGuideWriteSerializer,
 )
@@ -50,15 +51,17 @@ class PlatingGuideViewSet(
         partial = kwargs.pop('partial', False)
         dish = self.get_object()
         existing = getattr(dish, 'plating', None)
+        before = model_values(existing)
         serializer = self.get_serializer(existing, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
-        serializer.save(dish_recipe=dish)
+        guide = serializer.save(dish_recipe=dish)
 
         created = existing is None
         DishRecipeActivityLog.objects.create(
             recipe=dish, action_type=ActivityActionType.PLATING_UPDATED,
             description='Plating guide created' if created else 'Plating guide revised',
-            changed_by=self._changed_by(),
+            changed_by=self._changed_by(), version=dish.version,
+            changes=side_record_changes('plating', before, model_values(guide)),
         )
         dish.refresh_from_db()
         out = PlatingGuideDetailSerializer(dish, context=self.get_serializer_context())

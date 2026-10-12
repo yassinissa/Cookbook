@@ -14,6 +14,9 @@ import type {
   NutritionRollup,
   ActivityFeed,
   ActivityQuery,
+  RecipeChangeEntry,
+  RecipeChangeFeed,
+  RecipeChangeQuery,
   DishStandardDetail,
   DishStandardListItem,
   ProductionRecipeDetail,
@@ -1082,6 +1085,98 @@ export function seedActivityFeed(params: ActivityQuery): ActivityFeed {
     }),
     actors: Array.from(new Set(ALL_ACTIVITY.map((r) => r.changed_by))).sort(),
     action_types: ACTIVITY_ACTIONS,
+  }
+}
+
+/* ── recipe change history ────────────────────────────────────────── */
+const EMPTY_SUMMARY = {
+  fields_changed: [], ingredients_added: 0, ingredients_removed: 0,
+  ingredients_changed: 0, steps_added: 0, steps_removed: 0, steps_changed: 0,
+}
+const ACTOR_NAMES: Record<string, string> = {
+  nadia: 'Nadia Haddad', omar: 'Omar Khalil', karim: 'Karim Saab', lina: 'Lina Aoun', yassin: 'Yassin Issa',
+}
+
+function seedChangeEntry(r: SeedActivity): RecipeChangeEntry {
+  const { ts, ...rest } = r
+  const base = {
+    ...rest,
+    action_display: ACTIVITY_ACTIONS.find((a) => a.value === r.action)?.label ?? r.action,
+    changed_by_name: ACTOR_NAMES[r.changed_by] ?? null,
+    created_at: new Date(ts).toISOString(),
+    changes_reconstructed: false,
+  }
+  if (r.action === 'created')
+    return { ...base, version: 1, is_new_version: true, changes: null, summary: EMPTY_SUMMARY }
+  if (r.action === 'updated' && r.description.startsWith('Revised')) {
+    const { from: _f, to: _t, ...changes } = r.kind === 'dish' ? seedDiff() : seedProductionDiff()
+    return {
+      ...base, version: 2, is_new_version: true, changes,
+      summary: {
+        ...EMPTY_SUMMARY,
+        fields_changed: changes.fields.map((f) => f.field),
+        ingredients_added: changes.ingredients?.added.length ?? 0,
+        ingredients_removed: changes.ingredients?.removed.length ?? 0,
+        ingredients_changed: changes.ingredients?.changed.length ?? 0,
+        steps_added: changes.steps?.added.length ?? 0,
+        steps_removed: changes.steps?.removed.length ?? 0,
+      },
+    }
+  }
+  if (r.action === 'updated') {
+    const fields = [
+      { field: 'selling_price', from: '2.750', to: '2.900' },
+      { field: 'notes', from: null, to: 'Price aligned with the summer menu.' },
+    ]
+    return {
+      ...base, version: 1, is_new_version: false, changes: { fields },
+      summary: { ...EMPTY_SUMMARY, fields_changed: fields.map((f) => f.field) },
+    }
+  }
+  if (r.action === 'recalculated') {
+    const fields = [{ field: 'cost', from: '0.792', to: '0.831' }]
+    return {
+      ...base, version: 1, is_new_version: false, changes: { fields },
+      summary: { ...EMPTY_SUMMARY, fields_changed: ['cost'] },
+    }
+  }
+  return { ...base, version: 1, is_new_version: false, changes: null, summary: EMPTY_SUMMARY }
+}
+
+export function seedRecipeChanges(params: RecipeChangeQuery): RecipeChangeFeed {
+  const pageSize = params.page_size ?? 30
+  const page = Math.max(1, params.page ?? 1)
+  const from = params.date_from ? Date.parse(`${params.date_from}T00:00:00Z`) : null
+  const to = params.date_to ? Date.parse(`${params.date_to}T23:59:59Z`) : null
+  const q = (params.q ?? '').trim().toLowerCase()
+  const isVersion = (r: SeedActivity) =>
+    r.action === 'created' || (r.action === 'updated' && r.description.startsWith('Revised'))
+
+  let rows = ALL_ACTIVITY
+  if (params.all !== '1')
+    rows = rows.filter((r) => ['created', 'updated', 'recalculated'].includes(r.action))
+  if (params.kind) rows = rows.filter((r) => r.kind === params.kind)
+  if (params.type === 'version') rows = rows.filter(isVersion)
+  if (params.type === 'adjustment') rows = rows.filter((r) => !isVersion(r))
+  if (params.recipe) rows = rows.filter((r) => r.recipe_id === params.recipe)
+  if (q)
+    rows = rows.filter(
+      (r) => r.recipe_name.toLowerCase().includes(q) || r.recipe_code.toLowerCase().includes(q),
+    )
+  if (from !== null) rows = rows.filter((r) => r.ts >= from)
+  if (to !== null) rows = rows.filter((r) => r.ts <= to)
+  const actors = Array.from(new Set(rows.map((r) => r.changed_by))).sort()
+  if (params.actor) rows = rows.filter((r) => r.changed_by === params.actor)
+
+  const start = (page - 1) * pageSize
+  return {
+    count: rows.length,
+    page,
+    page_size: pageSize,
+    num_pages: Math.max(1, Math.ceil(rows.length / pageSize)),
+    versions: rows.filter(isVersion).length,
+    results: rows.slice(start, start + pageSize).map(seedChangeEntry),
+    actors: actors.map((a) => ({ username: a, name: ACTOR_NAMES[a] ?? a })),
   }
 }
 

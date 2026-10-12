@@ -56,7 +56,35 @@ before calling anything done — not just "the happy path returns 200."
     branch-scoped, production prep-kitchen-scoped + `production.view`-gated;
     the dashboard's `recent_activity` is a small unfiltered slice of the
     same data).
-  - **Recipe publish** (`publishing.py`): a `recipe.publish`-gated
+  - **Recipe change history vs. versions** (2026-10-12): two distinct things.
+    A **version** is created when (owner's rule, 2026-10-12) the category,
+    selling price, item name / description (`name_en`, `name_ar`,
+    `taste_profile`), or the ingredients + quantities change — plus method
+    steps and yield (`versioning._VERSIONED_FIELDS` + the line compare in
+    `edit_is_a_new_version`; a pure ingredient re-order is not a version).
+    Each new version gets a system-assigned **version code**
+    (`versioning.version_code` → `Rev.01`, `Rev.02` …) stored in `revision`
+    with `revision_date` = today; the write serializers ignore any
+    client-sent `revision`, and the editors show it read-only. Everything else
+    (station, prep time, waste %, notes, approvals, photo, allergens, a cost
+    recalculation) is an **adjustment**: no version bump, but logged with the
+    same detail. Every save writes an itemised before → after record onto the
+    existing `*ActivityLog` row — `changes` (JSON from
+    `versioning.diff_states(recipe_state(before), recipe_state(after))`:
+    `fields` from/to, `ingredients` added/removed/changed/reordered, `steps`
+    added/removed/changed, `allergens`), `version`, `is_new_version`
+    (migration `0029`, which also backfills `version` from the old
+    "Revised to vN" descriptions). A save that changes nothing writes no row.
+    QA-standard and plating edits record `standard.<field>` / `plating.<field>`
+    rows via `side_record_changes`. `GET cookbook/recipe-changes/`
+    (`views_changes.py`, `recipe.history`, same scoping as the activity feed via
+    `views_activity.scoped_log_querysets`, money fields stripped without
+    `costing.view`) filters by `q` (name EN/AR or recipe code) / `type`
+    (`version`|`adjustment`) / `kind` / `actor` / `date_from` / `date_to` /
+    `recipe`; `all=1` adds publish / QA / plating events for a single recipe's
+    timeline. Version rows that predate the log are rebuilt on read from the
+    archived snapshots (`changes_reconstructed`). `versions/` now also returns
+    `changed_by` / `changed_at`. `test_recipe_changes_api.py` pins all of it. a `recipe.publish`-gated
     `POST /cookbook/{dish,production}-recipes/<id>/publish/` action pushes a
     recipe to inventory-platform. Resolves SKU→item id and unit code→unit id
     against a live catalogue pull; unknown SKUs become `warnings`, not
@@ -151,7 +179,20 @@ before calling anything done — not just "the happy path returns 200."
     2026-08-31.
   - **Activity & History** (`src/features/activity`) — one URL-param-driven
     filterable feed (kind / action / actor / date / recipe / search) grouped
-    by day.
+    by day. `feedParts.tsx` holds what it shares with Recipe Changes
+    (`groupByDay`, `FilterField`, `FeedPager`, `FeedSkeleton`, and
+    `useSearchParamInput` — a debounced URL-bound search box; writing each
+    keystroke straight to the search params dropped characters).
+  - **Recipe Changes** (`src/features/changes`, `/recipe-changes`, nav item
+    gated `recipe.history`) — the audit feed for recipe edits: search by
+    recipe name / code, All / New versions / Adjustments, by person, date
+    range. `ChangeEntry` (badge, who, when, one-line summary, disclosure) +
+    `ChangeDetail` (the itemised ingredients / method / allergens / details
+    ledger) are shared with the per-recipe drawer. `VersionDrawer` (the
+    "Recipe history" button on dish + production pages) now has two tabs:
+    **Change history** (that recipe's full timeline incl. publish / QA /
+    plating) and **Versions** (who made each, compare to current — rendered
+    with the same `ChangeDetail`).
   - **Menus** list / branch detail (trend charts, snapshots). The branch
     detail has a **Menu / Specials calendar** tab switch. The calendar
     (`src/features/menus/SpecialsCalendar.tsx` + `PeriodEditor.tsx`) is

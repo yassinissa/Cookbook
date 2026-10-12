@@ -1,22 +1,29 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 
 import { Drawer } from '@/components/Drawer'
 import { Icon } from '@/components/Icon'
 import { IconButton } from '@/components/IconButton'
+import { SegmentedButtons } from '@/components/Page'
 import { Pill } from '@/components/Pill'
-import { ErrorState, LoadingRow } from '@/components/States'
+import { EmptyState, ErrorState, LoadingRow } from '@/components/States'
+import { ChangeDetail, hasChangeDetail } from '@/features/changes/ChangeDetail'
+import { ChangeEntry } from '@/features/changes/ChangeEntry'
 import {
   useDishDiff,
   useDishVersions,
   useProductionDiff,
   useProductionVersions,
+  useRecipeChanges,
 } from '@/lib/queries'
-import { kwd, shortDate } from '@/lib/format'
+import { dateTime, kwd, shortDate } from '@/lib/format'
 import { cn } from '@/lib/cn'
 import { useI18n, type TFunc } from '@/i18n'
-import type { VersionDiff, VersionRow } from '@/types/api'
+import type { RecipeChangeEntry, VersionRow } from '@/types/api'
 
 type RecipeKind = 'dish' | 'production'
+type Tab = 'changes' | 'versions'
+type ChangeFilter = 'all' | 'version' | 'adjustment'
 
 function useVersions(kind: RecipeKind, id: string, enabled: boolean) {
   const dish = useDishVersions(id, enabled && kind === 'dish')
@@ -29,6 +36,14 @@ function useDiff(kind: RecipeKind, id: string, versionId: string) {
   return kind === 'dish' ? dish : prod
 }
 
+/**
+ * A recipe's full history, in two views:
+ *  - **Change history** — every save, recalculation, publish and QA event:
+ *    who, when, and the itemised before → after. New versions and plain
+ *    adjustments are told apart.
+ *  - **Versions** — the numbered revisions of the recipe itself, each
+ *    comparable to the current one.
+ */
 export function VersionDrawer({
   recipeId,
   kind = 'dish',
@@ -41,47 +56,153 @@ export function VersionDrawer({
   onClose: () => void
 }) {
   const { t, locale } = useI18n()
-  const { data: versions, isLoading, isError, refetch } = useVersions(kind, recipeId, open)
-  const [compare, setCompare] = useState<string | null>(null)
+  const [tab, setTab] = useState<Tab>('changes')
+  const versions = useVersions(kind, recipeId, open)
+  // the change log hangs off the live row, even when an archived version is on screen
+  const liveId = versions.data?.find((v) => v.is_current)?.id ?? recipeId
 
   return (
     <Drawer open={open} onClose={onClose} title={t('version.title')} width="lg">
-      {isLoading && <LoadingRow />}
-      {isError && <ErrorState onRetry={() => refetch()} />}
+      <div className="mb-4">
+        <SegmentedButtons
+          label={t('version.title')}
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: 'changes', label: t('change.tab.changes') },
+            { value: 'versions', label: t('change.tab.versions') },
+          ]}
+        />
+      </div>
 
-      {versions && versions.length <= 1 && (
-        <p className="rounded-lg bg-surface-sunken p-4 text-sm text-ink-subtle">
-          {t('version.single')}
-        </p>
+      {tab === 'changes' && (
+        <ChangesTab recipeId={liveId} enabled={open && !versions.isLoading} onNavigate={onClose} />
       )}
 
-      {versions && versions.length > 1 && (
-        <div className="space-y-4">
-          <ol className="relative space-y-3 ps-5">
-            <span className="absolute inset-y-1 start-[7px] w-px bg-hairline" aria-hidden="true" />
-            {[...versions].reverse().map((v) => (
-              <VersionItem
-                key={v.id}
-                v={v}
-                locale={locale}
-                t={t}
-                onCompare={() => setCompare(v.id)}
-                comparing={compare === v.id}
-              />
-            ))}
-          </ol>
-
-          {compare && (
-            <DiffView
-              kind={kind}
-              recipeId={recipeId}
-              versionId={compare}
-              onClear={() => setCompare(null)}
-            />
+      {tab === 'versions' && (
+        <>
+          {versions.isLoading && <LoadingRow />}
+          {versions.isError && <ErrorState onRetry={() => versions.refetch()} />}
+          {versions.data && (
+            <VersionsTab kind={kind} recipeId={recipeId} versions={versions.data} locale={locale} t={t} />
           )}
-        </div>
+        </>
       )}
     </Drawer>
+  )
+}
+
+/* ── change history ───────────────────────────────────────────────── */
+
+function matches(e: RecipeChangeEntry, f: ChangeFilter) {
+  if (f === 'version') return e.is_new_version
+  if (f === 'adjustment') return !e.is_new_version && (e.action === 'updated' || e.action === 'recalculated')
+  return true
+}
+
+function ChangesTab({
+  recipeId,
+  enabled,
+  onNavigate,
+}: {
+  recipeId: string
+  enabled: boolean
+  onNavigate: () => void
+}) {
+  const { t } = useI18n()
+  const [filter, setFilter] = useState<ChangeFilter>('all')
+  const { data, isLoading, isError, refetch } = useRecipeChanges(
+    { recipe: recipeId, all: '1', page_size: 100 },
+    enabled,
+  )
+
+  if (isError) return <ErrorState onRetry={() => refetch()} />
+  if (isLoading || !data) return <LoadingRow />
+  if (data.results.length === 0) return <EmptyState icon="history" title={t('change.emptyRecipe')} />
+
+  const rows = data.results.filter((e) => matches(e, filter))
+  // open the newest entry that has something to show
+  const firstDetailed = rows.find((e) => hasChangeDetail(e.changes) && e.action !== 'created')?.id
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-ink-subtle">{t('change.legend')}</p>
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <SegmentedButtons
+          label={t('change.type.label')}
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { value: 'all', label: t('change.type.all') },
+            { value: 'version', label: t('change.type.version') },
+            { value: 'adjustment', label: t('change.type.adjustment') },
+          ]}
+        />
+        <Link
+          to={`/recipe-changes?recipe=${recipeId}`}
+          onClick={onNavigate}
+          className="inline-flex items-center gap-1 text-2xs font-semibold uppercase tracking-wide text-accent-ink hover:underline"
+        >
+          {t('change.openAll')}
+          <Icon name="arrowRight" size={12} className="rtl:rotate-180" />
+        </Link>
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="rounded-lg bg-surface-sunken p-4 text-sm text-ink-subtle">{t('change.empty')}</p>
+      ) : (
+        <ol className="divide-y divide-hairline overflow-hidden rounded-card border border-hairline">
+          {rows.map((e) => (
+            <ChangeEntry key={`${filter}${e.id}`} e={e} showRecipe={false} defaultOpen={e.id === firstDetailed} />
+          ))}
+        </ol>
+      )}
+    </div>
+  )
+}
+
+/* ── versions ─────────────────────────────────────────────────────── */
+
+function VersionsTab({
+  kind,
+  recipeId,
+  versions,
+  locale,
+  t,
+}: {
+  kind: RecipeKind
+  recipeId: string
+  versions: VersionRow[]
+  locale: 'en' | 'ar'
+  t: TFunc
+}) {
+  const [compare, setCompare] = useState<string | null>(null)
+
+  if (versions.length <= 1) {
+    return <p className="rounded-lg bg-surface-sunken p-4 text-sm text-ink-subtle">{t('version.single')}</p>
+  }
+
+  return (
+    <div className="space-y-4">
+      <ol className="relative space-y-3 ps-5">
+        <span className="absolute inset-y-1 start-[7px] w-px bg-hairline" aria-hidden="true" />
+        {[...versions].reverse().map((v) => (
+          <VersionItem
+            key={v.id}
+            v={v}
+            locale={locale}
+            t={t}
+            onCompare={() => setCompare(v.id)}
+            comparing={compare === v.id}
+          />
+        ))}
+      </ol>
+
+      {compare && (
+        <DiffView kind={kind} recipeId={recipeId} versionId={compare} onClear={() => setCompare(null)} />
+      )}
+    </div>
   )
 }
 
@@ -99,6 +220,21 @@ function VersionItem({
   comparing: boolean
 }) {
   const s = v.changes_from_previous
+  const ingredients =
+    s &&
+    [
+      s.ingredients_added && t('change.sum.added', { n: s.ingredients_added }),
+      s.ingredients_changed && t('change.sum.changed', { n: s.ingredients_changed }),
+      s.ingredients_removed && t('change.sum.removed', { n: s.ingredients_removed }),
+    ].filter(Boolean)
+  const steps =
+    s &&
+    [
+      s.steps_added && t('change.sum.added', { n: s.steps_added }),
+      s.steps_changed && t('change.sum.changed', { n: s.steps_changed }),
+      s.steps_removed && t('change.sum.removed', { n: s.steps_removed }),
+    ].filter(Boolean)
+
   return (
     <li className="relative">
       <span
@@ -109,38 +245,40 @@ function VersionItem({
         aria-hidden="true"
       />
       <div className="flex items-start justify-between gap-2">
-        <div>
+        <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-[13px] font-semibold text-ink">v{v.version}</span>
+            <span className="font-mono text-[13px] font-semibold text-ink">v{v.version}</span>
+            {v.revision && <span className="font-mono text-xs text-ink-subtle">{v.revision}</span>}
             {v.is_current && <Pill tone="accent">{t('version.current')}</Pill>}
             {v.is_viewed && !v.is_current && <Pill>{t('version.viewing')}</Pill>}
           </div>
           <p className="mt-0.5 text-xs text-ink-subtle">
-            {shortDate(v.updated_at, locale)} · {kwd(v.cost)} KWD
+            {v.changed_by && (
+              <span className="font-medium text-ink-muted">{t('change.madeBy', { name: v.changed_by })} · </span>
+            )}
+            {v.changed_at ? dateTime(v.changed_at, locale) : shortDate(v.created_at, locale)}
+            {v.cost !== null && <span className="font-mono tnum"> · {kwd(v.cost)} KWD</span>}
           </p>
-          {s && (
+          {ingredients && ingredients.length > 0 && (
             <p className="mt-1 text-xs text-ink-muted">
-              {[
-                s.fields_changed.length && `${s.fields_changed.length} fields`,
-                s.ingredients_added && `+${s.ingredients_added} ing`,
-                s.ingredients_removed && `−${s.ingredients_removed} ing`,
-                s.ingredients_changed && `${s.ingredients_changed} ing changed`,
-                s.steps_added && `+${s.steps_added} step`,
-              ]
-                .filter(Boolean)
-                .join(' · ')}
+              {t('change.sum.ingredients')}: {ingredients.join(', ')}
+            </p>
+          )}
+          {steps && steps.length > 0 && (
+            <p className="mt-0.5 text-xs text-ink-muted">
+              {t('change.sum.method')}: {steps.join(', ')}
             </p>
           )}
         </div>
         {!v.is_current && (
           <button
             type="button"
+            aria-pressed={comparing}
             onClick={onCompare}
             className={cn(
               'flex-none rounded-md px-2 py-1 text-2xs font-semibold uppercase tracking-wide',
-              comparing
-                ? 'bg-accent text-white'
-                : 'text-accent-ink hover:bg-accent-subtle',
+              'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--focus)]',
+              comparing ? 'bg-accent text-white' : 'text-accent-ink hover:bg-accent-subtle',
             )}
           >
             {t('version.compare')}
@@ -168,102 +306,19 @@ function DiffView({
   return (
     <div className="rounded-card border border-hairline bg-surface-sunken p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-[13px] font-semibold text-ink">
+        <h3 className="font-mono text-[13px] font-semibold text-ink">
           {data ? `v${data.from.version} → v${data.to.version}` : t('version.title')}
         </h3>
         <IconButton label={t('action.close')} icon="close" size={15} className="-me-2" onClick={onClear} />
       </div>
       {isLoading && <LoadingRow />}
       {isError && <ErrorState onRetry={() => refetch()} />}
-      {data && <DiffBody diff={data} t={t} />}
-    </div>
-  )
-}
-
-function DiffBody({ diff, t }: { diff: VersionDiff; t: TFunc }) {
-  const empty =
-    diff.fields.length === 0 &&
-    diff.ingredients.added.length === 0 &&
-    diff.ingredients.removed.length === 0 &&
-    diff.ingredients.changed.length === 0 &&
-    diff.steps.added.length === 0 &&
-    diff.steps.removed.length === 0
-
-  if (empty) return <p className="text-sm text-ink-subtle">{t('version.noChanges')}</p>
-
-  return (
-    <div className="space-y-4 text-[13px]">
-      {diff.fields.length > 0 && (
-        <div>
-          <h4 className="mb-1.5 text-2xs font-semibold uppercase tracking-wide text-ink-subtle">
-            {t('version.fields')}
-          </h4>
-          <ul className="space-y-1">
-            {diff.fields.map((f) => (
-              <li key={f.field} className="flex flex-wrap items-baseline gap-x-2">
-                <span className="font-medium text-ink">{f.field.replace(/_/g, ' ')}</span>
-                <span className="text-danger-ink line-through">{f.from ?? '—'}</span>
-                <Icon name="arrowRight" size={12} className="text-ink-subtle rtl:rotate-180" />
-                <span className="text-success-ink">{f.to ?? '—'}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {(diff.ingredients.added.length > 0 ||
-        diff.ingredients.removed.length > 0 ||
-        diff.ingredients.changed.length > 0) && (
-        <div>
-          <h4 className="mb-1.5 text-2xs font-semibold uppercase tracking-wide text-ink-subtle">
-            {t('version.ingredients')}
-          </h4>
-          <ul className="space-y-1">
-            {diff.ingredients.added.map((i) => (
-              <li key={`a${i.item_sku}`} className="text-success-ink">
-                + {i.item_name_snapshot} — {i.quantity} {i.unit}
-              </li>
-            ))}
-            {diff.ingredients.removed.map((i) => (
-              <li key={`r${i.item_sku}`} className="text-danger-ink">
-                − {i.item_name_snapshot} — {i.quantity} {i.unit}
-              </li>
-            ))}
-            {diff.ingredients.changed.map((c) => (
-              <li key={`c${c.label}`} className="flex flex-wrap items-baseline gap-x-2">
-                <span className="font-medium text-ink">{c.to.item_name_snapshot}</span>
-                <span className="text-danger-ink line-through">
-                  {c.from.quantity} {c.from.unit} {c.from.prep_note}
-                </span>
-                <Icon name="arrowRight" size={12} className="text-ink-subtle rtl:rotate-180" />
-                <span className="text-success-ink">
-                  {c.to.quantity} {c.to.unit} {c.to.prep_note}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {(diff.steps.added.length > 0 || diff.steps.removed.length > 0) && (
-        <div>
-          <h4 className="mb-1.5 text-2xs font-semibold uppercase tracking-wide text-ink-subtle">
-            {t('version.steps')} ({diff.steps.count_from} → {diff.steps.count_to})
-          </h4>
-          <ul className="space-y-1">
-            {diff.steps.added.map((s, i) => (
-              <li key={`sa${i}`} className="text-success-ink">
-                + {s}
-              </li>
-            ))}
-            {diff.steps.removed.map((s, i) => (
-              <li key={`sr${i}`} className="text-danger-ink line-through">
-                − {s}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {data &&
+        (hasChangeDetail(data) ? (
+          <ChangeDetail changes={data} />
+        ) : (
+          <p className="text-sm text-ink-subtle">{t('version.noChanges')}</p>
+        ))}
     </div>
   )
 }

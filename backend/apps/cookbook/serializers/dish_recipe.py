@@ -5,6 +5,7 @@ from io import BytesIO
 
 from django.core.files.base import ContentFile
 from PIL import Image, UnidentifiedImageError
+from django.utils import timezone
 from rest_framework import serializers
 
 from apps.accounts.access import ALL, access_for
@@ -15,7 +16,10 @@ from apps.cookbook.models import (
 )
 from apps.cookbook.services import apply_cost
 from apps.cookbook.nutrition import allergen_rollup
-from apps.cookbook.versioning import archive_current_version, edit_is_a_new_version
+from apps.cookbook.versioning import (
+    EMPTY_STATE, archive_current_version, diff_states, edit_is_a_new_version, has_changes,
+    model_values, recipe_state, side_record_changes, version_code,
+)
 from .reference import (
     MenuCategorySerializer, SectionSerializer, ServiceStyleSerializer,
     ApproverSerializer, AllergenSerializer, UnitScaleSerializer,
@@ -309,10 +313,14 @@ class DishRecipeWriteSerializer(serializers.ModelSerializer):
     def _snapshot_price(self, recipe):
         DishPriceHistory.objects.create(dish_recipe=recipe, cost=recipe.cost, selling_price=recipe.selling_price)
 
-    def _log(self, recipe, action_type, description=''):
+    def _log(self, recipe, action_type, description='', changes=None, is_new_version=False):
         DishRecipeActivityLog.objects.create(
             recipe=recipe, action_type=action_type, description=description, changed_by=self._changed_by(),
+            changes=changes or {}, version=recipe.version, is_new_version=is_new_version,
         )
+
+    def _standard_values(self, recipe):
+        return model_values(DishStandard.objects.filter(dish_recipe=recipe).first())
 
     def create(self, validated_data):
         ingredient_data = validated_data.pop('ingredients', [])
@@ -321,7 +329,10 @@ class DishRecipeWriteSerializer(serializers.ModelSerializer):
         allergens       = validated_data.pop('allergens', [])
         image_data      = validated_data.pop('image_data', None)
 
-        recipe = DishRecipe(**validated_data)
+        # the version code is the system's to assign, never the client's
+        validated_data.pop('revision_date', None)
+        validated_data['revision'] = version_code(1)
+        recipe = DishRecipe(revision_date=timezone.localdate(), **validated_data)
         apply_cost(recipe, ingredient_data)      # sets cost / labor_cost / cost_breakdown
         apply_image_data(recipe, image_data)
         recipe.save()
@@ -330,7 +341,8 @@ class DishRecipeWriteSerializer(serializers.ModelSerializer):
         self._save_steps(recipe, step_data)
         self._save_standard(recipe, standard_data)
         self._snapshot_price(recipe)
-        self._log(recipe, ActivityActionType.CREATED)
+        self._log(recipe, ActivityActionType.CREATED, is_new_version=True,
+                  changes=diff_states(EMPTY_STATE, recipe_state(recipe)))
         return recipe
 
     def update(self, instance, validated_data):
@@ -341,11 +353,16 @@ class DishRecipeWriteSerializer(serializers.ModelSerializer):
         image_data      = validated_data.pop('image_data', None)
 
         old_cost, old_price = instance.cost, instance.selling_price
+        before, standard_before = recipe_state(instance), self._standard_values(instance)
 
         versioned = edit_is_a_new_version(instance, validated_data, ingredient_data, step_data)
+        validated_data.pop('revision', None)
+        validated_data.pop('revision_date', None)
         if versioned:
             archive_current_version(instance)          # snapshot the pre-edit state
             instance.version = (instance.version or 1) + 1
+            instance.revision = version_code(instance.version)
+            instance.revision_date = timezone.localdate()
 
         for attr, val in validated_data.items():
             setattr(instance, attr, val)
@@ -372,6 +389,16 @@ class DishRecipeWriteSerializer(serializers.ModelSerializer):
 
         if instance.cost != old_cost or instance.selling_price != old_price:
             self._snapshot_price(instance)
-        self._log(instance, ActivityActionType.UPDATED,
-                  f'Revised to v{instance.version}' if versioned else '')
+
+        # the view's prefetch predates this save — drop it so the response
+        # (and the change record) read the lines as they are now
+        instance._prefetched_objects_cache = {}
+        changes = diff_states(before, recipe_state(instance))
+        changes['fields'] += side_record_changes(
+            'standard', standard_before, self._standard_values(instance)).get('fields', [])
+        # a save that changed nothing leaves no entry in the change log
+        if versioned or has_changes(changes):
+            self._log(instance, ActivityActionType.UPDATED,
+                      f'Revised to v{instance.version}' if versioned else '',
+                      changes=changes, is_new_version=versioned)
         return instance

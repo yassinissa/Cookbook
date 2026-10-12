@@ -1,17 +1,17 @@
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 
-import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 import { Icon, type IconName } from '@/components/Icon'
 import { Input, Select } from '@/components/Input'
 import { Page, PageHeader, SegmentedButtons, FilterTrigger, FilterSheet } from '@/components/Page'
 import { Pill } from '@/components/Pill'
-import { EmptyState, ErrorState, Skeleton } from '@/components/States'
+import { EmptyState, ErrorState } from '@/components/States'
 import { useActivity } from '@/lib/queries'
 import { dateTime, relativeTime } from '@/lib/format'
 import { useI18n, type TFunc } from '@/i18n'
 import type { ActivityEntry } from '@/types/api'
+import { FeedPager, FeedSkeleton, FilterField, groupByDay, useSearchParamInput } from './feedParts'
 
 const ACTION_ICON: Record<string, IconName> = {
   created: 'plus',
@@ -50,6 +50,7 @@ export function ActivityPage() {
     })
   }
   const clearAll = () => setParams(new URLSearchParams())
+  const [search, setSearch] = useSearchParamInput(query.q ?? '', (v) => set('q', v))
   const clearFilterFields = () => {
     setParams((prev) => {
       const next = new URLSearchParams(prev)
@@ -71,9 +72,6 @@ export function ActivityPage() {
   const activeFilters = activeFilterCount > 0 || !!query.recipe || !!query.q
 
   const groups = useMemo(() => groupByDay(data?.results ?? [], locale), [data, locale])
-
-  const from = data && data.count ? (data.page - 1) * data.page_size + 1 : 0
-  const to = data ? Math.min(data.page * data.page_size, data.count) : 0
 
   const filterFields = (
     <>
@@ -160,8 +158,8 @@ export function ActivityPage() {
                 <Input
                   className="h-8 ps-8 text-[13px]"
                   placeholder={t('activity.filter.search')}
-                  value={query.q ?? ''}
-                  onChange={(e) => set('q', e.target.value)}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
               <FilterTrigger onClick={() => setFiltersOpen(true)} activeCount={activeFilterCount} />
@@ -222,34 +220,13 @@ export function ActivityPage() {
             </section>
           ))}
 
-          <div className="mt-6 flex items-center justify-between">
-            <p className="text-xs text-ink-subtle">
-              {t('activity.range', { from, to, total: data.count })}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                icon="chevronLeft"
-                disabled={data.page <= 1}
-                onClick={() => set('page', String(data.page - 1))}
-              >
-                {t('activity.prev')}
-              </Button>
-              <span className="tnum text-xs text-ink-subtle">
-                {data.page} / {data.num_pages}
-              </span>
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={data.page >= data.num_pages}
-                onClick={() => set('page', String(data.page + 1))}
-              >
-                {t('activity.next')}
-                <Icon name="chevronRight" size={14} className="rtl:rotate-180" />
-              </Button>
-            </div>
-          </div>
+          <FeedPager
+            page={data.page}
+            numPages={data.num_pages}
+            pageSize={data.page_size}
+            count={data.count}
+            onPage={(n) => set('page', String(n))}
+          />
         </div>
       )}
     </Page>
@@ -298,77 +275,5 @@ function EntryRow({
         {relativeTime(e.created_at, locale)}
       </time>
     </li>
-  )
-}
-
-function FilterField({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="flex flex-col gap-1.5 lg:flex-row lg:items-center lg:gap-2">
-      <span className="text-2xs font-semibold uppercase tracking-wide text-ink-subtle">{label}</span>
-      {children}
-    </label>
-  )
-}
-
-interface DayGroup {
-  key: string
-  label: string
-  entries: ActivityEntry[]
-}
-
-function groupByDay(entries: ActivityEntry[], locale: 'en' | 'ar'): DayGroup[] {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const yesterday = new Date(today)
-  yesterday.setDate(yesterday.getDate() - 1)
-
-  const out: DayGroup[] = []
-  for (const e of entries) {
-    const d = new Date(e.created_at)
-    const dayStart = new Date(d)
-    dayStart.setHours(0, 0, 0, 0)
-    const key = String(dayStart.getTime())
-    let group = out.find((g) => g.key === key)
-    if (!group) {
-      const label =
-        dayStart.getTime() === today.getTime()
-          ? locale === 'ar'
-            ? 'اليوم'
-            : 'Today'
-          : dayStart.getTime() === yesterday.getTime()
-            ? locale === 'ar'
-              ? 'أمس'
-              : 'Yesterday'
-            : d.toLocaleDateString(locale === 'ar' ? 'ar-KW-u-ca-gregory-nu-latn' : 'en-GB', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-              })
-      group = { key, label, entries: [] }
-      out.push(group)
-    }
-    group.entries.push(e)
-  }
-  return out
-}
-
-function FeedSkeleton() {
-  return (
-    <div className="space-y-6">
-      {Array.from({ length: 3 }).map((_, s) => (
-        <div key={s}>
-          <Skeleton className="mb-2 h-3 w-24" />
-          <Card className="overflow-hidden">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3 border-b border-hairline px-4 py-3.5 last:border-0">
-                <Skeleton className="h-7 w-7 flex-none rounded-full" />
-                <Skeleton className="h-4 w-64" />
-                <Skeleton className="ms-auto h-3 w-10" />
-              </div>
-            ))}
-          </Card>
-        </div>
-      ))}
-    </div>
   )
 }
