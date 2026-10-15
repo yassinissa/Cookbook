@@ -67,6 +67,8 @@ SUBJECT_TYPES = {
     'user': 'User',
     'role': 'Role',
     'digest_subscription': 'Cost digest setting',
+    'menu_category': 'Menu category',
+    'section': 'Kitchen station',
     'command': 'Management command',
     'django_admin': 'Django admin',
 }

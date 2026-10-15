@@ -408,8 +408,15 @@ before calling anything done — not just "the happy path returns 200."
   `features/dishes/brandOptions.ts` in the dish editor, which also clears a
   pick that isn't on a newly chosen brand's list). `DishRecipeWriteSerializer`
   enforces it only when the value is new or the brand moved, so older dishes
-  stay editable. Sando's 16 categories + 23 sections are seeded by `0034`;
-  other brands' lists are edited in Django admin (filter_horizontal) for now.
+  stay editable. Sando's 16 categories + 23 sections are seeded by `0034`.
+  Managed on the **Brands screen** (`BranchesPage` → `BrandListEditor.tsx`,
+  Shared list / Own list + chip checklist + "add a new one"): the brand
+  serializer takes `category_ids` / `section_ids`, and `reference/categories`
+  + `reference/sections` accept create/update (`admin.branches`, audited) —
+  new items are created already tied to that brand. Django admin still works.
+  **`Drawer` gotcha (fixed 2026-10-15):** its open effect used to depend on
+  `onClose`, so any parent re-render re-focused the first field and scrolled
+  the panel to the top; `onClose` is now read through a ref.
   Production recipes (prep kitchens, no brand) still see every section.
 - **Access control**: `backend/apps/accounts/` — capability catalogue
   (`capabilities.py`, code-owned; `manage.py sync_capabilities` mirrors it to

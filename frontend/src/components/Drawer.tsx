@@ -22,6 +22,12 @@ export function Drawer({ open, onClose, title, children, width = 'md', footer }:
   const bodyRef = useRef<HTMLDivElement>(null)
   const returnFocus = useRef<HTMLElement | null>(null)
   const titleId = useId()
+  // Callers pass a fresh `onClose` arrow on every render. Read it through a
+  // ref so the open effect below runs once per opening — otherwise any parent
+  // re-render (e.g. a query refetch behind an open drawer) re-ran it, yanking
+  // focus back to the first field and scrolling the panel to the top.
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   useEffect(() => {
     if (!open) return
@@ -30,7 +36,7 @@ export function Drawer({ open, onClose, title, children, width = 'md', footer }:
     document.body.style.overflow = 'hidden'
 
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') onCloseRef.current()
       if (e.key === 'Tab') trapTab(e, panelRef.current)
     }
     document.addEventListener('keydown', onKey)
@@ -48,7 +54,7 @@ export function Drawer({ open, onClose, title, children, width = 'md', footer }:
       document.body.style.overflow = prevOverflow
       returnFocus.current?.focus?.()
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!open) return null
 

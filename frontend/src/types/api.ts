@@ -25,6 +25,9 @@ export interface Branch {
   name_ar: string
   slug: string
   sort_order: number
+  /** the brand's own lists; empty = it uses the shared (unassigned) items */
+  category_ids?: ID[]
+  section_ids?: ID[]
 }
 export interface Section {
   id: ID

@@ -10,17 +10,25 @@ class MenuCategorySerializer(serializers.ModelSerializer):
         model = MenuCategory
         fields = ['id', 'name', 'name_ar', 'menu_title_ar', 'sort_order', 'branch_ids']
 
-    branch_ids = serializers.PrimaryKeyRelatedField(source='branches', many=True, read_only=True)
+    branch_ids = serializers.PrimaryKeyRelatedField(
+        source='branches', many=True, queryset=Branch.objects.all(), required=False)
 
 
 class BranchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Branch
-        fields = ['id', 'name_en', 'name_ar', 'slug', 'sort_order']
+        fields = ['id', 'name_en', 'name_ar', 'slug', 'sort_order', 'category_ids', 'section_ids']
         # slug is auto-derived from name_en on first save (Branch.save()) — it's
         # the brand key sent to inventory-platform on every publish, so it must
         # never change under a recipe that's already been published there.
         read_only_fields = ['slug']
+
+    # The brand's own category / section lists (see models.reference.brand_options).
+    # Empty = the brand uses the shared, unassigned items.
+    category_ids = serializers.PrimaryKeyRelatedField(
+        source='menu_categories', many=True, queryset=MenuCategory.objects.all(), required=False)
+    section_ids = serializers.PrimaryKeyRelatedField(
+        source='sections', many=True, queryset=Section.objects.all(), required=False)
 
 
 class PrepKitchenSerializer(serializers.ModelSerializer):
@@ -33,8 +41,10 @@ class SectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Section
         fields = ['id', 'name', 'avg_monthly_salary', 'branch_ids']
+        read_only_fields = ['avg_monthly_salary']   # labour costing — not edited from the Brands screen
 
-    branch_ids = serializers.PrimaryKeyRelatedField(source='branches', many=True, read_only=True)
+    branch_ids = serializers.PrimaryKeyRelatedField(
+        source='branches', many=True, queryset=Branch.objects.all(), required=False)
 
 
 class ApproverSerializer(serializers.ModelSerializer):

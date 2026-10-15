@@ -85,3 +85,57 @@ class SandoSeedMigrationTests(APITestCase):
         self.assertEqual(cats[0], ('Starters', 'المقبـــلات'))
         self.assertEqual(sando.sections.count(), 23)
         self.assertEqual(Section.objects.filter(name__iexact='kitchen manager').count(), 1)
+
+
+class BrandsScreenApiTests(APITestCase):
+    """The Brands screen manages a brand's lists: PATCH the brand's
+    category_ids / section_ids, and create new categories / stations."""
+
+    def setUp(self):
+        from apps.accounts.models import Role
+        from apps.cookbook.models import SystemActivityLog
+        self.Log = SystemActivityLog
+        self.brand = Branch.objects.create(name_en='Brand Y', slug='brand-y')
+        self.cat = MenuCategory.objects.create(name='Wraps Y')
+        self.sec = Section.objects.create(name='Wrap station Y')
+        self.admin = APIClient(HTTP_ACCEPT='application/json')
+        self.admin.force_authenticate(User.objects.create_superuser('boss', password='x'))
+        cook = User.objects.create_user('cook', password='x')
+        cook.profile.role = Role.objects.get(name='Restaurant Cook')
+        cook.profile.save()
+        self.cook = APIClient(HTTP_ACCEPT='application/json')
+        self.cook.force_authenticate(cook)
+
+    def test_set_and_clear_a_brands_lists(self):
+        url = f'/api/cookbook/reference/branches/{self.brand.id}/'
+        r = self.admin.patch(url, {'category_ids': [str(self.cat.id)], 'section_ids': [str(self.sec.id)]},
+                             format='json')
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(r.data['category_ids'], [self.cat.id])
+        self.assertIn(self.cat, brand_options(MenuCategory, self.brand))
+        log = self.Log.objects.get(subject_type='branch', action_type='updated')
+        self.assertEqual({f['field'] for f in log.changes['fields']}, {'branch.categories', 'branch.sections'})
+
+        self.admin.patch(url, {'category_ids': [], 'section_ids': []}, format='json')
+        self.assertFalse(self.brand.menu_categories.exists())     # back to the shared list
+        self.assertIn(self.cat, brand_options(MenuCategory, self.brand))  # unassigned again → in the shared list
+        self.assertEqual(self.brand.sections.count(), 0)
+
+    def test_create_category_and_station_for_a_brand(self):
+        r = self.admin.post('/api/cookbook/reference/categories/', {
+            'name': 'Bowls Y', 'name_ar': 'أطباق', 'branch_ids': [str(self.brand.id)]}, format='json')
+        self.assertEqual(r.status_code, 201, r.content)
+        self.assertEqual(r.data['branch_ids'], [self.brand.id])
+        r = self.admin.post('/api/cookbook/reference/sections/', {
+            'name': 'Bowl line Y', 'branch_ids': [str(self.brand.id)]}, format='json')
+        self.assertEqual(r.status_code, 201, r.content)
+        self.assertTrue(self.Log.objects.filter(subject_type='menu_category', action_type='created').exists())
+        dup = self.admin.post('/api/cookbook/reference/categories/', {'name': 'Bowls Y'}, format='json')
+        self.assertEqual(dup.status_code, 400)
+
+    def test_only_brand_admins_can_change_lists(self):
+        self.assertEqual(self.cook.get('/api/cookbook/reference/categories/').status_code, 200)
+        self.assertEqual(self.cook.post('/api/cookbook/reference/categories/', {'name': 'Nope'},
+                                        format='json').status_code, 403)
+        self.assertEqual(self.cook.patch(f'/api/cookbook/reference/branches/{self.brand.id}/',
+                                         {'category_ids': []}, format='json').status_code, 403)

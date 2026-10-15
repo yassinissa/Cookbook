@@ -35,9 +35,24 @@ class ReadOnlyReferenceViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
     pagination_class = None
 
 
-class MenuCategoryViewSet(ReadOnlyReferenceViewSet):
+class BrandListItemViewSet(AuditedViewSetMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin,
+                           ReadOnlyReferenceViewSet):
+    """Categories / sections: readable by anyone signed in; created and
+    renamed from the Brands screen (admin.branches), which is where a brand's
+    own lists are managed. No delete — dishes reference them."""
+    permission_classes = [capability_required(default=None, by_action={
+        'create': 'admin.branches', 'update': 'admin.branches', 'partial_update': 'admin.branches',
+    })]
+    audit_area = ActivityArea.ADMIN
+
+    def audit_subject_fields(self, obj):
+        return {'label': obj.name, 'label_ar': getattr(obj, 'name_ar', ''), 'path': '/admin/branches'}
+
+
+class MenuCategoryViewSet(BrandListItemViewSet):
     queryset = MenuCategory.objects.prefetch_related('branches')
     serializer_class = MenuCategorySerializer
+    audit_subject, audit_prefix = 'menu_category', 'category'
 
 
 class BranchViewSet(
@@ -60,6 +75,14 @@ class BranchViewSet(
     def audit_subject_fields(self, obj):
         return {'label': obj.name_en, 'label_ar': obj.name_ar, 'code': obj.slug,
                 'path': '/admin/branches', 'branch': obj}
+
+    def audit_state(self, obj):
+        return {**super().audit_state(obj),
+                'categories': ', '.join(c.name for c in obj.menu_categories.order_by('sort_order', 'name')) or None,
+                'sections': ', '.join(s.name for s in obj.sections.order_by('name')) or None}
+
+    def get_queryset(self):
+        return super().get_queryset().prefetch_related('menu_categories', 'sections')
     permission_classes = [capability_required(default=None, by_action={
         'create': 'admin.branches', 'update': 'admin.branches', 'partial_update': 'admin.branches',
     })]
@@ -90,9 +113,10 @@ class PrepKitchenViewSet(
     })]
 
 
-class SectionViewSet(ReadOnlyReferenceViewSet):
+class SectionViewSet(BrandListItemViewSet):
     queryset = Section.objects.prefetch_related('branches')
     serializer_class = SectionSerializer
+    audit_subject, audit_prefix = 'section', 'station'
 
 
 class ApproverViewSet(ReadOnlyReferenceViewSet):

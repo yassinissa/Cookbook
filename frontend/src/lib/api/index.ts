@@ -139,6 +139,35 @@ export async function updateBranch(id: ID, payload: Partial<Branch>): Promise<Br
   return data
 }
 
+/* A brand's own category / station lists are edited on the Brands screen;
+ * new items are created there already tied to that brand. */
+export async function createMenuCategory(payload: {
+  name: string
+  name_ar?: string
+  branch_ids: ID[]
+}): Promise<import('@/types/api').MenuCategory> {
+  if (USE_SEED) {
+    await delay()
+    return { id: `cat-${Date.now()}`, name: payload.name, name_ar: payload.name_ar ?? '', menu_title_ar: '', sort_order: 0, branch_ids: payload.branch_ids }
+  }
+  const { data } = await http.post('/cookbook/reference/categories/', {
+    ...payload,
+    menu_title_ar: payload.name_ar ?? '',
+  })
+  return data
+}
+export async function createSection(payload: {
+  name: string
+  branch_ids: ID[]
+}): Promise<import('@/types/api').Section> {
+  if (USE_SEED) {
+    await delay()
+    return { id: `sec-${Date.now()}`, name: payload.name, avg_monthly_salary: null, branch_ids: payload.branch_ids }
+  }
+  const { data } = await http.post('/cookbook/reference/sections/', payload)
+  return data
+}
+
 export async function createPrepKitchen(payload: Partial<PrepKitchen>): Promise<PrepKitchen> {
   if (USE_SEED) {
     await delay()

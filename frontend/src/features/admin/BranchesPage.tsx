@@ -15,6 +15,7 @@ import { qk } from '@/lib/queryClient'
 import { parseApiError } from '@/lib/parseApiError'
 import { useI18n } from '@/i18n'
 import type { Branch } from '@/types/api'
+import { BrandListEditor, type ListItem } from './BrandListEditor'
 
 export function BranchesPage() {
   const { t } = useI18n()
@@ -61,6 +62,14 @@ export function BranchesPage() {
                     </div>
                     <p className="mt-0.5 font-mono text-2xs text-ink-subtle">{b.slug}</p>
                   </div>
+                  <p className="flex-none text-end text-2xs text-ink-subtle">
+                    {b.category_ids?.length || b.section_ids?.length
+                      ? t('branches.lists.summary', {
+                          c: b.category_ids?.length ?? 0,
+                          s: b.section_ids?.length ?? 0,
+                        })
+                      : t('branches.lists.summaryShared')}
+                  </p>
                 </button>
               </li>
             ))}
@@ -81,10 +90,43 @@ function BranchDrawer({ branch, onClose }: { branch: Branch | null; onClose: () 
   const [nameEn, setNameEn] = useState(branch?.name_en ?? '')
   const [nameAr, setNameAr] = useState(branch?.name_ar ?? '')
   const [sortOrder, setSortOrder] = useState(branch?.sort_order ?? 0)
+  const [categoryIds, setCategoryIds] = useState<string[]>(branch?.category_ids ?? [])
+  const [sectionIds, setSectionIds] = useState<string[]>(branch?.section_ids ?? [])
+  const { data: ref } = useReference()
+
+  const categories: ListItem[] = (ref?.categories ?? []).map((c) => ({ id: c.id, label: c.name, labelAr: c.name_ar }))
+  const sections: ListItem[] = (ref?.sections ?? []).map((s) => ({ id: s.id, label: s.name }))
+  const failed = (e: unknown) => new Error(parseApiError(e).message)
+  const addCategory = async (name: string, nameAr: string): Promise<ListItem> => {
+    try {
+      const c = await api.createMenuCategory({ name, name_ar: nameAr, branch_ids: [branch!.id] })
+      qc.invalidateQueries({ queryKey: qk.reference })
+      toast.success(t('branches.lists.added', { name: c.name }))
+      return { id: c.id, label: c.name, labelAr: c.name_ar }
+    } catch (e) {
+      throw failed(e)
+    }
+  }
+  const addSection = async (name: string): Promise<ListItem> => {
+    try {
+      const s = await api.createSection({ name, branch_ids: [branch!.id] })
+      qc.invalidateQueries({ queryKey: qk.reference })
+      toast.success(t('branches.lists.added', { name: s.name }))
+      return { id: s.id, label: s.name }
+    } catch (e) {
+      throw failed(e)
+    }
+  }
 
   const save = useMutation({
     mutationFn: () => {
-      const payload = { name_en: nameEn, name_ar: nameAr, sort_order: sortOrder }
+      const payload = {
+        name_en: nameEn,
+        name_ar: nameAr,
+        sort_order: sortOrder,
+        category_ids: categoryIds,
+        section_ids: sectionIds,
+      }
       return branch ? api.updateBranch(branch.id, payload) : api.createBranch(payload)
     },
     onSuccess: () => {
@@ -100,7 +142,7 @@ function BranchDrawer({ branch, onClose }: { branch: Branch | null; onClose: () 
       open
       onClose={onClose}
       title={branch ? branch.name_en : t('branches.new')}
-      width="md"
+      width="lg"
       footer={
         <div className="flex justify-end gap-2">
           <Button size="sm" variant="ghost" onClick={onClose}>
@@ -139,6 +181,30 @@ function BranchDrawer({ branch, onClose }: { branch: Branch | null; onClose: () 
           ) : (
             <p className="text-xs text-ink-subtle">{t('branches.brandKeyNewHint')}</p>
           )}
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <h2 className="text-sm font-semibold text-ink">{t('branches.lists.title')}</h2>
+            <p className="mt-0.5 text-xs text-ink-subtle">{t('branches.lists.subtitle')}</p>
+          </div>
+          <BrandListEditor
+            title={t('branches.lists.categories')}
+            items={categories}
+            selected={categoryIds}
+            onChange={setCategoryIds}
+            onAdd={addCategory}
+            withArabic
+            canAdd={!!branch}
+          />
+          <BrandListEditor
+            title={t('branches.lists.sections')}
+            items={sections}
+            selected={sectionIds}
+            onChange={setSectionIds}
+            onAdd={(name) => addSection(name)}
+            canAdd={!!branch}
+          />
         </div>
       </div>
     </Drawer>
