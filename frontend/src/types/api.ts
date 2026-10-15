@@ -568,20 +568,31 @@ export interface PlatingGuideInput {
 }
 
 /* ── activity & history feed ────────────────────────────────────────── */
+/** What part of the system an action touched. dish / production are recipe
+ *  logs; the rest come from the system-wide log (items, menus, POS, admin). */
+export type ActivityKind = 'dish' | 'production' | 'item' | 'menu' | 'pos' | 'admin'
+
 export interface ActivityEntry {
   id: ID
-  kind: 'dish' | 'production'
+  kind: ActivityKind
+  kind_display?: string
   action: string
   action_display: string
   description: string
+  /** dish_recipe, item_conversion, menu_period, user … */
+  subject_type?: string
+  subject_type_display?: string
+  /** `recipe_*` carry the subject, whatever it is (a recipe, an item SKU, a menu …) */
   recipe_id: ID
   recipe_name: string
   recipe_name_ar: string
   recipe_code: string
-  recipe_path: string
+  /** null once the subject is gone (a delete) or has no screen of its own */
+  recipe_path: string | null
   scope_name: string | null
   changed_by: string | null
   created_at: string
+  changes?: RecipeChangeSet | null
 }
 
 export interface ActivityActionOption {
@@ -596,6 +607,7 @@ export interface ActivityFeed {
   num_pages: number
   results: ActivityEntry[]
   actors: string[]
+  kinds?: ActivityActionOption[]
   action_types: ActivityActionOption[]
 }
 
@@ -672,6 +684,8 @@ export interface IngredientSummary {
 
 /* ── recipe change history ──────────────────────────────────────────── */
 export interface RecipeChangeEntry extends ActivityEntry {
+  /** always a live recipe here */
+  recipe_path: string
   changed_by_name: string | null
   /** the recipe's version once this change was applied */
   version: number | null

@@ -112,7 +112,7 @@ class ActivityFeedTests(APITestCase):
         self.assertEqual(len(r.data['results']), 2)
 
     def test_bad_params_are_400(self):
-        self.assertEqual(self.client.get('/api/cookbook/activity/?kind=menu').status_code, 400)
+        self.assertEqual(self.client.get('/api/cookbook/activity/?kind=nonsense').status_code, 400)
         self.assertEqual(self.client.get('/api/cookbook/activity/?action=bogus').status_code, 400)
         self.assertEqual(self.client.get('/api/cookbook/activity/?date_from=nope').status_code, 400)
 

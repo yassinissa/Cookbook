@@ -528,6 +528,59 @@ export async function fetchActivity(params: ActivityQuery): Promise<ActivityFeed
   return data
 }
 
+/** Download every activity row matching `params` (no paging) as .xlsx / .csv.
+ *  A blob fetch rather than a plain link, so the JWT header rides along. */
+export async function downloadActivityExport(
+  params: ActivityQuery,
+  file: 'xlsx' | 'csv' = 'xlsx',
+): Promise<void> {
+  const clean: Record<string, string | number> = { file }
+  for (const [k, v] of Object.entries(params)) {
+    if (k !== 'page' && v !== undefined && v !== '' && v !== null) clean[k] = v as string | number
+  }
+  let blob: Blob
+  let name = `cookbook-activity.${file}`
+  if (USE_SEED) {
+    const feed = filterActivityFeed(seed.seedActivityFeed({ ...params, page: 1 }))
+    const cell = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`
+    const rows = [
+      ['Date', 'Area', 'Action', 'Name', 'Code', 'Changed by', 'Description'],
+      ...feed.results.map((e) => [
+        e.created_at, e.kind, e.action_display, e.recipe_name, e.recipe_code, e.changed_by, e.description,
+      ]),
+    ]
+    const csv = rows.map((r) => r.map(cell).join(',')).join('\n')
+    blob = new Blob(['﻿' + csv], { type: 'text/csv' })
+    name = 'cookbook-activity.csv'
+  } else {
+    const res = await http
+      .get<Blob>('/cookbook/activity/export/', { params: clean, responseType: 'blob', timeout: 120_000 })
+      .catch(async (err) => {
+        // an error body comes back as a Blob too — turn it back into JSON for parseApiError
+        const data = err?.response?.data
+        if (data instanceof Blob) {
+          try {
+            err.response.data = JSON.parse(await data.text())
+          } catch {
+            /* not JSON — leave it */
+          }
+        }
+        throw err
+      })
+    blob = res.data
+    const disposition = String(res.headers['content-disposition'] ?? '')
+    name = /filename="([^"]+)"/.exec(disposition)?.[1] ?? name
+  }
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = name
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
 /* ── recipe change history ────────────────────────────────────────── */
 export async function fetchRecipeChanges(params: RecipeChangeQuery): Promise<RecipeChangeFeed> {
   if (USE_SEED) {

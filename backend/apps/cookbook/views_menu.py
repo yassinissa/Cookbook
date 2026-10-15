@@ -20,8 +20,9 @@ from apps.accounts.access import ALL, access_for
 from apps.accounts.permissions import capability_required
 
 from .models import (
-    Branch, DishRecipe, Menu, MenuEdition, MenuLine, MenuSnapshot, MenuSnapshotLine,
+    ActivityActionType, ActivityArea, Branch, DishRecipe, Menu, MenuEdition, MenuLine, MenuSnapshot, MenuSnapshotLine,
 )
+from .audit import AuditedViewSetMixin, record
 from .menu_editions import publish_edition
 from .serializers.menu import (
     MenuDetailSerializer, MenuEditionSerializer, MenuLineSerializer, MenuListSerializer,
@@ -47,7 +48,22 @@ def _scoped_menu_qs(qs, request):
     return qs.filter(branch_id__in=list(access.scope.branch_ids))
 
 
-class MenuViewSet(viewsets.ModelViewSet):
+def _menu_subject(menu):
+    return {'label': menu.name or f'{menu.branch.name_en} menu', 'label_ar': menu.name_ar,
+            'path': f'/menus/{menu.branch_id}', 'branch': menu.branch}
+
+
+class MenuViewSet(AuditedViewSetMixin, viewsets.ModelViewSet):
+    audit_area, audit_subject, audit_prefix = ActivityArea.MENU, 'menu', 'menu'
+    audit_skip = ('last_snapshot_at',)
+
+    def audit_subject_fields(self, obj):
+        return _menu_subject(obj)
+
+    def _log(self, menu, action, description, changes=None):
+        record(self.request, area=ActivityArea.MENU, action=action, subject_type='menu',
+               subject_id=menu.pk, description=description, changes=changes, **_menu_subject(menu))
+
     permission_classes = [capability_required(default='menu.view', by_action={
         'list': 'menu.view', 'retrieve': 'menu.view', 'snapshots': 'menu.view', 'trends': 'menu.view',
         'effective': 'menu.view', 'editions': 'menu.view',
@@ -89,6 +105,9 @@ class MenuViewSet(viewsets.ModelViewSet):
                 image_url=dish.image_url, sort_order=(dish.category.sort_order if dish.category else 0) * 100 + i,
             )
             added += 1
+        if added:
+            self._log(menu, ActivityActionType.UPDATED,
+                      f'Built from the branch recipes: {added} dish(es) added')
         fresh = self.get_queryset().get(pk=menu.pk)
         return Response(dict(MenuDetailSerializer(fresh).data, _added=added))
 
@@ -103,6 +122,9 @@ class MenuViewSet(viewsets.ModelViewSet):
             menu=menu, dish_id=dish_id,
             sort_order=(menu.lines.count() + 1) * 10,
         )
+        self._log(menu, ActivityActionType.UPDATED, f'Added {line.dish.name_en}',
+                  changes={'fields': [{'field': f'menu.line {line.dish.name_en}',
+                                       'from': None, 'to': 'on the menu'}]})
         return Response(MenuLineSerializer(line).data, status=201)
 
     # ── freeze the current menu into a snapshot ──────────────────────────
@@ -126,6 +148,9 @@ class MenuViewSet(viewsets.ModelViewSet):
             )
         menu.last_snapshot_at = timezone.now()
         menu.save(update_fields=['last_snapshot_at'])
+        self._log(menu, ActivityActionType.SNAPSHOT_TAKEN,
+                  (f'Snapshot "{snap.label}"' if snap.label else 'Snapshot')
+                  + f' ({menu.lines.count()} dishes)')
         return Response(MenuSnapshotSerializer(snap).data, status=201)
 
     @action(detail=True, methods=['get'])
@@ -167,6 +192,8 @@ class MenuViewSet(viewsets.ModelViewSet):
             base_url=request.build_absolute_uri('/').rstrip('/'),
         )
         cache.delete(PUBLIC_MENU_CACHE_KEY.format(slug=menu.branch.slug))
+        self._log(menu, ActivityActionType.PUBLISHED,
+                  f'Public menu edition v{edition.version} published for {on.isoformat()}')
         return Response(MenuEditionSerializer(edition).data, status=201)
 
     @action(detail=True, methods=['get'])
@@ -197,10 +224,17 @@ class MenuViewSet(viewsets.ModelViewSet):
         return Response({'menu': menu.name or f'{menu.branch.name_en} Menu', 'points': points})
 
 
-class MenuLineViewSet(mixins.UpdateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
+class MenuLineViewSet(AuditedViewSetMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin,
+                      viewsets.GenericViewSet):
     permission_classes = [capability_required(default='menu.edit')]
     queryset = MenuLine.objects.select_related('dish', 'dish__category', 'menu')
     serializer_class = MenuLineSerializer
+    audit_area, audit_subject, audit_prefix = ActivityArea.MENU, 'menu_line', 'menu_line'
+    audit_skip = ('menu', 'dish')
+
+    def audit_subject_fields(self, obj):
+        return {**_menu_subject(obj.menu), 'label': obj.dish.name_en, 'label_ar': obj.dish.name_ar,
+                'code': obj.dish.recipe_code}
 
     def get_queryset(self):
         access = access_for(self.request)

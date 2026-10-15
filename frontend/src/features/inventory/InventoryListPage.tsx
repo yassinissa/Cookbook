@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
@@ -24,8 +25,10 @@ const keyOf = (i: InventoryItem) => i.id || i.sku
 
 export function InventoryListPage() {
   const { t } = useI18n()
-  const [q, setQ] = useState('')
-  const [search, setSearch] = useState('')
+  // ?q= (e.g. an Activity entry's link) pre-fills the search
+  const [params] = useSearchParams()
+  const [q, setQ] = useState(() => params.get('q') ?? '')
+  const [search, setSearch] = useState(() => (params.get('q') ?? '').trim())
   const [page, setPage] = useState(1)
   const [openId, setOpenId] = useState<string | null>(null)
 

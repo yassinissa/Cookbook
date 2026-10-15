@@ -56,6 +56,27 @@ before calling anything done — not just "the happy path returns 200."
     branch-scoped, production prep-kitchen-scoped + `production.view`-gated;
     the dashboard's `recent_activity` is a small unfiltered slice of the
     same data).
+  - **System-wide action log** (2026-10-15): everything that isn't a live
+    recipe edit goes to `SystemActivityLog` (models/history.py, migration
+    `0030`) — item conversions / nutrition / storage / allergens, menus +
+    menu lines + build / snapshot / edition publish, specials, modifier
+    groups + dish modifiers, branches, prep kitchens, users (password only as
+    "set"/"changed", never the value) + activate/deactivate, roles, digest
+    setting, and **recipe deletes** (the recipe's own log cascades away).
+    Written by `audit.py`: `AuditedViewSetMixin` (before/after snapshot
+    around perform_create/update/destroy; a no-op save writes nothing;
+    child rows flattened one field each, e.g. `conversion.line 1 Tbs`) or
+    `record()` for custom actions. **Any new write endpoint must use one of
+    them.** The subject is denormalised so rows outlive what they describe;
+    `branch_ref`/`prep_kitchen_ref` are only for scoping. The feed
+    (`views_activity.collect_activity`) merges all three logs; `kind` =
+    `ActivityArea` (dish/production/item/menu/pos/admin), each gated
+    (item→`inventory.view`, menu→`menu.view`+branch, pos→`pos.manage`,
+    admin→any `admin.*`), money fields stripped without `costing.view`.
+    `GET cookbook/activity/export/?file=xlsx|csv` + the same filters →
+    every matching row (cap 50k), .xlsx with an "Activity" sheet and a
+    "Field changes" sheet (`file`, not `format` — DRF reserves that).
+    `test_system_activity_log.py` pins it.
   - **Recipe change history vs. versions** (2026-10-12): two distinct things.
     A **version** is created when (owner's rule, 2026-10-12) the category,
     selling price, item name / description (`name_en`, `name_ar`,
@@ -177,7 +198,10 @@ before calling anything done — not just "the happy path returns 200."
     to drop a pin, drag / arrow-nudge to move it, bilingual pin + caption
     fields, photo reorder / delete. Gated `standard.edit`. Verified end-to-end
     2026-08-31.
-  - **Activity & History** (`src/features/activity`) — one URL-param-driven
+  - **Activity & History** (`src/features/activity`) — every area of the
+    system (Type select), rows expand to the before → after via the shared
+    `ChangeDetail`, **Export sheet** / CSV buttons download the filtered set
+    (`downloadActivityExport` — blob fetch so the JWT rides along). One URL-param-driven
     filterable feed (kind / action / actor / date / recipe / search) grouped
     by day. `feedParts.tsx` holds what it shares with Recipe Changes
     (`groupByDay`, `FilterField`, `FeedPager`, `FeedSkeleton`, and

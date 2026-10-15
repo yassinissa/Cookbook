@@ -34,9 +34,17 @@ class DigestSubscriptionView(APIView):
         cadence = request.data.get('cadence')
         if cadence not in DigestCadence.values:
             raise ValidationError({'cadence': f'Must be one of {DigestCadence.values}.'})
+        before = DigestSubscription.objects.filter(user=request.user).values_list('cadence', flat=True).first()
         sub, _ = DigestSubscription.objects.update_or_create(
             user=request.user, defaults={'cadence': cadence},
         )
+        if before != cadence:
+            from .audit import record
+            from .models import ActivityActionType, ActivityArea
+            record(request, area=ActivityArea.ADMIN, action=ActivityActionType.UPDATED,
+                   subject_type='digest_subscription', subject_id=request.user.pk,
+                   label=request.user.username, code=request.user.username, path='/settings',
+                   changes={'fields': [{'field': 'digest.cadence', 'from': before, 'to': cadence}]})
         return Response(_payload(request.user, sub))
 
 

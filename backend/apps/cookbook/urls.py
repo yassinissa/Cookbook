@@ -7,7 +7,7 @@ from . import views_plating
 from . import views_reporting
 from . import views_specials
 from . import views_standards
-from .views_activity import ActivityFeedView
+from .views_activity import ActivityExportView, ActivityFeedView
 from .views_changes import RecipeChangeFeedView
 from .views_dashboard import DashboardView
 
@@ -39,6 +39,7 @@ urlpatterns = [
     path('modifier-readiness/', views_modifiers.ModifierReadinessView.as_view(), name='modifier-readiness'),
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('activity/', ActivityFeedView.as_view(), name='activity'),
+    path('activity/export/', ActivityExportView.as_view(), name='activity-export'),
     path('recipe-changes/', RecipeChangeFeedView.as_view(), name='recipe-changes'),
     path('digest-subscription/', views_reporting.DigestSubscriptionView.as_view(), name='digest-subscription'),
     path('public/digest/unsubscribe/<uuid:token>/', views_reporting.DigestUnsubscribeView.as_view(),

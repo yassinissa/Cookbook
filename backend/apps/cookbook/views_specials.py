@@ -14,7 +14,8 @@ from rest_framework.exceptions import ValidationError
 from apps.accounts.access import ALL, access_for
 from apps.accounts.permissions import capability_required
 
-from .models import Menu, MenuPeriod
+from .audit import AuditedViewSetMixin, num
+from .models import ActivityArea, Menu, MenuPeriod
 from .serializers.specials import MenuPeriodSerializer, MenuPeriodWriteSerializer
 
 
@@ -28,7 +29,22 @@ def menus_in_scope(request):
     return qs.filter(branch_id__in=list(access.scope.branch_ids))
 
 
-class MenuPeriodViewSet(viewsets.ModelViewSet):
+class MenuPeriodViewSet(AuditedViewSetMixin, viewsets.ModelViewSet):
+    audit_area, audit_subject, audit_prefix = ActivityArea.MENU, 'menu_period', 'special'
+
+    def audit_subject_fields(self, obj):
+        return {'label': obj.name_en, 'label_ar': obj.name_ar,
+                'path': f'/menus/{obj.menu.branch_id}', 'branch': obj.menu.branch}
+
+    def audit_state(self, obj):
+        state = super().audit_state(obj)
+        for line in obj.lines.select_related('dish').all():
+            bits = [b for b in (
+                num(line.menu_price) and f'{num(line.menu_price)} KWD', line.pos_name,
+                line.description_en, line.image_url and 'photo') if b]
+            state[f'{line.get_op_display().lower()} {line.dish.name_en}'] = ' / '.join(bits) or 'yes'
+        return state
+
     permission_classes = [capability_required(default='menu.view', by_action={
         'list': 'menu.view', 'retrieve': 'menu.view',
         'create': 'menu.edit', 'update': 'menu.edit',

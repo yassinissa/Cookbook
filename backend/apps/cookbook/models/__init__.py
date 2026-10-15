@@ -25,7 +25,7 @@ from .modifiers import (
 )
 from .history import (
     ActivityActionType, DishPriceHistory, ProductionCostHistory,
-    DishRecipeActivityLog, ProductionRecipeActivityLog,
+    DishRecipeActivityLog, ProductionRecipeActivityLog, ActivityArea, SystemActivityLog,
 )
 from .reporting import DigestCadence, DigestSubscription
 
@@ -45,6 +45,6 @@ __all__ = [
     'ModifierGroup', 'ModifierOption', 'ModifierOptionIngredient', 'DishModifierGroup', 'MenuLineModifier',
     'ModifierSelection', 'ModifierOptionKind', 'ModifierRole', 'ModifierDeltaDirection', 'DeductionStatus',
     'ActivityActionType', 'DishPriceHistory', 'ProductionCostHistory',
-    'DishRecipeActivityLog', 'ProductionRecipeActivityLog',
+    'DishRecipeActivityLog', 'ProductionRecipeActivityLog', 'ActivityArea', 'SystemActivityLog',
     'DigestCadence', 'DigestSubscription',
 ]

@@ -11,8 +11,10 @@ from .models import (
     StandardMeasurementConversion, TasteDescriptor, DishRecipe, ProductionRecipe,
     DishPriceHistory, DishRecipeActivityLog, ProductionCostHistory,
     ProductionRecipeActivityLog, ActivityActionType,
-    ItemConversion, ItemNutrition, ItemStorage,
+    ItemConversion, ItemNutrition, ItemStorage, ActivityArea,
+    DishRecipeIngredient, ProductionRecipeIngredient,
 )
+from .audit import AuditedViewSetMixin, record, object_state, num
 from .serializers import (
     MenuCategorySerializer, BranchSerializer, SectionSerializer, ApproverSerializer,
     AllergenSerializer, ServiceStyleSerializer, UnitScaleSerializer,
@@ -39,6 +41,7 @@ class MenuCategoryViewSet(ReadOnlyReferenceViewSet):
 
 
 class BranchViewSet(
+    AuditedViewSetMixin,
     mixins.ListModelMixin, mixins.RetrieveModelMixin,
     mixins.CreateModelMixin, mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
@@ -52,12 +55,18 @@ class BranchViewSet(
     queryset = Branch.objects.all()
     serializer_class = BranchSerializer
     pagination_class = None
+    audit_area, audit_subject, audit_prefix = ActivityArea.ADMIN, 'branch', 'branch'
+
+    def audit_subject_fields(self, obj):
+        return {'label': obj.name_en, 'label_ar': obj.name_ar, 'code': obj.slug,
+                'path': '/admin/branches', 'branch': obj}
     permission_classes = [capability_required(default=None, by_action={
         'create': 'admin.branches', 'update': 'admin.branches', 'partial_update': 'admin.branches',
     })]
 
 
 class PrepKitchenViewSet(
+    AuditedViewSetMixin,
     mixins.ListModelMixin, mixins.RetrieveModelMixin,
     mixins.CreateModelMixin, mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
@@ -71,6 +80,11 @@ class PrepKitchenViewSet(
     queryset = PrepKitchen.objects.all()
     serializer_class = PrepKitchenSerializer
     pagination_class = None
+    audit_area, audit_subject, audit_prefix = ActivityArea.ADMIN, 'prep_kitchen', 'kitchen'
+
+    def audit_subject_fields(self, obj):
+        return {'label': obj.name_en, 'label_ar': getattr(obj, 'name_ar', ''),
+                'path': '/admin/prep-kitchens', 'prep_kitchen': obj}
     permission_classes = [capability_required(default=None, by_action={
         'create': 'admin.prep_kitchens', 'update': 'admin.prep_kitchens', 'partial_update': 'admin.prep_kitchens',
     })]
@@ -159,6 +173,22 @@ class RecipeViewSetBase(
     def _snapshot_and_log_recalculate(self, recipe, request):
         """Override per recipe type: write a history row + activity log entry."""
         raise NotImplementedError
+
+    audit_area = None  # set by subclass
+
+    def perform_destroy(self, instance):
+        # The recipe's own log cascades away with it, so the delete is
+        # recorded on the system log, which outlives it.
+        dish = self.audit_area == ActivityArea.DISH
+        record(
+            self.request, area=self.audit_area, action=ActivityActionType.DELETED,
+            subject_type='dish_recipe' if dish else 'production_recipe',
+            subject_id=instance.pk, label=instance.name_en, label_ar=instance.name_ar,
+            code=instance.recipe_code, description=f'Deleted at version {instance.version}',
+            branch=instance.branch_ref if dish else None,
+            prep_kitchen=None if dish else instance.prep_kitchen_ref,
+        )
+        super().perform_destroy(instance)
 
     @action(detail=True, methods=['post'])
     def recalculate(self, request, pk=None):
@@ -280,6 +310,7 @@ class DishRecipeViewSet(ScopedQuerySetMixin, RecipeViewSetBase):
         'category', 'section', 'service_style', 'approved_by', 'qa_approved_by', 'branch_ref',
     ).prefetch_related('ingredients__unit', 'steps', 'allergens', 'standard', 'price_history', 'activity_log')
     detail_serializer_class = DishRecipeDetailSerializer
+    audit_area = ActivityArea.DISH
 
     def get_serializer_class(self):
         if self.action in ('create', 'update', 'partial_update'):
@@ -321,6 +352,7 @@ class ProductionRecipeViewSet(ScopedQuerySetMixin, RecipeViewSetBase):
         'section', 'approved_by', 'qa_approved_by', 'output_unit', 'prep_kitchen_ref',
     ).prefetch_related('ingredients__unit', 'steps', 'cost_history', 'activity_log')
     detail_serializer_class = ProductionRecipeDetailSerializer
+    audit_area = ActivityArea.PRODUCTION
 
     def get_serializer_class(self):
         if self.action in ('create', 'update', 'partial_update'):
@@ -347,7 +379,27 @@ class ProductionRecipeViewSet(ScopedQuerySetMixin, RecipeViewSetBase):
         )
 
 
+class ItemSupplementAudit(AuditedViewSetMixin):
+    """Audit for the per-SKU supplements: the subject is the inventory item.
+    Its name isn't stored here, so it's borrowed from any recipe line that
+    snapshots it (no network call on a save); the SKU is the fallback."""
+    audit_area = ActivityArea.ITEM
+
+    def audit_subject_fields(self, obj):
+        sku = obj.item_sku
+        name = next((
+            n for model in (DishRecipeIngredient, ProductionRecipeIngredient)
+            for n in model.objects.filter(item_sku=sku).exclude(item_name_snapshot='')
+            .values_list('item_name_snapshot', flat=True)[:1]
+        ), None)
+        return {'label': name or sku, 'code': sku, 'path': f'/inventory?q={sku}'}
+
+    def audit_state(self, obj):
+        return object_state(obj, skip=('item_sku',) + tuple(self.audit_skip))
+
+
 class ItemConversionViewSet(
+    ItemSupplementAudit,
     mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,
     mixins.UpdateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet,
 ):
@@ -358,6 +410,17 @@ class ItemConversionViewSet(
     serializer_class = ItemConversionSerializer
     lookup_field = 'item_sku'
     lookup_value_regex = '[^/]+'
+    audit_subject, audit_prefix = 'item_conversion', 'conversion'
+    audit_skip = ('cost_updated_at',)
+
+    def audit_state(self, obj):
+        state = super().audit_state(obj)
+        for line in obj.lines.select_related('unit').all():
+            value = f'{num(line.quantity)} {line.unit.code}'
+            if line.gram_equivalent is not None:
+                value += f' (= {num(line.gram_equivalent)} g)'
+            state[f'line {line.label}'] = value
+        return state
 
     # Every change is pushed to inventory-platform straight away, so POS
     # deductions there use the new numbers without re-publishing recipes.
@@ -389,6 +452,7 @@ class ItemConversionViewSet(
 
 
 class ItemNutritionViewSet(
+    ItemSupplementAudit,
     mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,
     mixins.UpdateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet,
 ):
@@ -398,9 +462,11 @@ class ItemNutritionViewSet(
     serializer_class = ItemNutritionSerializer
     lookup_field = 'item_sku'
     lookup_value_regex = '[^/]+'
+    audit_subject, audit_prefix = 'item_nutrition', 'nutrition'
 
 
 class ItemStorageViewSet(
+    ItemSupplementAudit,
     mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,
     mixins.UpdateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet,
 ):
@@ -410,3 +476,4 @@ class ItemStorageViewSet(
     serializer_class = ItemStorageSerializer
     lookup_field = 'item_sku'
     lookup_value_regex = '[^/]+'
+    audit_subject, audit_prefix = 'item_storage', 'storage'

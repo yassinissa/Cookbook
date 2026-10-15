@@ -17,14 +17,41 @@ from rest_framework.views import APIView
 
 from apps.accounts.permissions import ScopedQuerySetMixin, capability_required
 
-from .models import DishRecipe, ModifierGroup, ModifierOption
+from .audit import AuditedViewSetMixin, num, record
+from .models import ActivityActionType, ActivityArea, DishRecipe, ModifierGroup, ModifierOption
 from .serializers.modifiers import (
     ModifierGroupSerializer, ModifierGroupWriteSerializer,
     DishModifierListSerializer, DishModifierDetailSerializer, DishModifierWriteSerializer,
 )
 
 
-class ModifierGroupViewSet(viewsets.ModelViewSet):
+class ModifierGroupViewSet(AuditedViewSetMixin, viewsets.ModelViewSet):
+    audit_area, audit_subject, audit_prefix = ActivityArea.POS, 'modifier_group', 'modifier'
+
+    def audit_subject_fields(self, obj):
+        return {'label': obj.name_en, 'label_ar': obj.name_ar, 'path': '/pos'}
+
+    def audit_state(self, obj):
+        state = super().audit_state(obj)
+        for opt in obj.options.select_related('variant_recipe', 'unit').prefetch_related('deltas__unit'):
+            bits = [opt.get_kind_display(), f'+{num(opt.price_delta) or 0} KWD']
+            if opt.pos_mods_string:
+                bits.append(f'POS "{opt.pos_mods_string}"')
+            if opt.variant_recipe_id:
+                bits.append(f'variant {opt.variant_recipe.name_en}')
+            if opt.item_sku:
+                unit = opt.unit.code if opt.unit else ''
+                bits.append(f'{num(opt.quantity) or ""} {unit} {opt.item_sku}'.strip())
+            for d in opt.deltas.all():
+                unit = d.unit.code if d.unit else ''
+                bits.append(f'{d.direction} {num(d.quantity)} {unit} {d.item_name_snapshot or d.item_sku}')
+            if opt.no_consumption_impact:
+                bits.append('no stock impact')
+            if not opt.is_available:
+                bits.append('unavailable')
+            state[f'option {opt.name_en}'] = ' / '.join(bits)
+        return state
+
     permission_classes = [capability_required(default='pos.manage')]
     pagination_class = None
     queryset = (ModifierGroup.objects
@@ -56,12 +83,27 @@ class DishModifierViewSet(
             return DishModifierDetailSerializer
         return DishModifierListSerializer
 
+    @staticmethod
+    def _groups(dish):
+        return {f'group {g.group.name_en}': g.get_default_role_display()
+                for g in dish.modifier_groups.select_related('group').all()}
+
     def update(self, request, *args, **kwargs):
         dish = self.get_object()
+        before = self._groups(dish)
         writer = DishModifierWriteSerializer(data=request.data)
         writer.is_valid(raise_exception=True)
         writer.save(dish=dish)
         dish.refresh_from_db()
+        after = self._groups(dish)
+        rows = [{'field': f'dish_modifiers.{k}', 'from': before.get(k), 'to': after.get(k)}
+                for k in {**before, **after} if before.get(k) != after.get(k)]
+        if rows:
+            record(request, area=ActivityArea.POS, action=ActivityActionType.UPDATED,
+                   subject_type='dish_modifiers', subject_id=dish.pk, label=dish.name_en,
+                   label_ar=dish.name_ar, code=dish.recipe_code,
+                   path=f'/recipes/dishes/{dish.pk}', changes={'fields': rows},
+                   description='Modifier groups on this dish changed', branch=dish.branch_ref)
         out = DishModifierDetailSerializer(dish, context=self.get_serializer_context())
         return Response(out.data)
 

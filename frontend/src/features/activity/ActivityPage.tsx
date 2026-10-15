@@ -1,16 +1,23 @@
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 
+import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 import { Icon, type IconName } from '@/components/Icon'
 import { Input, Select } from '@/components/Input'
-import { Page, PageHeader, SegmentedButtons, FilterTrigger, FilterSheet } from '@/components/Page'
+import { Page, PageHeader, FilterTrigger, FilterSheet } from '@/components/Page'
 import { Pill } from '@/components/Pill'
 import { EmptyState, ErrorState } from '@/components/States'
+import { useToast } from '@/components/Toast'
+import { downloadActivityExport } from '@/lib/api'
+import { cn } from '@/lib/cn'
 import { useActivity } from '@/lib/queries'
 import { dateTime, relativeTime } from '@/lib/format'
+import { parseApiError } from '@/lib/parseApiError'
 import { useI18n, type TFunc } from '@/i18n'
-import type { ActivityEntry } from '@/types/api'
+import type { MessageKey } from '@/i18n/messages'
+import type { ActivityEntry, ActivityKind } from '@/types/api'
+import { ChangeDetail, hasChangeDetail } from '@/features/changes/ChangeDetail'
 import { FeedPager, FeedSkeleton, FilterField, groupByDay, useSearchParamInput } from './feedParts'
 
 const ACTION_ICON: Record<string, IconName> = {
@@ -20,11 +27,22 @@ const ACTION_ICON: Record<string, IconName> = {
   deleted: 'trash',
   standard_updated: 'shield',
   standard_approved: 'check',
+  plating_updated: 'camera',
   published: 'external',
+  activated: 'check',
+  deactivated: 'lock',
+  snapshot_taken: 'history',
+}
+
+const KINDS: ActivityKind[] = ['dish', 'production', 'item', 'menu', 'pos', 'admin']
+
+function kindLabel(kind: string, t: TFunc) {
+  return (KINDS as string[]).includes(kind) ? t(`activity.kind.${kind}` as MessageKey) : kind
 }
 
 export function ActivityPage() {
   const { t, locale } = useI18n()
+  const toast = useToast()
   const [params, setParams] = useSearchParams()
 
   const query = {
@@ -39,6 +57,19 @@ export function ActivityPage() {
   }
 
   const { data, isLoading, isError, isFetching, refetch } = useActivity(query)
+
+  const [exporting, setExporting] = useState<'xlsx' | 'csv' | null>(null)
+  const exportSheet = async (file: 'xlsx' | 'csv') => {
+    setExporting(file)
+    try {
+      await downloadActivityExport(query, file)
+      toast.success(t('activity.export.done'))
+    } catch (e) {
+      toast.error(parseApiError(e).message)
+    } finally {
+      setExporting(null)
+    }
+  }
 
   const set = (key: string, value: string) => {
     setParams((prev) => {
@@ -76,16 +107,18 @@ export function ActivityPage() {
   const filterFields = (
     <>
       <FilterField label={t('activity.filter.kind')}>
-        <SegmentedButtons
-          label={t('activity.filter.kind')}
-          value={query.kind ?? 'all'}
-          onChange={(v) => set('kind', v === 'all' ? '' : v)}
-          options={[
-            { value: 'all', label: t('activity.filter.all') },
-            { value: 'dish', label: t('activity.filter.dishes') },
-            { value: 'production', label: t('activity.filter.production') },
-          ]}
-        />
+        <Select
+          className="h-8 w-full text-[13px] lg:w-auto"
+          value={query.kind ?? ''}
+          onChange={(e) => set('kind', e.target.value)}
+        >
+          <option value="">{t('activity.filter.all')}</option>
+          {KINDS.map((k) => (
+            <option key={k} value={k}>
+              {kindLabel(k, t)}
+            </option>
+          ))}
+        </Select>
       </FilterField>
 
       <FilterField label={t('activity.filter.action')}>
@@ -137,12 +170,37 @@ export function ActivityPage() {
     </>
   )
 
+  const canExport = !exporting && !!data?.count
+
   return (
     <Page stagger>
       <PageHeader
         eyebrow={t('app.group')}
         title={t('activity.title')}
         subtitle={data ? t('activity.count', { n: data.count }) : t('activity.subtitle')}
+        actions={
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => exportSheet('csv')}
+              loading={exporting === 'csv'}
+              disabled={!canExport}
+            >
+              CSV
+            </Button>
+            <Button
+              size="sm"
+              icon="documents"
+              onClick={() => exportSheet('xlsx')}
+              loading={exporting === 'xlsx'}
+              disabled={!canExport}
+              title={data ? t('activity.export.hint', { n: data.count }) : undefined}
+            >
+              {t('activity.export')}
+            </Button>
+          </>
+        }
       />
 
       {isError && <ErrorState body={t('state.retryHint')} onRetry={() => refetch()} />}
@@ -158,6 +216,7 @@ export function ActivityPage() {
                 <Input
                   className="h-8 ps-8 text-[13px]"
                   placeholder={t('activity.filter.search')}
+                  aria-label={t('activity.filter.search')}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -242,38 +301,73 @@ function EntryRow({
   locale: 'en' | 'ar'
   t: TFunc
 }) {
+  const [open, setOpen] = useState(false)
+  const panelId = useId()
+  const detail = hasChangeDetail(e.changes) ? e.changes : null
+  const name = locale === 'ar' && e.recipe_name_ar ? e.recipe_name_ar : e.recipe_name
+  const isRecipe = e.kind === 'dish' || e.kind === 'production'
+
   return (
-    <li className="flex items-start gap-3 px-4 py-3">
-      <span className="mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full bg-surface-sunken text-ink-subtle">
-        <Icon name={ACTION_ICON[e.action] ?? 'activity'} size={14} />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm text-ink">
-          {e.changed_by && <span className="font-medium">{e.changed_by} </span>}
-          <span className="text-ink-muted">{e.action_display.toLowerCase()} </span>
-          <Link
-            to={e.recipe_path}
-            className="font-medium text-accent-ink hover:underline"
+    <li className="px-4 py-3">
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full bg-surface-sunken text-ink-subtle">
+          <Icon name={ACTION_ICON[e.action] ?? 'activity'} size={14} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm text-ink">
+            {e.changed_by && <span className="font-medium">{e.changed_by} </span>}
+            <span className="text-ink-muted">{e.action_display.toLowerCase()} </span>
+            {e.recipe_path ? (
+              <Link to={e.recipe_path} className="font-medium text-accent-ink hover:underline">
+                {name}
+              </Link>
+            ) : (
+              <span className="font-medium">{name}</span>
+            )}
+          </p>
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-subtle">
+            <Pill tone="neutral">{kindLabel(e.kind, t)}</Pill>
+            {!isRecipe && e.subject_type_display && <span>{e.subject_type_display}</span>}
+            {e.scope_name && <span>{e.scope_name}</span>}
+            {e.recipe_code && <span className="font-mono">#{e.recipe_code}</span>}
+            {e.description && <span className="text-ink-muted">· {e.description}</span>}
+          </div>
+        </div>
+        <div className="flex flex-none items-start gap-1">
+          <time
+            className="pt-1.5 text-2xs text-ink-subtle"
+            title={dateTime(e.created_at, locale)}
+            dateTime={e.created_at}
           >
-            {e.recipe_name}
-          </Link>
-        </p>
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-subtle">
-          <Pill tone="neutral">
-            {e.kind === 'dish' ? t('activity.kind.dish') : t('activity.kind.production')}
-          </Pill>
-          {e.scope_name && <span>{e.scope_name}</span>}
-          {e.recipe_code && <span className="font-mono">#{e.recipe_code}</span>}
-          {e.description && <span className="text-ink-muted">· {e.description}</span>}
+            {relativeTime(e.created_at, locale)}
+          </time>
+          {detail && (
+            <button
+              type="button"
+              aria-expanded={open}
+              aria-controls={panelId}
+              aria-label={open ? t('change.hide') : t('change.show')}
+              onClick={() => setOpen((o) => !o)}
+              className={cn(
+                'flex h-7 w-7 items-center justify-center rounded-md text-accent-ink',
+                'transition-colors duration-150 hover:bg-accent-subtle',
+                'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--focus)]',
+              )}
+            >
+              <Icon
+                name="chevronDown"
+                size={14}
+                className={cn('transition-transform duration-150', open && 'rotate-180')}
+              />
+            </button>
+          )}
         </div>
       </div>
-      <time
-        className="flex-none text-2xs text-ink-subtle"
-        title={dateTime(e.created_at, locale)}
-        dateTime={e.created_at}
-      >
-        {relativeTime(e.created_at, locale)}
-      </time>
+      {detail && open && (
+        <div id={panelId} className="mt-3 sm:ps-10">
+          <ChangeDetail changes={detail} />
+        </div>
+      )}
     </li>
   )
 }
