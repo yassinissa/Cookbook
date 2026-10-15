@@ -20,6 +20,7 @@ import {
 } from './IngredientEditor'
 import { EMPTY_STANDARD, QaStandardFields, standardToForm } from './QaStandardFields'
 import { VersionDrawer } from './VersionDrawer'
+import { brandOptions, hasBrandList } from './brandOptions'
 import * as api from '@/lib/api'
 import { qk } from '@/lib/queryClient'
 import { useDishRecipe, useInventoryItems, useReference } from '@/lib/queries'
@@ -156,6 +157,22 @@ export function DishEditorPage() {
   }
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }))
+  // A brand can have its own category / section list; switching brand drops
+  // a pick that isn't on the new brand's list.
+  const setBrand = (branchId: string) =>
+    setForm((f) => {
+      const keep = (items: { id: string; branch_ids?: string[] }[], id: string) =>
+        !id || brandOptions(items, branchId).some((i) => i.id === id) ? id : ''
+      return {
+        ...f,
+        branch_ref: branchId,
+        category: ref ? keep(ref.categories, f.category) : f.category,
+        section: ref ? keep(ref.sections, f.section) : f.section,
+      }
+    })
+  const brandName = ref?.branches.find((b) => b.id === form.branch_ref)?.name_en
+  const brandHint = (items: { id: string; branch_ids?: string[] }[]) =>
+    brandName && hasBrandList(items, form.branch_ref) ? t('editor.help.brandList', { brand: brandName }) : undefined
   const setStd = (k: string, v: string) => setStandard((s) => ({ ...s, [k]: v }))
   const err = (k: string) => fieldErrors[k]
 
@@ -330,7 +347,7 @@ export function DishEditorPage() {
                   <Input value={form.revision || 'Rev.01'} readOnly className="font-mono text-ink-muted" />
                 </Field>
                 <Field label={t('editor.field.branchRef')} help={t('editor.help.branchRef')} error={err('branch_ref')}>
-                  <Select value={form.branch_ref} onChange={(e) => set('branch_ref', e.target.value)}>
+                  <Select value={form.branch_ref} onChange={(e) => setBrand(e.target.value)}>
                     <option value="">—</option>
                     {ref.branches.map((b) => (
                       <option key={b.id} value={b.id}>
@@ -356,20 +373,28 @@ export function DishEditorPage() {
             <Card>
               <CardHeader title={t('editor.section.classification')} />
               <CardBody className="grid gap-4 sm:grid-cols-3">
-                <Field label={t('editor.field.category')} error={err('category')}>
+                <Field
+                  label={t('editor.field.category')}
+                  help={brandHint(ref.categories)}
+                  error={err('category')}
+                >
                   <Select value={form.category} onChange={(e) => set('category', e.target.value)}>
                     <option value="">—</option>
-                    {ref.categories.map((c) => (
+                    {brandOptions(ref.categories, form.branch_ref, form.category).map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
                       </option>
                     ))}
                   </Select>
                 </Field>
-                <Field label={t('editor.field.station')} help={t('editor.help.station')} error={err('section')}>
+                <Field
+                  label={t('editor.field.station')}
+                  help={brandHint(ref.sections) ?? t('editor.help.station')}
+                  error={err('section')}
+                >
                   <Select value={form.section} onChange={(e) => set('section', e.target.value)}>
                     <option value="">—</option>
-                    {ref.sections.map((s) => (
+                    {brandOptions(ref.sections, form.branch_ref, form.section).map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name}
                       </option>

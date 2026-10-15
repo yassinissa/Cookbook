@@ -14,6 +14,7 @@ from apps.cookbook.models import (
     MenuCategory, Section, ServiceStyle, Approver, Allergen, UnitScale,
     DishPriceHistory, DishRecipeActivityLog, ActivityActionType,
 )
+from apps.cookbook.models.reference import brand_options
 from apps.cookbook.services import apply_cost
 from apps.cookbook.nutrition import allergen_rollup
 from apps.cookbook.versioning import (
@@ -248,6 +249,7 @@ class DishRecipeWriteSerializer(serializers.ModelSerializer):
         singly-scoped user's new dishes default to that branch."""
         if 'ingredients' in attrs:
             attrs['ingredients'] = clean_ingredient_lines(attrs['ingredients'])
+        self._check_brand_lists(attrs)
         request = self.context.get('request')
         if not request:
             return attrs
@@ -265,6 +267,25 @@ class DishRecipeWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {'branch_ref': 'This dish must belong to a branch you are assigned to.'})
         return attrs
+
+    def _check_brand_lists(self, attrs):
+        """A dish's category and section must come from its brand's list (see
+        `brand_options`). Only checked when the value is new or the brand
+        moved, so a dish saved before a brand got its list stays editable."""
+        branch = attrs['branch_ref'] if 'branch_ref' in attrs else getattr(self.instance, 'branch_ref', None)
+        moved = self.instance is None or (
+            'branch_ref' in attrs and attrs['branch_ref'] != self.instance.branch_ref)
+        errors = {}
+        for field, model, noun in (('category', MenuCategory, 'category'), ('section', Section, 'section')):
+            value = attrs.get(field)
+            if value is None:
+                continue
+            changed = moved or value != getattr(self.instance, field, None)
+            if changed and not brand_options(model, branch).filter(pk=value.pk).exists():
+                where = f'the {branch.name_en} list' if branch else 'the list for dishes without a brand'
+                errors[field] = f'"{value}" is not on {where} of {noun}s.'
+        if errors:
+            raise serializers.ValidationError(errors)
 
     def _save_ingredients(self, recipe, ingredient_data):
         for i, ing in enumerate(ingredient_data):

@@ -36,7 +36,7 @@ class ReadOnlyReferenceViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
 
 
 class MenuCategoryViewSet(ReadOnlyReferenceViewSet):
-    queryset = MenuCategory.objects.all()
+    queryset = MenuCategory.objects.prefetch_related('branches')
     serializer_class = MenuCategorySerializer
 
 
@@ -91,7 +91,7 @@ class PrepKitchenViewSet(
 
 
 class SectionViewSet(ReadOnlyReferenceViewSet):
-    queryset = Section.objects.all()
+    queryset = Section.objects.prefetch_related('branches')
     serializer_class = SectionSerializer
 
 

@@ -14,6 +14,8 @@ from .models import (
 class MenuCategoryAdmin(admin.ModelAdmin):
     list_display  = ['name', 'name_ar', 'sort_order']
     search_fields = ['name']
+    list_filter   = ['branches']
+    filter_horizontal = ['branches']
 
 
 @admin.register(Branch)
@@ -26,6 +28,8 @@ class BranchAdmin(admin.ModelAdmin):
 class SectionAdmin(admin.ModelAdmin):
     list_display  = ['name', 'avg_monthly_salary']
     search_fields = ['name']
+    list_filter   = ['branches']
+    filter_horizontal = ['branches']
 
 
 @admin.register(Approver)

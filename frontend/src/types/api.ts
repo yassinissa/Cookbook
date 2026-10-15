@@ -16,6 +16,8 @@ export interface MenuCategory {
   name_ar: string
   menu_title_ar: string
   sort_order: number
+  /** brands with their own list; empty = offered to brands without one */
+  branch_ids?: ID[]
 }
 export interface Branch {
   id: ID
@@ -28,6 +30,7 @@ export interface Section {
   id: ID
   name: string
   avg_monthly_salary: string | null
+  branch_ids?: ID[]
 }
 export interface Approver {
   id: ID

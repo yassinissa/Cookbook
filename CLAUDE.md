@@ -401,6 +401,16 @@ before calling anything done — not just "the happy path returns 200."
   **Gotcha**: Vite's StatReloader misses `.tsx`/`.py` changes on Windows —
   restart the dev server (and run Django with `--noreload`) rather than
   trusting HMR when a route or endpoint 404s after an edit.
+- **Per-brand category / section lists** (2026-10-15, migrations `0033`/`0034`):
+  `MenuCategory.branches` + `Section.branches` (M2M). A brand with any assigned
+  uses only its own list; a brand without one uses the unassigned items
+  (`models.reference.brand_options` — mirrored by
+  `features/dishes/brandOptions.ts` in the dish editor, which also clears a
+  pick that isn't on a newly chosen brand's list). `DishRecipeWriteSerializer`
+  enforces it only when the value is new or the brand moved, so older dishes
+  stay editable. Sando's 16 categories + 23 sections are seeded by `0034`;
+  other brands' lists are edited in Django admin (filter_horizontal) for now.
+  Production recipes (prep kitchens, no brand) still see every section.
 - **Access control**: `backend/apps/accounts/` — capability catalogue
   (`capabilities.py`, code-owned; `manage.py sync_capabilities` mirrors it to
   `Capability` rows), `Role` (bundles capabilities + a default data scope),

@@ -32,6 +32,9 @@ class MenuCategory(BaseModel):
                       help_text="Arabic heading printed on the menu — the sheet keeps this "
                                 "separate from name_ar (it can differ).")
     sort_order    = models.PositiveIntegerField(default=0)
+    branches      = models.ManyToManyField('Branch', blank=True, related_name='menu_categories',
+                                    help_text='Brands that use this. A brand with any assigned uses only its own list; '
+                                    'empty = offered to brands that have no list of their own.')
 
     class Meta:
         ordering = ['sort_order', 'name']
@@ -109,6 +112,9 @@ class Section(BaseModel):
     name               = models.CharField(max_length=100, unique=True)
     avg_monthly_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
                            help_text='KWD/month. Null if not currently computable (no staff assigned).')
+    branches           = models.ManyToManyField(Branch, blank=True, related_name='sections',
+                                    help_text='Brands that use this. A brand with any assigned uses only its own list; '
+                                    'empty = offered to brands that have no list of their own.')
 
     class Meta:
         ordering = ['name']
@@ -232,3 +238,11 @@ class TasteDescriptor(BaseModel):
 
     def __str__(self):
         return f'{self.get_category_display()}: {self.value}'
+
+
+def brand_options(model, branch):
+    """The MenuCategory / Section rows a dish of `branch` may use: the brand's
+    own list if it has one, otherwise everything not tied to any brand."""
+    if branch is not None and model.objects.filter(branches=branch).exists():
+        return model.objects.filter(branches=branch)
+    return model.objects.filter(branches__isnull=True)

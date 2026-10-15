@@ -8,7 +8,9 @@ from apps.cookbook.models import (
 class MenuCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = MenuCategory
-        fields = ['id', 'name', 'name_ar', 'menu_title_ar', 'sort_order']
+        fields = ['id', 'name', 'name_ar', 'menu_title_ar', 'sort_order', 'branch_ids']
+
+    branch_ids = serializers.PrimaryKeyRelatedField(source='branches', many=True, read_only=True)
 
 
 class BranchSerializer(serializers.ModelSerializer):
@@ -30,7 +32,9 @@ class PrepKitchenSerializer(serializers.ModelSerializer):
 class SectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Section
-        fields = ['id', 'name', 'avg_monthly_salary']
+        fields = ['id', 'name', 'avg_monthly_salary', 'branch_ids']
+
+    branch_ids = serializers.PrimaryKeyRelatedField(source='branches', many=True, read_only=True)
 
 
 class ApproverSerializer(serializers.ModelSerializer):
