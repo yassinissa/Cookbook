@@ -34,6 +34,7 @@ const ACTION_ICON: Record<string, IconName> = {
   snapshot_taken: 'history',
   signed_in: 'key',
   sign_in_failed: 'warning',
+  signed_out: 'logout',
   command_run: 'settings',
   command_failed: 'alert',
 }

@@ -254,6 +254,15 @@ class SignInLogTests(SystemLogTestBase):
         self.assertNotIn('right-horse-battery', blob)
         self.assertNotIn('wrong-guess-123', blob)
 
+    def test_sign_out_is_logged(self):
+        token = self.anon.post(self.LOGIN, {'username': 'nadia', 'password': 'right-horse-battery'},
+                               format='json').data['access']
+        c = APIClient(HTTP_ACCEPT='application/json', HTTP_AUTHORIZATION=f'Bearer {token}')
+        self.assertEqual(c.post('/api/auth/logout/').status_code, 204)
+        row = SystemActivityLog.objects.get(action_type=ActivityActionType.SIGNED_OUT)
+        self.assertEqual((row.area, row.changed_by), ('auth', 'nadia'))
+        self.assertEqual(APIClient().post('/api/auth/logout/').status_code, 401)
+
     def test_rate_limited_attempt_is_logged(self):
         with mock.patch.object(ScopedRateThrottle, 'THROTTLE_RATES', {'login': '1/min'}):
             self.anon.post(self.LOGIN, {'username': 'x', 'password': 'y'}, format='json')

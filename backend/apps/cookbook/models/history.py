@@ -34,6 +34,7 @@ class ActivityActionType(models.TextChoices):
     SNAPSHOT_TAKEN    = 'snapshot_taken',    'Snapshot taken'
     SIGNED_IN         = 'signed_in',         'Signed in'
     SIGN_IN_FAILED    = 'sign_in_failed',    'Sign-in failed'
+    SIGNED_OUT        = 'signed_out',        'Signed out'
     COMMAND_RUN       = 'command_run',       'Ran command'
     COMMAND_FAILED    = 'command_failed',    'Command failed'
 

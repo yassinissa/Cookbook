@@ -1,4 +1,4 @@
-from django.contrib.auth.signals import user_logged_in, user_login_failed
+from django.contrib.auth.signals import user_logged_in, user_logged_out, user_login_failed
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -37,6 +37,16 @@ class ThrottledLoginView(TokenObtainPairView):
             credentials={'username': (request.data or {}).get('username', '')},
         )
         super().throttled(request, wait)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def logout(request):
+    """Sign out. JWTs live in the browser, so the app drops its own tokens;
+    this call exists so the sign-out is announced (Django's `user_logged_out`
+    signal — the cookbook action log listens)."""
+    user_logged_out.send(sender=request.user.__class__, request=request, user=request.user)
+    return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 def _scope_payload(id_set, model):

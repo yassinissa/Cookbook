@@ -8,9 +8,11 @@ view, so `apps.core` (the JWT login) never imports the cookbook app:
   - `user_login_failed`: sent by `authenticate()` on a wrong username /
     password (credentials arrive with the password already scrubbed), and by
     the login view when the rate limit blocks an attempt.
+  - `user_logged_out`: sent by core's logout view (the app's Sign out calls it
+    before dropping its tokens) and by Django on an /admin/ logout.
 The password is never read or stored — only the username that was tried.
 """
-from django.contrib.auth.signals import user_logged_in, user_login_failed
+from django.contrib.auth.signals import user_logged_in, user_logged_out, user_login_failed
 from django.dispatch import receiver
 
 from .audit import record
@@ -46,3 +48,13 @@ def log_sign_in_failed(sender, credentials=None, request=None, reason='', **kwar
     record('', area=ActivityArea.AUTH, action=ActivityActionType.SIGN_IN_FAILED,
            subject_type='user', label=tried or '(no username)', code=tried,
            description=' · '.join(b for b in (why, _client(request)) if b))
+
+
+@receiver(user_logged_out, dispatch_uid='cookbook.audit.signed_out')
+def log_sign_out(sender, request=None, user=None, **kwargs):
+    if user is None or not getattr(user, 'is_authenticated', False):
+        return
+    profile = getattr(user, 'profile', None)
+    record(user.username, area=ActivityArea.AUTH, action=ActivityActionType.SIGNED_OUT,
+           subject_type='user', subject_id=user.pk, code=user.username, path='/admin/users',
+           label=(getattr(profile, 'display_name', '') or user.username), description=_client(request))

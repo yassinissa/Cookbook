@@ -57,7 +57,16 @@ export async function login(username: string, password: string) {
   return data
 }
 
-export function logout() {
+/** Tell the server first (so the sign-out is in the activity log), then drop
+ *  the tokens. Never blocks sign-out: offline or a failed call still clears. */
+export async function logout() {
+  if (getToken()) {
+    try {
+      await http.post('/auth/logout/', null, { timeout: 4000 })
+    } catch {
+      /* signing out must always work */
+    }
+  }
   clearToken()
 }
 

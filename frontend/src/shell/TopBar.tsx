@@ -224,8 +224,7 @@ function UserMenu() {
               role="menuitem"
               onMouseDown={(e) => {
                 e.preventDefault()
-                logout()
-                window.location.assign('/login')
+                void logout().finally(() => window.location.assign('/login'))
               }}
               className="flex w-full items-center gap-2 px-3 py-2 text-start text-[13px] text-ink hover:bg-surface-sunken"
             >

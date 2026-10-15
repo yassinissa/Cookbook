@@ -64,13 +64,15 @@ before calling anything done — not just "the happy path returns 200."
     "set"/"changed", never the value) + activate/deactivate, roles, digest
     setting (incl. the email unsubscribe link), **recipe deletes** (the
     recipe's own log cascades away), **sign-ins** — success, wrong
-    password, rate-limit block; IP + user agent, never the password — via
+    password, rate-limit block, and sign-out (the app's Sign out POSTs
+    `/api/auth/logout/` before dropping its tokens; JWTs are otherwise
+    invisible to the server); IP + user agent, never the password — via
     Django's `user_logged_in` / `user_login_failed` signals (`signals.py`;
     core's login view only *sends* them, so core never imports cookbook), and
     **every `manage.py` command run** (all commands subclass
     `audit.AuditedCommand`: args, ok/failed, output tail — new commands must
     too). Django-admin edits (reference data) come from Django's own
-    `LogEntry`, merged into the feed rather than duplicated (migration `0031`).
+    `LogEntry`, merged into the feed rather than duplicated (migrations `0031`, `0032`).
     Written by `audit.py`: `AuditedViewSetMixin` (before/after snapshot
     around perform_create/update/destroy; a no-op save writes nothing;
     child rows flattened one field each, e.g. `conversion.line 1 Tbs`) or
