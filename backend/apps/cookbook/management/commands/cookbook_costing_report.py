@@ -13,11 +13,12 @@ from django.core.management.base import BaseCommand
 from apps.cookbook.models import DishRecipe
 from apps.cookbook.recipe_sheet import parse_menu_to_dor
 from apps.cookbook.services import apply_cost, get_inventory_items_by_sku
+from apps.cookbook.audit import AuditedCommand
 
 TOLERANCE = Decimal('0.001')
 
 
-class Command(BaseCommand):
+class Command(AuditedCommand):
     help = 'Diff recomputed dish costs against the cook book sheet.'
 
     def add_arguments(self, parser):

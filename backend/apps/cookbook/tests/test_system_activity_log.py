@@ -14,13 +14,18 @@ import io
 from decimal import Decimal
 from unittest import mock
 
+from django.contrib.admin.models import CHANGE, LogEntry
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
+from django.core.management import CommandError, call_command
 from openpyxl import load_workbook
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.test import APIClient, APITestCase
 
 from apps.accounts.models import Capability, Role
 from apps.cookbook.models import (
-    ActivityActionType, Branch, DishRecipe, DishRecipeActivityLog, Menu, Section,
+    ActivityActionType, Allergen, Branch, DigestSubscription, DishRecipe, DishRecipeActivityLog, Menu, Section,
     SystemActivityLog,
 )
 from .support import make_units
@@ -221,3 +226,79 @@ class ExportTests(SystemLogTestBase):
     def test_export_is_capability_gated(self):
         staff = self._user('Branch Staff', branches=[self.salmiya])
         self.assertEqual(self.api(staff).get(f'{FEED}export/').status_code, 403)
+
+
+class SignInLogTests(SystemLogTestBase):
+    LOGIN = '/api/auth/login/'
+
+    def setUp(self):
+        super().setUp()
+        cache.clear()
+        self.addCleanup(cache.clear)
+        self.nadia = User.objects.create_user('nadia', password='right-horse-battery')
+        self.anon = APIClient(HTTP_ACCEPT='application/json', REMOTE_ADDR='10.1.2.3')
+
+    def test_sign_in_and_failed_sign_in_are_logged_without_the_password(self):
+        r = self.anon.post(self.LOGIN, {'username': 'nadia', 'password': 'right-horse-battery'}, format='json')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('access', r.data)
+        r = self.anon.post(self.LOGIN, {'username': 'nadia', 'password': 'wrong-guess-123'}, format='json')
+        self.assertEqual(r.status_code, 401)
+
+        ok = SystemActivityLog.objects.get(action_type=ActivityActionType.SIGNED_IN)
+        self.assertEqual((ok.area, ok.changed_by, ok.subject_code), ('auth', 'nadia', 'nadia'))
+        self.assertIn('10.1.2.3', ok.description)
+        bad = SystemActivityLog.objects.get(action_type=ActivityActionType.SIGN_IN_FAILED)
+        self.assertEqual((bad.subject_code, bad.changed_by), ('nadia', ''))
+        blob = str(list(SystemActivityLog.objects.values_list('description', 'changes', 'subject_label')))
+        self.assertNotIn('right-horse-battery', blob)
+        self.assertNotIn('wrong-guess-123', blob)
+
+    def test_rate_limited_attempt_is_logged(self):
+        with mock.patch.object(ScopedRateThrottle, 'THROTTLE_RATES', {'login': '1/min'}):
+            self.anon.post(self.LOGIN, {'username': 'x', 'password': 'y'}, format='json')
+            r = self.anon.post(self.LOGIN, {'username': 'x', 'password': 'y'}, format='json')
+        self.assertEqual(r.status_code, 429)
+        self.assertTrue(SystemActivityLog.objects.filter(
+            action_type='sign_in_failed', description__startswith='Blocked').exists())
+
+    def test_sign_ins_are_visible_to_user_admins_only(self):
+        self.anon.post(self.LOGIN, {'username': 'nadia', 'password': 'right-horse-battery'}, format='json')
+        self.assertEqual(self.client.get(FEED, {'kind': 'auth'}).data['count'], 1)
+        qa = self._user('QA Manager')
+        self.assertEqual(self.api(qa).get(FEED, {'kind': 'auth'}).data['count'], 0)
+
+
+class OtherActionLogTests(SystemLogTestBase):
+    def test_unsubscribe_link_is_logged(self):
+        sub = DigestSubscription.objects.create(user=self.admin, cadence='weekly')
+        APIClient().get(f'/api/cookbook/public/digest/unsubscribe/{sub.unsubscribe_token}/')
+        row = SystemActivityLog.objects.get(subject_type='digest_subscription')
+        self.assertEqual((row.changed_by, row.description), ('boss', 'Unsubscribed via the email link'))
+
+    def test_command_runs_are_logged_with_output(self):
+        call_command('sync_capabilities', stdout=io.StringIO())
+        row = SystemActivityLog.objects.get(subject_type='command')
+        self.assertEqual((row.area, row.action_type, row.subject_code, row.changed_by),
+                         ('system', 'command_run', 'sync_capabilities', 'system'))
+        self.assertTrue(row.description.startswith('manage.py sync_capabilities'))
+
+    def test_failed_command_is_logged_and_still_raises(self):
+        with self.assertRaises(CommandError):
+            call_command('import_pos_menu', 'no-such-file.xlsm', '--dry-run', stdout=io.StringIO())
+        row = SystemActivityLog.objects.get(action_type=ActivityActionType.COMMAND_FAILED)
+        self.assertIn('--dry-run', row.description)
+        self.assertIn('File not found', fields(row)['command.error'][1])
+
+    def test_django_admin_edits_appear_in_the_feed(self):
+        allergen = Allergen.objects.create(name='Sesame')
+        LogEntry.objects.log_action(
+            user_id=self.admin.pk, content_type_id=ContentType.objects.get_for_model(Allergen).pk,
+            object_id=str(allergen.pk), object_repr='Sesame', action_flag=CHANGE,
+            change_message='[{"changed": {"fields": ["Name"]}}]')
+        r = self.client.get(FEED, {'kind': 'admin'})
+        e = r.data['results'][0]
+        self.assertEqual((e['action'], e['recipe_name'], e['changed_by']), ('updated', 'Sesame', 'boss'))
+        self.assertIn('Django admin', e['subject_type_display'])
+        x = self.client.get(f'{FEED}export/', {'kind': 'admin'})
+        self.assertEqual(x.status_code, 200)

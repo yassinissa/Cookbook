@@ -570,7 +570,7 @@ export interface PlatingGuideInput {
 /* ── activity & history feed ────────────────────────────────────────── */
 /** What part of the system an action touched. dish / production are recipe
  *  logs; the rest come from the system-wide log (items, menus, POS, admin). */
-export type ActivityKind = 'dish' | 'production' | 'item' | 'menu' | 'pos' | 'admin'
+export type ActivityKind = 'dish' | 'production' | 'item' | 'menu' | 'pos' | 'admin' | 'auth' | 'system'
 
 export interface ActivityEntry {
   id: ID

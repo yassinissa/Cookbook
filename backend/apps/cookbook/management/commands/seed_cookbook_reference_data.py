@@ -11,6 +11,7 @@ from apps.cookbook.models import (
     MenuCategory, Branch, Section, Approver, Allergen, ServiceStyle, UnitScale,
     StandardMeasurementConversion, TasteDescriptor, TasteDescriptorCategory,
 )
+from apps.cookbook.audit import AuditedCommand
 
 # name_en -> (name_ar, menu_title_ar) — Restaurant Information sheet cols B / D / F
 MENU_CATEGORIES = {
@@ -183,7 +184,7 @@ TASTE_DESCRIPTORS = {
 }
 
 
-class Command(BaseCommand):
+class Command(AuditedCommand):
     help = 'Seed apps.cookbook reference tables with real data from the Lebanese Menu Cook Book.'
 
     @transaction.atomic

@@ -32,9 +32,13 @@ const ACTION_ICON: Record<string, IconName> = {
   activated: 'check',
   deactivated: 'lock',
   snapshot_taken: 'history',
+  signed_in: 'key',
+  sign_in_failed: 'warning',
+  command_run: 'settings',
+  command_failed: 'alert',
 }
 
-const KINDS: ActivityKind[] = ['dish', 'production', 'item', 'menu', 'pos', 'admin']
+const KINDS: ActivityKind[] = ['dish', 'production', 'item', 'menu', 'pos', 'admin', 'auth', 'system']
 
 function kindLabel(kind: string, t: TFunc) {
   return (KINDS as string[]).includes(kind) ? t(`activity.kind.${kind}` as MessageKey) : kind

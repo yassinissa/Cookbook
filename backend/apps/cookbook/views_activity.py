@@ -7,12 +7,15 @@ merged from three logs —
     recalculations, QA, plating, publishes), and
   - SystemActivityLog (everything else: inventory-item supplements, menus,
     specials, POS modifiers, branches, prep kitchens, users, roles, recipe
-    deletes — written by `apps.cookbook.audit`).
+    deletes, sign-ins, management-command runs — written by
+    `apps.cookbook.audit` / `apps.cookbook.signals`), and
+  - Django's own admin LogEntry (reference data edited at /admin/).
 
 Who sees what: dish rows are branch-scoped; production rows are
 prep-kitchen-scoped and need `production.view`; item rows need
 `inventory.view`, menu rows `menu.view` (+ branch scope), POS rows
-`pos.manage`, admin rows any `admin.*` capability. Money fields are stripped
+`pos.manage`, admin + system rows (and Django-admin edits) any `admin.*`
+capability, sign-ins `admin.users`. Money fields are stripped
 from the change record without `costing.view`.
 
 Volume is modest, so the merge is done in Python: filter each queryset,
@@ -24,6 +27,7 @@ import csv
 import io
 from datetime import datetime, time
 
+from django.contrib.admin.models import ADDITION, CHANGE, DELETION, LogEntry
 from django.db.models import Q
 from django.http import HttpResponse
 from django.utils import timezone
@@ -63,7 +67,12 @@ SUBJECT_TYPES = {
     'user': 'User',
     'role': 'Role',
     'digest_subscription': 'Cost digest setting',
+    'command': 'Management command',
+    'django_admin': 'Django admin',
 }
+
+_ADMIN_FLAG_ACTION = {ADDITION: 'created', CHANGE: 'updated', DELETION: 'deleted'}
+_ACTION_ADMIN_FLAG = {v: k for k, v in _ADMIN_FLAG_ACTION.items()}
 
 # Money in a system change record — the last segment of `<prefix>.<field>`.
 _SYSTEM_COSTING = COSTING_FIELDS | {'cost_per_base_unit', 'order_cost', 'menu_price'}
@@ -124,6 +133,34 @@ def _system_entry(log):
     }
 
 
+def _django_admin_entry(log):
+    """A Django-admin LogEntry (reference data edited at /admin/) in the same shape."""
+    action = _ADMIN_FLAG_ACTION.get(log.action_flag, 'updated')
+    model = log.content_type.name if log.content_type_id else 'record'
+    return {
+        'id': f'admin-{log.pk}',
+        'kind': ActivityArea.ADMIN,
+        'kind_display': ActivityArea.ADMIN.label,
+        'action': action,
+        'action_display': ActivityActionType(action).label,
+        'description': log.get_change_message() or '',
+        'subject_type': 'django_admin',
+        'subject_type_display': f'{model[:1].upper()}{model[1:]} (Django admin)',
+        'recipe_id': log.object_id or '',
+        'recipe_name': log.object_repr,
+        'recipe_name_ar': '',
+        'recipe_code': '',
+        'recipe_path': None,
+        'scope_name': None,
+        'changed_by': log.user.username if log.user_id else None,
+        'created_at': log.action_time.isoformat(),
+    }
+
+
+def when(log):
+    return log.action_time if isinstance(log, LogEntry) else log.created_at
+
+
 def _strip_system_costing(changes):
     if not changes:
         return changes
@@ -171,7 +208,9 @@ def scoped_system_queryset(access, kind=None):
     if access.can('pos.manage'):
         areas.append(ActivityArea.POS)
     if any(access.can(c) for c in ADMIN_CAPS):
-        areas.append(ActivityArea.ADMIN)
+        areas += [ActivityArea.ADMIN, ActivityArea.SYSTEM]
+    if access.can('admin.users'):
+        areas.append(ActivityArea.AUTH)
     qs = qs.filter(area__in=areas)
     if access.scope.branch_ids is not ALL:
         qs = qs.filter(Q(branch_ref__isnull=True) | Q(branch_ref_id__in=list(access.scope.branch_ids)))
@@ -237,11 +276,33 @@ def collect_activity(request):
     actors |= set(sys_qs.exclude(changed_by='').values_list('changed_by', flat=True))
     rows += [('system', log) for log in sys_qs]
 
-    rows.sort(key=lambda t: t[1].created_at, reverse=True)
+    # Django admin edits (reference data). Admin-capable callers only.
+    if kind in (None, ActivityArea.ADMIN) and (
+            access.is_superuser or any(access.can(c) for c in ADMIN_CAPS)):
+        adm = LogEntry.objects.select_related('user', 'content_type')
+        if actions:
+            flags = [_ACTION_ADMIN_FLAG[a] for a in actions if a in _ACTION_ADMIN_FLAG]
+            adm = adm.filter(action_flag__in=flags)
+        if actor:
+            adm = adm.filter(user__username=actor)
+        if date_from:
+            adm = adm.filter(action_time__gte=date_from)
+        if date_to:
+            adm = adm.filter(action_time__lte=date_to)
+        if subject_id:
+            adm = adm.filter(object_id=subject_id)
+        if query:
+            adm = adm.filter(Q(object_repr__icontains=query) | Q(change_message__icontains=query))
+        actors |= set(adm.values_list('user__username', flat=True))
+        rows += [('django_admin', log) for log in adm]
+
+    rows.sort(key=lambda t: when(t[1]), reverse=True)
     return rows, actors, access
 
 
 def feed_entry(source, log, *, can_cost):
+    if source == 'django_admin':
+        return {**_django_admin_entry(log), 'changes': None}
     if source == 'system':
         entry = _system_entry(log)
         changes = log.changes if can_cost else _strip_system_costing(log.changes)
@@ -343,7 +404,7 @@ def _export_rows(rows, can_cost):
     activity, field_rows = [], []
     for source, log in rows:
         e = feed_entry(source, log, can_cost=can_cost)
-        local = timezone.localtime(log.created_at)
+        local = timezone.localtime(when(log))
         day, clock = local.strftime('%Y-%m-%d'), local.strftime('%H:%M')
         flat = flatten_changes(e['changes'])
         activity.append([

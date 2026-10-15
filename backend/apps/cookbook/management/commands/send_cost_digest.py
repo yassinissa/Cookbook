@@ -28,12 +28,13 @@ from django.utils import timezone
 from apps.accounts.access import access_for
 from apps.cookbook.models import DigestCadence, DigestSubscription
 from apps.cookbook.reporting import build_weekly_digest
+from apps.cookbook.audit import AuditedCommand
 
 User = get_user_model()
 _RESEND_GUARD = timedelta(days=5)   # don't re-send within this window unless forced
 
 
-class Command(BaseCommand):
+class Command(AuditedCommand):
     help = 'Email the weekly cost-report digest to enrolled users.'
 
     def add_arguments(self, parser):

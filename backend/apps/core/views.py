@@ -1,7 +1,10 @@
+from django.contrib.auth.signals import user_logged_in, user_login_failed
+from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from apps.accounts.access import ALL, access_for
@@ -14,6 +17,26 @@ class ThrottledLoginView(TokenObtainPairView):
     global anon/user throttles."""
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = 'login'
+
+    # Sign-ins are audited through Django's standard auth signals (the
+    # cookbook app listens): a wrong password already fires
+    # `user_login_failed` inside authenticate(); a success and a rate-limit
+    # block are announced here. Never the password.
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError as e:
+            raise InvalidToken(e.args[0]) from e
+        user_logged_in.send(sender=serializer.user.__class__, request=request, user=serializer.user)
+        return Response(serializer.validated_data, status=status.HTTP_200_OK)
+
+    def throttled(self, request, wait):
+        user_login_failed.send(
+            sender=__name__, request=request, reason='rate_limited',
+            credentials={'username': (request.data or {}).get('username', '')},
+        )
+        super().throttled(request, wait)
 
 
 def _scope_payload(id_set, model):

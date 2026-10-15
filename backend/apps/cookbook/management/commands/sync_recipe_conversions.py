@@ -16,9 +16,10 @@ from django.core.management.base import BaseCommand, CommandError
 
 from apps.cookbook.publishing import sync_item_conversions
 from apps.integrations.inventory_client import InventoryAPIError
+from apps.cookbook.audit import AuditedCommand
 
 
-class Command(BaseCommand):
+class Command(AuditedCommand):
     help = "Send Cookbook's per-item recipe conversions to inventory-platform."
 
     def add_arguments(self, parser):

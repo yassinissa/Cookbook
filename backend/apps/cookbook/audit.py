@@ -14,9 +14,14 @@ lines, modifier options, menu lines ...) are flattened into one field per row
 keyed by its label, so an edit to "1 Tbs" reads as one from → to line.
 An update that changes nothing writes no row.
 """
+import io
+import logging
+import sys
 from decimal import Decimal
 
-from .models import ActivityActionType, SystemActivityLog
+from django.core.management.base import BaseCommand
+
+from .models import ActivityActionType, ActivityArea, SystemActivityLog
 from .versioning import _fk_label
 
 A = ActivityActionType
@@ -134,3 +139,67 @@ class AuditedViewSetMixin:
         record(self.request, area=self.audit_area, action=A.DELETED, subject_type=self.audit_subject,
                subject_id=pk, changes=diff(self.audit_prefix or self.audit_subject, before, {}),
                **{**subject, 'path': ''})
+
+
+# ── management commands ─────────────────────────────────────────────────────
+
+_BASE_OPTIONS = {'verbosity', 'settings', 'pythonpath', 'traceback', 'no_color', 'force_color',
+                 'skip_checks', 'stdout', 'stderr'}
+_OUTPUT_TAIL = 3000
+
+
+class _Tee(io.TextIOBase):
+    """Writes through to the real stream and keeps a copy for the log."""
+    def __init__(self, primary):
+        self.primary, self.copy = primary, io.StringIO()
+
+    def write(self, s):
+        self.copy.write(s)
+        return self.primary.write(s)
+
+    def flush(self):
+        self.primary.flush()
+
+    def isatty(self):
+        return getattr(self.primary, 'isatty', lambda: False)()
+
+
+class AuditedCommand(BaseCommand):
+    """BaseCommand that logs each run (imports, bulk publishes, syncs, seeds,
+    the digest cron ...) as one SystemActivityLog row: the arguments, whether
+    it succeeded, and the tail of its output. Logging never breaks the
+    command — an audit write failure is swallowed (logged to stderr)."""
+
+    def execute(self, *args, **options):
+        tee = _Tee(options.get('stdout') or sys.stdout)
+        options['stdout'] = tee
+        name = type(self).__module__.rsplit('.', 1)[-1]
+        argv = [str(a) for a in args] + [
+            f'--{k.replace("_", "-")}' + ('' if v is True else f'={v}')
+            for k, v in sorted(options.items())
+            if k not in _BASE_OPTIONS and v not in (None, False, '', [], ())
+        ]
+        try:
+            result = super().execute(*args, **options)
+        except BaseException as e:
+            self._audit(name, argv, tee, failed=f'{type(e).__name__}: {e}')
+            raise
+        self._audit(name, argv, tee)
+        return result
+
+    @staticmethod
+    def _audit(name, argv, tee, failed=''):
+        output = tee.copy.getvalue().strip()
+        if len(output) > _OUTPUT_TAIL:
+            output = '…' + output[-_OUTPUT_TAIL:]
+        fields = [{'field': 'command.output', 'from': None, 'to': output}] if output else []
+        if failed:
+            fields.insert(0, {'field': 'command.error', 'from': None, 'to': failed[:1000]})
+        try:
+            record('system', area=ActivityArea.SYSTEM,
+                   action=ActivityActionType.COMMAND_FAILED if failed else ActivityActionType.COMMAND_RUN,
+                   subject_type='command', label=name, code=name,
+                   description=' '.join(['manage.py', name, *argv])[:2000],
+                   changes={'fields': fields} if fields else None)
+        except Exception:  # never fail the command over its audit row
+            logging.getLogger(__name__).exception('could not log the %s run', name)

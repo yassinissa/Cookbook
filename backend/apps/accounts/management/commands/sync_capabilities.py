@@ -3,9 +3,10 @@ from django.core.management.base import BaseCommand
 
 from apps.accounts.capabilities import CAPABILITIES, CAPABILITY_CODES
 from apps.accounts.models import Capability
+from apps.cookbook.audit import AuditedCommand
 
 
-class Command(BaseCommand):
+class Command(AuditedCommand):
     help = 'Sync the Capability table with apps.accounts.capabilities.CAPABILITIES'
 
     def add_arguments(self, parser):

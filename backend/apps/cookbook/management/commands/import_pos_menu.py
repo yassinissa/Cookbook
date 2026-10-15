@@ -31,6 +31,7 @@ from apps.cookbook.models import (
     ModifierGroup, ModifierOption, ModifierOptionKind, ModifierRole,
     ModifierSelection, DishModifierGroup, MenuLineModifier,
 )
+from apps.cookbook.audit import AuditedCommand
 
 FORCED_SHEET = 'POSLavu Forced Modifier'
 OPTIONAL_SHEET = 'POSLavu Optional Modifier'
@@ -92,7 +93,7 @@ def _guess_kind(name_en, price, *, forced):
     return ModifierOptionKind.ADDON if price > 0 else ModifierOptionKind.CHOICE
 
 
-class Command(BaseCommand):
+class Command(AuditedCommand):
     help = 'Import POS modifier groups/options + dish attachments from a Menu POS Applications workbook.'
 
     def add_arguments(self, parser):

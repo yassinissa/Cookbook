@@ -18,6 +18,7 @@ from django.core.management.base import BaseCommand, CommandError
 from apps.cookbook.models import (
     DishRecipe, DishModifierGroup, ModifierOptionKind, DeductionStatus,
 )
+from apps.cookbook.audit import AuditedCommand
 
 
 def _ascii(s):
@@ -82,7 +83,7 @@ def _norm(s):
     return ' '.join(s.split()).casefold()
 
 
-class Command(BaseCommand):
+class Command(AuditedCommand):
     help = 'Audit a Lavu sales report against POS-modifier deduction readiness.'
 
     def add_arguments(self, parser):

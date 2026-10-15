@@ -33,6 +33,7 @@ from apps.cookbook.models import (
     DishRecipe, DishModifierGroup, ModifierGroup, ModifierOption,
     ModifierOptionKind, ModifierRole, DeductionStatus,
 )
+from apps.cookbook.audit import AuditedCommand
 
 PROTEIN_GROUP = 'WnR Protein Choice'
 # report Mods that are a protein / variant pick (normalised -> canonical label)
@@ -75,7 +76,7 @@ def parse_report(path):
     return by_item
 
 
-class Command(BaseCommand):
+class Command(AuditedCommand):
     help = 'Structural backfill for WnR POS modifiers (safe changes only) + chef worklist.'
 
     def add_arguments(self, parser):

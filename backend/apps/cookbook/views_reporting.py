@@ -66,8 +66,16 @@ class DigestUnsubscribeView(APIView):
     def get(self, request, token):
         sub = get_object_or_404(DigestSubscription, unsubscribe_token=token)
         if sub.cadence != DigestCadence.OFF:
+            before = sub.cadence
             sub.cadence = DigestCadence.OFF
             sub.save(update_fields=['cadence', 'updated_at'])
+            from .audit import record
+            from .models import ActivityActionType, ActivityArea
+            user = sub.user
+            record(user.username, area=ActivityArea.ADMIN, action=ActivityActionType.UPDATED,
+                   subject_type='digest_subscription', subject_id=user.pk, label=user.username,
+                   code=user.username, path='/settings', description='Unsubscribed via the email link',
+                   changes={'fields': [{'field': 'digest.cadence', 'from': before, 'to': DigestCadence.OFF}]})
         return HttpResponse(_UNSUB_HTML.format(
             heading='You’re unsubscribed',
             body='You won’t get the weekly Cookbook cost report any more. '

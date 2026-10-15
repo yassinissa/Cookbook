@@ -32,6 +32,10 @@ class ActivityActionType(models.TextChoices):
     ACTIVATED         = 'activated',         'Activated'
     DEACTIVATED       = 'deactivated',       'Deactivated'
     SNAPSHOT_TAKEN    = 'snapshot_taken',    'Snapshot taken'
+    SIGNED_IN         = 'signed_in',         'Signed in'
+    SIGN_IN_FAILED    = 'sign_in_failed',    'Sign-in failed'
+    COMMAND_RUN       = 'command_run',       'Ran command'
+    COMMAND_FAILED    = 'command_failed',    'Command failed'
 
 
 class DishPriceHistory(BaseModel):
@@ -106,6 +110,8 @@ class ActivityArea(models.TextChoices):
     MENU       = 'menu',       'Menu'
     POS        = 'pos',        'POS modifiers'
     ADMIN      = 'admin',      'Administration'
+    AUTH       = 'auth',       'Sign-ins'
+    SYSTEM     = 'system',     'System & commands'
 
 
 class SystemActivityLog(BaseModel):

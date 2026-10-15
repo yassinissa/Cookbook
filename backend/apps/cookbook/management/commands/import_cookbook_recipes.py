@@ -21,9 +21,10 @@ from apps.cookbook.recipe_sheet import (
     parse_dish_standards, parse_menu_to_dor, parse_recipe_blocks,
 )
 from apps.cookbook.services import apply_cost, get_inventory_items_by_sku
+from apps.cookbook.audit import AuditedCommand
 
 
-class Command(BaseCommand):
+class Command(AuditedCommand):
     help = 'Import authored dishes from the Lebanese Menu Cook Book workbook.'
 
     def add_arguments(self, parser):

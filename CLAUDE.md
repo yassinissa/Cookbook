@@ -62,7 +62,15 @@ before calling anything done — not just "the happy path returns 200."
     menu lines + build / snapshot / edition publish, specials, modifier
     groups + dish modifiers, branches, prep kitchens, users (password only as
     "set"/"changed", never the value) + activate/deactivate, roles, digest
-    setting, and **recipe deletes** (the recipe's own log cascades away).
+    setting (incl. the email unsubscribe link), **recipe deletes** (the
+    recipe's own log cascades away), **sign-ins** — success, wrong
+    password, rate-limit block; IP + user agent, never the password — via
+    Django's `user_logged_in` / `user_login_failed` signals (`signals.py`;
+    core's login view only *sends* them, so core never imports cookbook), and
+    **every `manage.py` command run** (all commands subclass
+    `audit.AuditedCommand`: args, ok/failed, output tail — new commands must
+    too). Django-admin edits (reference data) come from Django's own
+    `LogEntry`, merged into the feed rather than duplicated (migration `0031`).
     Written by `audit.py`: `AuditedViewSetMixin` (before/after snapshot
     around perform_create/update/destroy; a no-op save writes nothing;
     child rows flattened one field each, e.g. `conversion.line 1 Tbs`) or
@@ -70,8 +78,8 @@ before calling anything done — not just "the happy path returns 200."
     them.** The subject is denormalised so rows outlive what they describe;
     `branch_ref`/`prep_kitchen_ref` are only for scoping. The feed
     (`views_activity.collect_activity`) merges all three logs; `kind` =
-    `ActivityArea` (dish/production/item/menu/pos/admin), each gated
-    (item→`inventory.view`, menu→`menu.view`+branch, pos→`pos.manage`,
+    `ActivityArea` (dish/production/item/menu/pos/admin/auth/system), each gated
+    (item→`inventory.view`, menu→`menu.view`+branch, pos→`pos.manage`, auth→`admin.users`, system→any `admin.*`,
     admin→any `admin.*`), money fields stripped without `costing.view`.
     `GET cookbook/activity/export/?file=xlsx|csv` + the same filters →
     every matching row (cap 50k), .xlsx with an "Activity" sheet and a

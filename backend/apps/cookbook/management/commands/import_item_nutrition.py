@@ -12,6 +12,7 @@ from django.db import transaction
 
 from apps.cookbook.models import ItemNutrition, UnitScale
 from apps.cookbook.parsing import to_decimal
+from apps.cookbook.audit import AuditedCommand
 
 BASE_UNIT_MAP = {'g': 'g', 'ml': 'ml', 'ea': 'EA', 'each': 'EA', 'pc': 'Pc', 'pcs': 'Pcs'}
 
@@ -35,7 +36,7 @@ def _norm(s):
     return ' '.join(str(s or '').lower().split())
 
 
-class Command(BaseCommand):
+class Command(AuditedCommand):
     help = 'Import per-SKU nutrition from the "Nutritional Information" sheet.'
 
     def add_arguments(self, parser):

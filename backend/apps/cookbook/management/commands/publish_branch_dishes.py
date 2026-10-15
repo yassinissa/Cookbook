@@ -15,9 +15,10 @@ from django.core.management.base import BaseCommand, CommandError
 from apps.cookbook.models import Branch, DishRecipe
 from apps.cookbook.publishing import publish_dish_recipe, RecipePublishError
 from apps.integrations.inventory_client import InventoryClient, InventoryAPIError
+from apps.cookbook.audit import AuditedCommand
 
 
-class Command(BaseCommand):
+class Command(AuditedCommand):
     help = 'Publish every unpublished DishRecipe for a branch (by slug) to inventory-platform.'
 
     def add_arguments(self, parser):

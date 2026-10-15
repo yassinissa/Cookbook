@@ -25,6 +25,7 @@ from apps.cookbook.models import (
     DishModifierGroup, ModifierRole,
 )
 from apps.cookbook.services import apply_cost
+from apps.cookbook.audit import AuditedCommand
 
 # sku -> snapshot display name
 _ITEM_NAMES = {
@@ -218,7 +219,7 @@ def _ascii(s):
     return str(s).encode('ascii', 'replace').decode('ascii')
 
 
-class Command(BaseCommand):
+class Command(AuditedCommand):
     help = 'Seed the WnR branch with a 15-dish demo menu (recipes + menu lines + a modifier group).'
 
     def add_arguments(self, parser):

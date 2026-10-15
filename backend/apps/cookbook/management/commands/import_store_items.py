@@ -19,6 +19,7 @@ from django.utils import timezone
 from apps.cookbook.models import ItemConversion, ItemConversionLine, UnitScale
 from apps.cookbook.models.item_supplement import CostSource
 from apps.cookbook.parsing import parse_conversion_cell, to_decimal
+from apps.cookbook.audit import AuditedCommand
 
 # "Unit Scale" cell text -> UnitScale.code
 BASE_UNIT_MAP = {'g': 'g', 'ml': 'ml', 'ea': 'EA', 'each': 'EA', 'pc': 'Pc', 'pcs': 'Pcs'}
@@ -50,7 +51,7 @@ def _nonzero(d):
     return d if (d is not None and d != 0) else None
 
 
-class Command(BaseCommand):
+class Command(AuditedCommand):
     help = 'Import item cost + conversions from the "Store Items" sheet.'
 
     def add_arguments(self, parser):
