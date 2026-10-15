@@ -62,7 +62,8 @@ export async function login(username: string, password: string) {
 export async function logout() {
   if (getToken()) {
     try {
-      await http.post('/auth/logout/', null, { timeout: 4000 })
+      // the server blacklists this refresh token so it can't be reused
+      await http.post('/auth/logout/', { refresh: getRefreshToken() }, { timeout: 4000 })
     } catch {
       /* signing out must always work */
     }
@@ -102,6 +103,15 @@ async function refreshAccessToken(): Promise<string> {
         const { data } = await axios.post(`${API_BASE_URL}/auth/token/refresh/`, { refresh })
         setToken(data.access, data.refresh)
         return data.access as string
+      } catch (err) {
+        // Refresh tokens are single-use (rotated + blacklisted). If another
+        // tab of this browser refreshed at the same moment, ours was just
+        // spent — pick up the pair that tab stored instead of signing out.
+        await new Promise((r) => setTimeout(r, 600))
+        const latest = getRefreshToken()
+        const access = getToken()
+        if (latest && latest !== refresh && access) return access
+        throw err
       } finally {
         refreshInFlight = null
       }

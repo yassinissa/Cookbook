@@ -311,3 +311,63 @@ class OtherActionLogTests(SystemLogTestBase):
         self.assertIn('Django admin', e['subject_type_display'])
         x = self.client.get(f'{FEED}export/', {'kind': 'admin'})
         self.assertEqual(x.status_code, 200)
+
+
+class RefreshTokenRevocationTests(APITestCase):
+    LOGIN, REFRESH, LOGOUT = '/api/auth/login/', '/api/auth/token/refresh/', '/api/auth/logout/'
+
+    def setUp(self):
+        cache.clear()
+        self.addCleanup(cache.clear)
+        self.user = User.objects.create_user('omar', password='first-pass-word')
+        self.admin = User.objects.create_superuser('boss', password='x')
+
+    def _login(self, password='first-pass-word'):
+        r = self.client.post(self.LOGIN, {'username': 'omar', 'password': password}, format='json')
+        self.assertEqual(r.status_code, 200, r.content)
+        return r.data
+
+    def _refresh(self, raw):
+        return APIClient().post(self.REFRESH, {'refresh': raw}, format='json').status_code
+
+    def test_sign_out_kills_the_refresh_token(self):
+        pair = self._login()
+        c = APIClient(HTTP_AUTHORIZATION=f"Bearer {pair['access']}")
+        self.assertEqual(c.post(self.LOGOUT, {'refresh': pair['refresh']}, format='json').status_code, 204)
+        self.assertEqual(self._refresh(pair['refresh']), 401)
+
+    def test_a_rotated_refresh_token_cannot_be_reused(self):
+        pair = self._login()
+        r = APIClient().post(self.REFRESH, {'refresh': pair['refresh']}, format='json')
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(self._refresh(pair['refresh']), 401)      # spent
+        self.assertEqual(self._refresh(r.data['refresh']), 200)    # the new one works
+
+    def test_cannot_revoke_someone_elses_token(self):
+        pair = self._login()
+        boss = APIClient()
+        boss.force_authenticate(self.admin)
+        self.assertEqual(boss.post(self.LOGOUT, {'refresh': pair['refresh']}, format='json').status_code, 204)
+        self.assertEqual(self._refresh(pair['refresh']), 200)
+
+    def test_bad_refresh_on_sign_out_still_signs_out(self):
+        pair = self._login()
+        c = APIClient(HTTP_AUTHORIZATION=f"Bearer {pair['access']}")
+        self.assertEqual(c.post(self.LOGOUT, {'refresh': 'garbage'}, format='json').status_code, 204)
+
+    def test_password_change_and_deactivation_revoke_every_session(self):
+        a, b = self._login(), self._login()          # two devices
+        admin = APIClient()
+        admin.force_authenticate(self.admin)
+        admin.patch(f'/api/accounts/users/{self.user.pk}/', {'password': 'second-pass-word'}, format='json')
+        self.assertEqual(self._refresh(a['refresh']), 401)
+        self.assertEqual(self._refresh(b['refresh']), 401)
+
+        c = self._login('second-pass-word')
+        admin.post(f'/api/accounts/users/{self.user.pk}/deactivate/')
+        self.assertEqual(self._refresh(c['refresh']), 401)
+
+    def test_last_login_touch_does_not_revoke(self):
+        pair = self._login()
+        self._login()                                # saves last_login only
+        self.assertEqual(self._refresh(pair['refresh']), 200)

@@ -481,7 +481,14 @@ before calling anything done — not just "the happy path returns 200."
   test` (CI runs it). Smoke-level for now; grow it alongside new screens.
   Grow both suites alongside new work.
 - **Auth**: JWT via default Django `User` (+ `accounts.UserProfile`), one
-  superuser (`cookadmin`). Roles: Administrator / Executive Chef / QA Manager
+  superuser (`cookadmin`). Refresh tokens are single-use and revocable
+  (2026-10-15): simplejwt's `token_blacklist` app is installed, so
+  `ROTATE_REFRESH_TOKENS` + `BLACKLIST_AFTER_ROTATION` really retire a
+  spent token; Sign out POSTs its refresh token to `/api/auth/logout/` to
+  kill it; a password change or deactivation (any path — admin API, Django
+  admin, `changepassword`) revokes every session via the User save hooks in
+  `apps/core/tokens.py`. An issued access token still lives out its 60 min.
+  The frontend's refresh tolerates another tab having just rotated the pair. Roles: Administrator / Executive Chef / QA Manager
   / Cost Controller / Restaurant Cook / Prep Cook / **Branch Staff / Branch
   Manager / Prep Kitchen Staff / Prep Kitchen Manager** (the last four added
   2026-09-13 for the Kitchen screen — see the per-brand/per-kitchen floor

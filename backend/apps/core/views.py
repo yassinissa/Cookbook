@@ -42,9 +42,14 @@ class ThrottledLoginView(TokenObtainPairView):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout(request):
-    """Sign out. JWTs live in the browser, so the app drops its own tokens;
-    this call exists so the sign-out is announced (Django's `user_logged_out`
-    signal — the cookbook action log listens)."""
+    """Sign out. Body: {"refresh": "<the caller's refresh token>"} — it is
+    blacklisted so it can never mint another access token. The sign-out is
+    also announced (Django's `user_logged_out` signal — the action log
+    listens). Always 204: signing out must not fail on a bad token."""
+    from .tokens import revoke_refresh_token
+    raw = (request.data or {}).get('refresh') if hasattr(request, 'data') else None
+    if raw:
+        revoke_refresh_token(str(raw), request.user)
     user_logged_out.send(sender=request.user.__class__, request=request, user=request.user)
     return Response(status=status.HTTP_204_NO_CONTENT)
 

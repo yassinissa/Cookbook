@@ -23,6 +23,9 @@ DJANGO_APPS = [
 THIRD_PARTY_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
+    # makes BLACKLIST_AFTER_ROTATION real, and lets Sign out / a password
+    # change kill refresh tokens (apps.core.tokens)
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'django_filters',
 ]
