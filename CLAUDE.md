@@ -152,6 +152,27 @@ before calling anything done — not just "the happy path returns 200."
     sync on save (`inventory_sync` in the response); bulk:
     `manage.py sync_recipe_conversions [--commit]`. Purchasing / ordering
     units are inventory-only (its pack sizes), never modelled here.
+  - **Pack-priced inventory items** (2026-10-16): inventory prices ~770 items
+    per packet/box/bottle/bag/tin/tray/bunch. `CostContext.price_for` now
+    turns that into a per-base-unit price via the SKU's own
+    `ItemConversion` "1 <order_unit> = <pack_qty> <base_unit>" (same anchor
+    as `stock_units`, matched with `same_unit`); before, every such line
+    costed as "no price". Without a pack size the issue text says what to add.
+  - **Stored cost is a snapshot**: `cost`/`cost_breakdown`/`nutrition` refresh
+    only on save, the Recalculate button, or `manage.py recalculate_costs
+    [--kind dish|production] [--commit]` (dry-run default; saves only changed
+    recipes + history row + "Cost recalculated" log as `system`; aborts if
+    inventory-platform is unreachable). An inventory price change does not
+    reach recipes on its own.
+  - **Unit-guide import** (2026-10-16): the "cookbook guide unit .xlsx"
+    workbook (gitignored) is one `Sheet1` with conversions + nutrition —
+    `import_store_items --sheet Sheet1 --skip-cost` and `import_item_nutrition
+    --sheet Sheet1`. Both now merge by default (hand-entered values/lines
+    kept, `--replace` to overwrite), read the sheets' 1,000,000 placeholder
+    as "not set", skip all-zero nutrition rows, and write in bulk (a
+    per-row version against Render's Postgres took hours). Imported to Render
+    2026-10-16 without costs: 2,136 conversions / 10,082 lines / 1,076
+    nutrition rows.
   - **Gotcha**: point `INVENTORY_API_BASE_URL` at `127.0.0.1`, never
     `localhost` — on Windows the `::1` attempt stalls for seconds before the
     IPv4 fallback, turning a 0.3s proxy call into 4-13s.

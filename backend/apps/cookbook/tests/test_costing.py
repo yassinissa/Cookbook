@@ -68,6 +68,37 @@ class LineConversionTests(CostingTestBase):
         self.assertEqual(out['lines'][0].status, 'ok')
         self.assertAlmostEqual(float(out['lines'][0].amount), 1.0, places=6)
 
+    def _pack_item(self, sku, base_code, order_unit, pack_qty, gpp=None):
+        from apps.cookbook.models import ItemConversion
+        return ItemConversion.objects.create(
+            item_sku=sku, base_unit=self.units[base_code], order_unit=order_unit,
+            pack_qty=Decimal(pack_qty), grams_per_piece=Decimal(gpp) if gpp else None)
+
+    def test_inventory_price_per_packet_uses_pack_size(self):
+        # inventory: 3.375 KWD per packet; Cookbook: 1 PKT = 9950 g, no own cost
+        self._pack_item('P1', 'g', 'PKT', '9950')
+        inv = {'P1': {'sku': 'P1', 'unit_cost': '3.375', 'unit_code': 'packet'}}
+        lc = cost_recipe(lines=[{'item_sku': 'P1', 'quantity': '230', 'unit': 'g'}], items_by_sku=inv)['lines'][0]
+        self.assertEqual(lc.status, 'ok')
+        self.assertAlmostEqual(float(lc.amount), 230 * 3.375 / 9950, places=8)
+
+    def test_inventory_price_per_box_of_pieces(self):
+        self._pack_item('P2', 'EA', 'BOX', '2500')
+        inv = {'P2': {'sku': 'P2', 'unit_cost': '10.762', 'unit_code': 'box'}}
+        lc = cost_recipe(lines=[{'item_sku': 'P2', 'quantity': '1', 'unit': 'EA'}], items_by_sku=inv)['lines'][0]
+        self.assertEqual(lc.status, 'ok')
+        self.assertAlmostEqual(float(lc.amount), 10.762 / 2500, places=8)
+
+    def test_pack_priced_item_without_pack_size_says_what_is_missing(self):
+        inv = {'P3': {'sku': 'P3', 'unit_cost': '4.000', 'unit_code': 'bottle'}}
+        lc = cost_recipe(lines=[{'item_sku': 'P3', 'quantity': '10', 'unit': 'ml'}], items_by_sku=inv)['lines'][0]
+        self.assertEqual(lc.status, 'no_price')
+        self.assertIn('per bottle', lc.detail)
+        # a pack size for a different unit doesn't count
+        self._pack_item('P3', 'ml', 'BOX', '6000')
+        lc = cost_recipe(lines=[{'item_sku': 'P3', 'quantity': '10', 'unit': 'ml'}], items_by_sku=inv)['lines'][0]
+        self.assertEqual(lc.status, 'no_price')
+
 
 class LabourTests(CostingTestBase):
     def test_salad_three_minutes(self):

@@ -220,7 +220,7 @@ class RecipeViewSetBase(
         recipe = self.get_object()
         old = {'cost': recipe.cost, 'labor_cost': recipe.labor_cost}
         apply_cost(recipe)
-        recipe.save(update_fields=['cost', 'labor_cost', 'cost_breakdown'])
+        recipe.save(update_fields=['cost', 'labor_cost', 'cost_breakdown', 'nutrition'])
         # an adjustment, never a version: the recipe is the same, its cost moved
         recipe._recalc_changes = {'fields': [
             {'field': f, 'from': str(old[f]), 'to': str(getattr(recipe, f))}

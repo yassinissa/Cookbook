@@ -111,10 +111,29 @@ class CostContext:
         inv = self.inventory.get(sku)
         if inv:
             unit_cost = to_decimal(inv.get('unit_cost'))
-            base = self.units_by_code.get(INVENTORY_UNIT_CODE.get((inv.get('unit_code') or '').lower()))
-            if unit_cost and unit_cost > 0 and base is not None:
+            if not unit_cost or unit_cost <= 0:
+                return None
+            stock_code = inv.get('unit_code') or ''
+            base = self.units_by_code.get(INVENTORY_UNIT_CODE.get(stock_code.lower()))
+            if base is not None:
                 return unit_cost, base, 'inventory'
+            # Priced per a pack unit (packet, box, bottle...): the SKU's own
+            # "1 <order unit> = <pack_qty> <base unit>" says what one holds —
+            # the same anchor stock_units uses for deduction.
+            from .stock_units import same_unit
+            if supp and supp.pack_qty and supp.base_unit_id and same_unit(supp.order_unit, stock_code):
+                return unit_cost / Decimal(supp.pack_qty), supp.base_unit, 'inventory'
         return None
+
+    def price_problem(self, sku):
+        """Why price_for found nothing, for a SKU it does know."""
+        inv = self.inventory.get(sku) or {}
+        unit_cost = to_decimal(inv.get('unit_cost'))
+        if unit_cost and unit_cost > 0:
+            code = inv.get('unit_code') or '?'
+            return (f'inventory prices it per {code} — add how much one {code} holds '
+                    f'(e.g. "1 {code} = 500 g") to its conversions')
+        return 'no price'
 
     # -- cross-dimension bridges for one SKU -----------------------------
     def bridges_for(self, sku):
@@ -234,7 +253,7 @@ def cost_line(line, ctx):
         known = sku in ctx.supplements or sku in ctx.inventory
         return LineCost(sku, qty, unit_code, Decimal(0),
                         NO_PRICE if known else UNKNOWN_SKU,
-                        'no price' if known else 'SKU not found')
+                        ctx.price_problem(sku) if known else 'SKU not found')
 
     cost_per_base, base_unit, _src = price
     if unit is None:
