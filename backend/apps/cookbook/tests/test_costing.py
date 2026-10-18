@@ -68,6 +68,17 @@ class LineConversionTests(CostingTestBase):
         self.assertEqual(out['lines'][0].status, 'ok')
         self.assertAlmostEqual(float(out['lines'][0].amount), 1.0, places=6)
 
+    def test_received_inventory_price_beats_the_imported_sheet_cost(self):
+        # sheet said 1.400 KWD/kg; inventory's last-receiving average is 2.000 KWD/kg
+        self.make_item('K8', 'g', '1.400', '1000', None, [])
+        line = [{'item_sku': 'K8', 'quantity': '500', 'unit': 'g'}]
+        inv = {'K8': {'sku': 'K8', 'unit_cost': '2.000', 'unit_code': 'kg'}}
+        self.assertAlmostEqual(float(cost_recipe(lines=line, items_by_sku=inv)['lines'][0].amount), 1.0, places=6)
+        # never received (inventory price 0) or inventory unreachable -> sheet cost
+        for fallback in ({'K8': {'sku': 'K8', 'unit_cost': '0', 'unit_code': 'kg'}}, {}):
+            lc = cost_recipe(lines=line, items_by_sku=fallback)['lines'][0]
+            self.assertAlmostEqual(float(lc.amount), 0.7, places=6)
+
     def _pack_item(self, sku, base_code, order_unit, pack_qty, gpp=None):
         from apps.cookbook.models import ItemConversion
         return ItemConversion.objects.create(

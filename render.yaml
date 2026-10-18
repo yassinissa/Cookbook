@@ -124,6 +124,42 @@ services:
         fromService: { name: cookbook-api, type: web, envVarKey: FRONTEND_URL }
       - fromGroup: cookbook-shared
 
+  # ── Hourly recipe re-cost from inventory prices (cron) ───────────────────
+  # inventory-platform re-computes an item's unit_cost (weighted average) on
+  # every approved receiving; this carries it into every current recipe's
+  # stored cost. Saves only recipes whose numbers moved (each gets a "Cost
+  # recalculated" entry by `system`); a run that changed nothing logs nothing.
+  # Exits non-zero (red here) when inventory-platform is unreachable.
+  - type: cron
+    name: cookbook-recalc-costs
+    runtime: python
+    rootDir: backend
+    plan: starter
+    region: oregon
+    schedule: "15 * * * *"
+    buildCommand: pip install -r requirements/production.txt
+    startCommand: python manage.py recalculate_costs --commit --quiet-if-unchanged
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: PYTHON_VERSION
+        value: "3.12.10"
+      - key: SECRET_KEY
+        fromService: { name: cookbook-api, type: web, envVarKey: SECRET_KEY }
+      - key: DB_NAME
+        fromDatabase: { name: cookbook-db, property: database }
+      - key: DB_USER
+        fromDatabase: { name: cookbook-db, property: user }
+      - key: DB_PASSWORD
+        fromDatabase: { name: cookbook-db, property: password }
+      - key: DB_HOST
+        fromDatabase: { name: cookbook-db, property: host }
+      - key: DB_PORT
+        fromDatabase: { name: cookbook-db, property: port }
+      - key: ALLOWED_HOSTS
+        value: localhost          # the cron makes no HTTP requests to itself
+      - fromGroup: cookbook-shared
+
   # ── React / Vite frontend (static) ──────────────────────────────────────
   - type: web
     name: cookbook-frontend

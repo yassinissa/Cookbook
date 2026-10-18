@@ -81,3 +81,40 @@ class RecalculateCostsTests(TestCase):
                 call_command('recalculate_costs', '--commit', stdout=StringIO())
         self.dish.refresh_from_db()
         self.assertEqual(self.dish.cost_breakdown['issues'], [{'sku': 'P1'}])
+
+    def test_received_price_replaces_the_imported_sheet_cost(self):
+        # the sheet once said 1.000 per 1000 g; inventory's receiving average is 2.000 per packet
+        ItemConversion.objects.filter(item_sku='P1').update(order_cost=Decimal('1.000'))
+        self.run_cmd('--commit')
+        self.dish.refresh_from_db()
+        self.assertEqual(self.dish.cost, Decimal('0.500'))        # 250 g x 2.000 / 1000 g, not 0.250
+        # never received in inventory -> the sheet cost is the fallback
+        self.run_cmd('--commit', price='0')
+        self.dish.refresh_from_db()
+        self.assertEqual(self.dish.cost, Decimal('0.250'))
+
+
+class HourlyCronAuditTests(TestCase):
+    """--quiet-if-unchanged: the hourly cron leaves no system-log row when it
+    changed nothing; a run that re-costs something, or fails, is still logged."""
+
+    setUp, _dish, run_cmd = RecalculateCostsTests.setUp, RecalculateCostsTests._dish, RecalculateCostsTests.run_cmd
+
+    def _command_rows(self):
+        from apps.cookbook.models import SystemActivityLog
+        return SystemActivityLog.objects.filter(subject_type='command', subject_code='recalculate_costs')
+
+    def test_quiet_run(self):
+        self.run_cmd('--commit', '--quiet-if-unchanged')           # re-costs Fries -> logged
+        self.assertEqual(self._command_rows().count(), 1)
+        self.run_cmd('--commit', '--quiet-if-unchanged')           # nothing moved -> silent
+        self.assertEqual(self._command_rows().count(), 1)
+        self.run_cmd('--commit')                                   # manual runs always log
+        self.assertEqual(self._command_rows().count(), 2)
+
+    def test_failed_quiet_run_is_logged(self):
+        with mock.patch('apps.integrations.inventory_client.InventoryClient.get_items',
+                        side_effect=InventoryAPIError('down')):
+            with self.assertRaises(CommandError):
+                call_command('recalculate_costs', '--commit', '--quiet-if-unchanged', stdout=StringIO())
+        self.assertEqual(self._command_rows().count(), 1)

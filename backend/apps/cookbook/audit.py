@@ -184,7 +184,9 @@ class AuditedCommand(BaseCommand):
         except BaseException as e:
             self._audit(name, argv, tee, failed=f'{type(e).__name__}: {e}')
             raise
-        self._audit(name, argv, tee)
+        # a scheduled run that found nothing to do may opt out (failures never can)
+        if not getattr(self, 'audit_skip', False):
+            self._audit(name, argv, tee)
         return result
 
     @staticmethod

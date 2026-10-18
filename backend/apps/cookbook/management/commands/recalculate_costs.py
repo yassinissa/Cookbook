@@ -8,6 +8,7 @@ Dry-run by default; pass --commit to save.
     python manage.py recalculate_costs
     python manage.py recalculate_costs --commit
     python manage.py recalculate_costs --kind dish --commit
+    python manage.py recalculate_costs --commit --quiet-if-unchanged   # the hourly cron
 
 A recipe's `cost` / `cost_breakdown` is a snapshot from its last save, so an
 inventory price change (or a conversion fix) doesn't reach it until it is
@@ -59,6 +60,9 @@ class Command(AuditedCommand):
     def add_arguments(self, parser):
         parser.add_argument('--commit', action='store_true', help='Save the new costs (default: dry run).')
         parser.add_argument('--kind', choices=['all', *KINDS], default='all')
+        parser.add_argument('--quiet-if-unchanged', action='store_true',
+                            help='Write no activity-log row for a run that changed nothing '
+                                 '(for the hourly cron; a failed run is always logged).')
 
     def handle(self, *args, **opts):
         try:
@@ -71,6 +75,7 @@ class Command(AuditedCommand):
 
         commit = opts['commit']
         kinds = list(KINDS) if opts['kind'] == 'all' else [opts['kind']]
+        total_changed = 0
         for kind in kinds:
             model, write_history = KINDS[kind]
             recipes = (model.objects.filter(is_current=True)
@@ -103,8 +108,11 @@ class Command(AuditedCommand):
                         log.objects.create(recipe=r, action_type=ActivityActionType.RECALCULATED,
                                            changed_by=ACTOR, description='Bulk cost recalculation',
                                            changes=changes, version=r.version)
+            total_changed += changed
             self.stdout.write(f'{kind}: {seen} current, {changed} changed, '
                               f'uncosted lines {issues_before} -> {issues_after}')
 
         if not commit:
             self.stdout.write(self.style.WARNING('DRY RUN — nothing saved. Re-run with --commit.'))
+        # each recipe that changed has its own "Cost recalculated" entry already
+        self.audit_skip = opts['quiet_if_unchanged'] and total_changed == 0

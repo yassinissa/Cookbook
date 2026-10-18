@@ -99,20 +99,17 @@ class CostContext:
 
     # -- price + base unit -------------------------------------------------
     def price_for(self, sku):
-        """(cost_per_base_unit: Decimal, base_unit: UnitScale, source: str) or None."""
+        """(cost_per_base_unit: Decimal, base_unit: UnitScale, source: str) or None.
+
+        inventory-platform's price comes first: its unit_cost is the weighted
+        average it re-computes on every approved receiving, so purchasing ->
+        receiving -> recipe cost needs nothing entered here. The sheet cost
+        imported onto ItemConversion (no screen edits it) is only a fallback
+        for an item inventory has no price for yet."""
         supp = self.supplements.get(sku)
-        if supp and supp.base_unit_id:
-            # order_cost / pack_qty is exact; the stored field can be a
-            # rounded repeating decimal.
-            if supp.order_cost and supp.pack_qty:
-                return Decimal(supp.order_cost) / Decimal(supp.pack_qty), supp.base_unit, 'cookbook'
-            if supp.cost_per_base_unit is not None:
-                return Decimal(supp.cost_per_base_unit), supp.base_unit, 'cookbook'
         inv = self.inventory.get(sku)
-        if inv:
-            unit_cost = to_decimal(inv.get('unit_cost'))
-            if not unit_cost or unit_cost <= 0:
-                return None
+        unit_cost = to_decimal(inv.get('unit_cost')) if inv else None
+        if unit_cost and unit_cost > 0:
             stock_code = inv.get('unit_code') or ''
             base = self.units_by_code.get(INVENTORY_UNIT_CODE.get(stock_code.lower()))
             if base is not None:
@@ -123,6 +120,13 @@ class CostContext:
             from .stock_units import same_unit
             if supp and supp.pack_qty and supp.base_unit_id and same_unit(supp.order_unit, stock_code):
                 return unit_cost / Decimal(supp.pack_qty), supp.base_unit, 'inventory'
+        if supp and supp.base_unit_id:
+            # order_cost / pack_qty is exact; the stored field can be a
+            # rounded repeating decimal.
+            if supp.order_cost and supp.pack_qty:
+                return Decimal(supp.order_cost) / Decimal(supp.pack_qty), supp.base_unit, 'cookbook'
+            if supp.cost_per_base_unit is not None:
+                return Decimal(supp.cost_per_base_unit), supp.base_unit, 'cookbook'
         return None
 
     def price_problem(self, sku):
@@ -358,6 +362,12 @@ def _round(value, places):
     return Decimal(value).quantize(q, rounding=ROUND_HALF_UP)
 
 
+def _canon(d):
+    """One spelling per number ("2", not "2" from a form and "2.000" from the
+    DB), so re-costing an unchanged recipe yields an identical breakdown."""
+    return None if d is None else format(Decimal(d).normalize(), 'f')
+
+
 def serialize_cost_result(result):
     """cost_recipe() output -> a JSON-safe dict for RecipeCardFields.cost_breakdown."""
     def s(v):
@@ -375,7 +385,7 @@ def serialize_cost_result(result):
             for sc in result['scenarios']
         ],
         'lines': [
-            {'sku': lc.sku, 'quantity': s(lc.quantity), 'unit': lc.unit_code,
+            {'sku': lc.sku, 'quantity': _canon(lc.quantity), 'unit': lc.unit_code,
              'amount': s(_round(lc.amount, 4)), 'status': lc.status, 'detail': lc.detail}
             for lc in result['lines']
         ],

@@ -158,12 +158,23 @@ before calling anything done — not just "the happy path returns 200."
     `ItemConversion` "1 <order_unit> = <pack_qty> <base_unit>" (same anchor
     as `stock_units`, matched with `same_unit`); before, every such line
     costed as "no price". Without a pack size the issue text says what to add.
-  - **Stored cost is a snapshot**: `cost`/`cost_breakdown`/`nutrition` refresh
-    only on save, the Recalculate button, or `manage.py recalculate_costs
-    [--kind dish|production] [--commit]` (dry-run default; saves only changed
-    recipes + history row + "Cost recalculated" log as `system`; aborts if
-    inventory-platform is unreachable). An inventory price change does not
-    reach recipes on its own.
+  - **Prices come from inventory-platform** (2026-10-18): `price_for` uses
+    inventory's `unit_cost` first — the weighted average its receiving
+    approval re-computes (`receiving/views.py` there) — so purchasing →
+    receiving → recipe cost needs nothing entered in Cookbook (there is no
+    price screen here). The imported sheet cost on `ItemConversion`
+    (`order_cost`/`cost_per_base_unit`) is only a fallback for an item
+    inventory has no price for yet; the live preview labels it so.
+  - **Stored cost is a snapshot**, refreshed on save, the Recalculate button,
+    or `manage.py recalculate_costs [--kind dish|production] [--commit]`
+    (dry-run default; saves only changed recipes + history row + "Cost
+    recalculated" log as `system`; aborts if inventory-platform is
+    unreachable). The `cookbook-recalc-costs` Render cron runs it hourly
+    (`:15`) with `--quiet-if-unchanged` (no system-log row for a no-op run —
+    `AuditedCommand.audit_skip`; failures always log). Re-costing must be
+    idempotent for that: `serialize_cost_result` writes one spelling per line
+    quantity (`_canon`; migration `0035` rewrote stored ones), else every
+    editor save would look "changed" to the next cron run.
   - **Unit-guide import** (2026-10-16): the "cookbook guide unit .xlsx"
     workbook (gitignored) is one `Sheet1` with conversions + nutrition —
     `import_store_items --sheet Sheet1 --skip-cost` and `import_item_nutrition
