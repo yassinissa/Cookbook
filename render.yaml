@@ -146,6 +146,14 @@ services:
         value: "3.12.10"
       - key: SECRET_KEY
         fromService: { name: cookbook-api, type: web, envVarKey: SECRET_KEY }
+      # the inventory service account lives on cookbook-api itself (not yet in
+      # cookbook-shared — see DEPLOY.md); read it from there so there's one copy
+      - key: INVENTORY_API_BASE_URL
+        fromService: { name: cookbook-api, type: web, envVarKey: INVENTORY_API_BASE_URL }
+      - key: INVENTORY_API_EMAIL
+        fromService: { name: cookbook-api, type: web, envVarKey: INVENTORY_API_EMAIL }
+      - key: INVENTORY_API_PASSWORD
+        fromService: { name: cookbook-api, type: web, envVarKey: INVENTORY_API_PASSWORD }
       - key: DB_NAME
         fromDatabase: { name: cookbook-db, property: database }
       - key: DB_USER
