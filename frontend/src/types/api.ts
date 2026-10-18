@@ -92,6 +92,20 @@ export interface CostLine {
   status: LineStatus
   detail: string
 }
+/** POST /cookbook/cost-preview/ — unsaved rows costed live, with the working. */
+export interface CostPreviewLine extends CostLine {
+  price: { per_unit: string; unit: string; source: 'cookbook' | 'inventory' } | null
+  base_qty: string | null
+  conversion: { text: string; source: 'item' | 'standard' } | null
+  stock: { unit: string; qty: string | null; problem: string | null } | null
+}
+export interface CostPreview {
+  lines: CostPreviewLine[]
+  items: string
+  waste: string
+  per_serving: string
+  inventory_reachable: boolean
+}
 export interface CostIssue {
   sku: string
   status: LineStatus
