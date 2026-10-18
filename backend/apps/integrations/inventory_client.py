@@ -43,7 +43,21 @@ class InventoryClient:
         self._access_token = None
 
     # ── auth ──────────────────────────────────────────────────────────────
+    def _check_configured(self):
+        missing = [name for name, value in (
+            ('INVENTORY_API_BASE_URL', self.base_url),
+            ('INVENTORY_API_EMAIL', self.email),
+            ('INVENTORY_API_PASSWORD', self.password),
+        ) if not value]
+        if missing:
+            raise InventoryAPIError(
+                f'{", ".join(missing)} not set for this service — add '
+                f'{"it" if len(missing) == 1 else "them"} to its environment '
+                f'(on Render: the cookbook-shared env group)')
+
     def _login(self):
+        self._check_configured()
+
         def do_login():
             return requests.post(
                 f'{self.base_url}/auth/login/',

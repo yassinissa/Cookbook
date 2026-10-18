@@ -5,6 +5,13 @@ DEBUG = False
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='', cast=Csv())
 
+# No localhost fallback here: on a deployed service "localhost" is the
+# service's own box, so a missing value used to surface as a baffling
+# "connection refused to localhost:8000". Left blank, InventoryClient fails
+# with "INVENTORY_API_BASE_URL is not set" instead. Not required at startup —
+# services that never call inventory (the digest cron) don't need it.
+INVENTORY_API_BASE_URL = config('INVENTORY_API_BASE_URL', default='')
+
 # ─── STATIC FILES ────────────────────────────────────────────────────────────
 # WhiteNoise serves the API's own static assets (Django admin, DRF browsable
 # API) straight from the app — no separate static host needed. It must sit

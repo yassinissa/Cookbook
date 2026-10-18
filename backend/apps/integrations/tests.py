@@ -68,3 +68,25 @@ class InventoryClientConnectionFailureTests(SimpleTestCase):
         client = InventoryClient()
         with self.assertRaises(InventoryAPIError):
             client._request('GET', '/items/')
+
+
+class InventoryClientNotConfiguredTests(SimpleTestCase):
+    """A service missing its inventory settings says so — no network call,
+    and never a confusing "connection refused" to some default host."""
+
+    @override_settings(INVENTORY_API_BASE_URL='', INVENTORY_API_EMAIL='svc@example.com',
+                       INVENTORY_API_PASSWORD='x')
+    @mock.patch('apps.integrations.inventory_client.requests.post')
+    def test_missing_base_url(self, mock_post):
+        with self.assertRaisesMessage(InventoryAPIError, 'INVENTORY_API_BASE_URL not set'):
+            InventoryClient().get_items()
+        mock_post.assert_not_called()
+
+    @override_settings(INVENTORY_API_BASE_URL='http://127.0.0.1:1/api', INVENTORY_API_EMAIL='',
+                       INVENTORY_API_PASSWORD='')
+    @mock.patch('apps.integrations.inventory_client.requests.post')
+    def test_missing_credentials_named_together(self, mock_post):
+        with self.assertRaisesMessage(
+                InventoryAPIError, 'INVENTORY_API_EMAIL, INVENTORY_API_PASSWORD not set'):
+            InventoryClient().get_items()
+        mock_post.assert_not_called()
