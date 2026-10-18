@@ -110,16 +110,20 @@ class CostContext:
         inv = self.inventory.get(sku)
         unit_cost = to_decimal(inv.get('unit_cost')) if inv else None
         if unit_cost and unit_cost > 0:
+            from .stock_units import same_unit
             stock_code = inv.get('unit_code') or ''
             base = self.units_by_code.get(INVENTORY_UNIT_CODE.get(stock_code.lower()))
-            if base is not None:
+            # Same order as stock_units' anchor: a measure (kg, l...) is its
+            # own size; anything else — packet, box, and PCS too, which is
+            # often a bottle or a pack — is what the SKU's own "1 <order
+            # unit> = <pack_qty> <base unit>" says one holds ("1 PCS = 1500
+            # ml" of oil). Only without that is a PCS one piece.
+            if base is not None and base.dimension != 'count':
                 return unit_cost, base, 'inventory'
-            # Priced per a pack unit (packet, box, bottle...): the SKU's own
-            # "1 <order unit> = <pack_qty> <base unit>" says what one holds —
-            # the same anchor stock_units uses for deduction.
-            from .stock_units import same_unit
             if supp and supp.pack_qty and supp.base_unit_id and same_unit(supp.order_unit, stock_code):
                 return unit_cost / Decimal(supp.pack_qty), supp.base_unit, 'inventory'
+            if base is not None:
+                return unit_cost, base, 'inventory'
         if supp and supp.base_unit_id:
             # order_cost / pack_qty is exact; the stored field can be a
             # rounded repeating decimal.

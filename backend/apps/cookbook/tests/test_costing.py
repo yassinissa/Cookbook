@@ -100,6 +100,30 @@ class LineConversionTests(CostingTestBase):
         self.assertEqual(lc.status, 'ok')
         self.assertAlmostEqual(float(lc.amount), 10.762 / 2500, places=8)
 
+    def test_inventory_pcs_that_is_a_bottle_uses_the_items_pack_size(self):
+        # production 2026-10-18: oil stocked per PCS, Cookbook "1 PCS = 1500 ml"
+        self._pack_item('B1436', 'ml', 'PCS', '1500')
+        inv = {'B1436': {'sku': 'B1436', 'unit_cost': '1.296', 'unit_code': 'pcs'}}
+        lc = cost_recipe(lines=[{'item_sku': 'B1436', 'quantity': '100', 'unit': 'ml'}],
+                         items_by_sku=inv)['lines'][0]
+        self.assertEqual(lc.status, 'ok')
+        self.assertAlmostEqual(float(lc.amount), 100 * 1.296 / 1500, places=8)
+
+    def test_pieces_of_a_pcs_pack_are_not_charged_a_whole_pack(self):
+        # bay leaves: inventory 1.250 per PCS = a 490 g pack; a leaf is 0.22 g
+        self._pack_item('B585', 'g', 'PCS', '490', gpp='0.22')
+        inv = {'B585': {'sku': 'B585', 'unit_cost': '1.250', 'unit_code': 'pcs'}}
+        lc = cost_recipe(lines=[{'item_sku': 'B585', 'quantity': '3', 'unit': 'Pcs'}],
+                         items_by_sku=inv)['lines'][0]
+        self.assertEqual(lc.status, 'ok')
+        self.assertAlmostEqual(float(lc.amount), 3 * 0.22 * 1.250 / 490, places=8)   # not 3.750
+
+    def test_pcs_without_a_pack_size_is_one_piece(self):
+        inv = {'T1': {'sku': 'T1', 'unit_cost': '0.148', 'unit_code': 'pcs'}}
+        lc = cost_recipe(lines=[{'item_sku': 'T1', 'quantity': '2', 'unit': 'Pcs'}],
+                         items_by_sku=inv)['lines'][0]
+        self.assertAlmostEqual(float(lc.amount), 0.296, places=6)
+
     def test_pack_priced_item_without_pack_size_says_what_is_missing(self):
         inv = {'P3': {'sku': 'P3', 'unit_cost': '4.000', 'unit_code': 'bottle'}}
         lc = cost_recipe(lines=[{'item_sku': 'P3', 'quantity': '10', 'unit': 'ml'}], items_by_sku=inv)['lines'][0]

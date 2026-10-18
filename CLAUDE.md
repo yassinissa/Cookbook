@@ -158,6 +158,14 @@ before calling anything done — not just "the happy path returns 200."
     `ItemConversion` "1 <order_unit> = <pack_qty> <base_unit>" (same anchor
     as `stock_units`, matched with `same_unit`); before, every such line
     costed as "no price". Without a pack size the issue text says what to add.
+    **PCS counts as a pack too** (2026-10-18): inventory's PCS is often a
+    bottle / pack, so the order is the same as `stock_units`' anchor —
+    measure (kg, l) as itself, then the SKU's pack size ("1 PCS = 1500 ml"),
+    and only without one is a PCS one piece. Before, PCS was always "one
+    piece": production charged 3 bay leaves a whole pack (3.750 KWD) and left
+    oil-per-bottle lines uncosted. `manage.py audit_piece_prices` lists what's
+    still suspicious (piece-counted lines over 0.200 KWD/PCS, PCS items with
+    no pack size).
   - **Prices come from inventory-platform** (2026-10-18): `price_for` uses
     inventory's `unit_cost` first — the weighted average its receiving
     approval re-computes (`receiving/views.py` there) — so purchasing →
