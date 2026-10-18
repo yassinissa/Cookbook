@@ -173,6 +173,15 @@ before calling anything done — not just "the happy path returns 200."
     per-row version against Render's Postgres took hours). Imported to Render
     2026-10-16 without costs: 2,136 conversions / 10,082 lines / 1,076
     nutrition rows.
+  - **Live cost preview** (2026-10-18): `POST cookbook/cost-preview/`
+    (`views_costing.py`, `costing.view`) costs *unsaved* ingredient rows with
+    the same `cost_line` maths, writes nothing, and explains each line
+    (`costing.explain_line`: price per base unit + source, the conversion
+    used — item's own vs standard size — and the stock-unit deduction or the
+    reason publish would refuse it). Item list cached 120s for it only.
+    `IngredientEditor` calls it debounced (`useCostPreview`) — live per-row
+    chip, click for the working, running total (ingredients + waste; labour
+    is added on save). `test_cost_preview_api.py`, `IngredientEditor.test.tsx`.
   - **Gotcha**: point `INVENTORY_API_BASE_URL` at `127.0.0.1`, never
     `localhost` — on Windows the `::1` attempt stalls for seconds before the
     IPv4 fallback, turning a 0.3s proxy call into 4-13s.

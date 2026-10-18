@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import * as api from '@/lib/api'
@@ -30,6 +31,25 @@ export function useInventoryItemsPage(search: string, page: number, pageSize = 2
     placeholderData: (prev) => prev,
     staleTime: 5 * 60_000,
   })
+}
+/** Live cost of unsaved ingredient rows, re-asked ~0.5s after typing stops. */
+export function useCostPreview(payload: Parameters<typeof api.previewCost>[0], enabled: boolean) {
+  const key = JSON.stringify(payload)
+  const [settled, setSettled] = useState(key)
+  useEffect(() => {
+    const t = setTimeout(() => setSettled(key), 500)
+    return () => clearTimeout(t)
+  }, [key])
+  const query = useQuery({
+    queryKey: ['cost-preview', settled],
+    queryFn: () => api.previewCost(JSON.parse(settled)),
+    enabled: enabled && payload.lines.length > 0,
+    placeholderData: (prev) => prev,
+    staleTime: 60_000,
+    retry: false,
+  })
+  // true while the rows on screen differ from the ones last costed
+  return { query, pending: key !== settled || query.isFetching }
 }
 export function useInventoryItem(id: string | undefined) {
   return useQuery({

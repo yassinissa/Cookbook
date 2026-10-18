@@ -433,6 +433,7 @@ export function ProductionEditorPage() {
                   units={ref.units}
                   items={items}
                   costLines={breakdown?.lines}
+                  wastePct={form.expected_waste_pct}
                   errors={ingredientErrors}
                   showAlternate
                   onChange={(i, k, v) =>

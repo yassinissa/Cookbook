@@ -16,6 +16,7 @@ import {
 } from '@/lib/seed/filterForIdentity'
 import type {
   ActivityFeed,
+  CostPreview,
   ActivityQuery,
   RecipeChangeFeed,
   RecipeChangeQuery,
@@ -414,6 +415,16 @@ export async function recalcDishRecipe(id: string): Promise<DishRecipeDetail> {
     return seed.seedDishDetail(id)
   }
   const { data } = await http.post(`/cookbook/dish-recipes/${id}/recalculate/`)
+  return data
+}
+
+export async function previewCost(payload: {
+  lines: { item_sku: string; quantity: string | null; unit: string }[]
+  expected_waste_pct?: string
+}): Promise<CostPreview> {
+  // seed builds have no costing engine — the editors fall back to the saved breakdown
+  if (USE_SEED) throw new Error('cost preview unavailable in seed mode')
+  const { data } = await http.post('/cookbook/cost-preview/', payload)
   return data
 }
 

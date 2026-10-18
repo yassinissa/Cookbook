@@ -10,6 +10,7 @@ from . import views_standards
 from .views_activity import ActivityExportView, ActivityFeedView
 from .views_changes import RecipeChangeFeedView
 from .views_dashboard import DashboardView
+from .views_costing import CostPreviewView
 
 router = DefaultRouter()
 router.register(r'reference/categories', views.MenuCategoryViewSet, basename='menu-category')
@@ -38,6 +39,7 @@ router.register(r'dish-modifiers', views_modifiers.DishModifierViewSet, basename
 urlpatterns = [
     path('modifier-readiness/', views_modifiers.ModifierReadinessView.as_view(), name='modifier-readiness'),
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
+    path('cost-preview/', CostPreviewView.as_view(), name='cost-preview'),
     path('activity/', ActivityFeedView.as_view(), name='activity'),
     path('activity/export/', ActivityExportView.as_view(), name='activity-export'),
     path('recipe-changes/', RecipeChangeFeedView.as_view(), name='recipe-changes'),

@@ -267,6 +267,54 @@ def cost_line(line, ctx):
     return LineCost(sku, qty, unit_code, base_qty * Decimal(cost_per_base), OK)
 
 
+def explain_line(line, ctx, stock_code=None):
+    """cost_line() plus the working behind it, for the editor's live preview:
+    the price per base unit and where it came from, the conversion used
+    ("1 Tbs = 0.05 Kg", the item's own or the standard size), and — when the
+    item's inventory stock unit is known — what inventory-platform will
+    deduct per sale, or why publishing would refuse the line."""
+    from .stock_units import ItemUnits, same_unit
+
+    lc = cost_line(line, ctx)
+    sku, qty, unit_raw = _norm_line(line)
+    unit = ctx.resolve_unit(unit_raw)
+    qty = qty or Decimal(0)
+    out = {
+        'sku': lc.sku, 'quantity': _fmt_qty(qty), 'unit': lc.unit_code,
+        'amount': str(_round(lc.amount, 4)), 'status': lc.status, 'detail': lc.detail,
+        'price': None, 'base_qty': None, 'conversion': None, 'stock': None,
+    }
+    price = ctx.price_for(sku) if sku else None
+    if price is not None:
+        cost_per_base, base_unit, source = price
+        out['price'] = {'per_unit': str(_round(cost_per_base, 6)), 'unit': base_unit.code,
+                        'source': source}
+        if lc.status == OK:
+            out['base_qty'] = _fmt_qty(ctx.convert_for(sku, qty, unit, base_unit))
+            if unit.code != base_unit.code:
+                one = ctx.convert_for(sku, Decimal(1), unit, base_unit)
+                own = bool(ctx.own_amounts(sku, unit.code)) or unit.dimension != base_unit.dimension
+                out['conversion'] = {'text': f'1 {unit.code} = {_fmt_qty(one)} {base_unit.code}',
+                                     'source': 'item' if own else 'standard'}
+
+    if sku and unit is not None and stock_code:
+        stock = {'unit': stock_code, 'qty': None, 'problem': None}
+        if same_unit(unit.code, stock_code):
+            stock['qty'] = _fmt_qty(qty)
+        else:
+            iu = ItemUnits(sku, stock_code, ctx)
+            f = iu.factor(unit)
+            if f is not None:
+                stock['qty'] = _fmt_qty(qty * f)
+            elif iu.anchor is None:
+                stock['problem'] = iu.problem
+            else:
+                stock['problem'] = (f'no conversion from {unit.code} to its stock unit {stock_code}; '
+                                    f'add one in this item\'s conversions (e.g. "1 {unit.code} = 25 g")')
+        out['stock'] = stock
+    return out
+
+
 def calculate_items_cost(lines, ctx):
     """items_total is unrounded — round only for display/storage, and only once,
     so a recipe with many small lines does not drift (matches the source sheet)."""
