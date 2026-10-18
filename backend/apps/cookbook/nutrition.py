@@ -11,7 +11,7 @@ on an ingredient's item supplement.
 """
 from decimal import Decimal
 
-from .units import ConversionError, convert
+from .units import NOT_AN_AMOUNT, ConversionError, convert
 
 NUTRIENTS = [
     'calories', 'fat_g', 'protein_g', 'saturated_fat_g', 'trans_fat_g',
@@ -42,7 +42,7 @@ def roll_up_nutrition(lines, ctx):
 
         n = ctx.nutrition.get(sku)
         unit = ctx.resolve_unit(unit_raw)
-        if not n or not n.unit_scale_id or unit is None:
+        if not n or not n.unit_scale_id or unit is None or unit.code in NOT_AN_AMOUNT:
             continue
         try:
             scaled = convert(Decimal(str(qty or 0)), unit, n.unit_scale, ctx.bridges_for(sku))

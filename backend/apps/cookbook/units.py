@@ -20,6 +20,12 @@ from decimal import Decimal
 CANONICAL = {'mass': 'g', 'volume': 'ml', 'count': 'each', 'length': 'cm'}
 
 
+# Cookbook units that are not an amount of an ingredient ("1 Portion" of agar
+# agar means nothing). Costing, nutrition and stock deduction all refuse them
+# rather than guess — a guess here silently charged a whole pack.
+NOT_AN_AMOUNT = {'Portion'}
+
+
 class ConversionError(Exception):
     pass
 

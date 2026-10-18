@@ -19,7 +19,7 @@ from django.conf import settings
 
 from .models import ItemConversion, ItemNutrition, UnitScale
 from .parsing import label_parts, to_decimal
-from .units import ConversionError, convert, invert_bridge
+from .units import NOT_AN_AMOUNT, ConversionError, convert, invert_bridge
 
 WORKING_MINUTES_PER_MONTH = Decimal(settings.COOKBOOK_WORKING_HOURS_PER_MONTH) * 60
 
@@ -266,6 +266,9 @@ def cost_line(line, ctx):
     cost_per_base, base_unit, _src = price
     if unit is None:
         return LineCost(sku, qty, unit_code, Decimal(0), NO_CONVERSION, 'line has no unit')
+    if unit.code in NOT_AN_AMOUNT:
+        return LineCost(sku, qty, unit_code, Decimal(0), NO_CONVERSION,
+                        f"{unit.code} isn't an amount of an ingredient — use g, ml or pieces")
 
     try:
         base_qty = ctx.convert_for(sku, qty, unit, base_unit)

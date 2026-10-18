@@ -24,6 +24,7 @@ piece) — never a global density.
 from decimal import Decimal
 
 from .costing import _fmt_qty
+from .units import NOT_AN_AMOUNT
 
 # inventory measure units: code -> (dimension, size in the dimension's
 # canonical unit: g / ml). Codes are compared case-insensitively.
@@ -47,9 +48,6 @@ _SAME = {
     'kg': 'kg', 'kgs': 'kg', 'kilo': 'kg',
     'btl': 'bottle', 'bottle': 'bottle', 'ctn': 'carton', 'carton': 'carton',
 }
-
-# Cookbook units that are not an amount of an ingredient
-NOT_AN_AMOUNT = {'Portion'}
 
 
 def same_unit(a, b):

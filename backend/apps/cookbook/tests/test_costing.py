@@ -118,6 +118,22 @@ class LineConversionTests(CostingTestBase):
         self.assertEqual(lc.status, 'ok')
         self.assertAlmostEqual(float(lc.amount), 3 * 0.22 * 1.250 / 490, places=8)   # not 3.750
 
+    def test_portion_of_an_ingredient_is_not_costed(self):
+        # production 2026-10-18: "2 Portion" of cress (0.33 g a piece) was costed
+        # as 2 pieces, "1 Portion" of agar agar as a whole 22.500 KWD pack
+        from apps.cookbook.models import UnitScale
+        UnitScale.objects.get_or_create(code='Portion', defaults={
+            'description': 'Portion', 'dimension': 'count', 'factor_to_canonical': Decimal('1')})
+        self._pack_item('B1467', 'g', 'PCS', '50', gpp='0.33')
+        inv = {'B1467': {'sku': 'B1467', 'unit_cost': '0.550', 'unit_code': 'pcs'},
+               'B1582': {'sku': 'B1582', 'unit_cost': '22.500', 'unit_code': 'pcs'}}
+        for sku in inv:
+            lc = cost_recipe(lines=[{'item_sku': sku, 'quantity': '2', 'unit': 'Portion'}],
+                             items_by_sku=inv)['lines'][0]
+            self.assertEqual(lc.status, 'no_conversion')
+            self.assertEqual(lc.amount, Decimal('0'))
+            self.assertIn('use g, ml or pieces', lc.detail)
+
     def test_pcs_without_a_pack_size_is_one_piece(self):
         inv = {'T1': {'sku': 'T1', 'unit_cost': '0.148', 'unit_code': 'pcs'}}
         lc = cost_recipe(lines=[{'item_sku': 'T1', 'quantity': '2', 'unit': 'Pcs'}],

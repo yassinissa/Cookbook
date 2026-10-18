@@ -39,6 +39,17 @@ class NutritionRollupTests(TestCase):
         out = roll_up_nutrition(lines, ctx)
         self.assertAlmostEqual(float(out['calories']), 117 * 0.3, places=3)
 
+    def test_portion_is_not_an_amount(self):
+        # B271 has 117 g a piece; "1 Portion" must not quietly become one piece
+        from apps.cookbook.models import UnitScale
+        UnitScale.objects.get_or_create(code='Portion', defaults={
+            'description': 'Portion', 'dimension': 'count', 'factor_to_canonical': Decimal('1')})
+        ItemNutrition.objects.create(item_sku='B271', unit_scale=self.units['g'], calories=Decimal('0.3'))
+        out = roll_up_nutrition([{'item_sku': 'B271', 'quantity': '1', 'unit': 'Portion'}],
+                                CostContext(['B271'], {}))
+        self.assertEqual(float(out['calories']), 0)
+        self.assertEqual(out['_coverage'], {'covered': 0, 'total': 1})
+
 
 class AllergenRollupTests(TestCase):
     def setUp(self):
