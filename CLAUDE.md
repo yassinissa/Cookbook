@@ -201,6 +201,12 @@ before calling anything done — not just "the happy path returns 200."
     `IngredientEditor` calls it debounced (`useCostPreview`) — live per-row
     chip, click for the working, running total (ingredients + waste; labour
     is added on save). `test_cost_preview_api.py`, `IngredientEditor.test.tsx`.
+  - **Branch food cost** (2026-10-20): `GET cookbook/branch-food-cost/`
+    (`views_dashboard.BranchFoodCostView`, `costing.view`, branch-scoped) — per
+    branch, sum(cost) / sum(selling price) over current dishes with both (weighted,
+    not a mean of per-dish %); unpriced / zero-cost dishes are counted, not summed.
+    Rendered as `BranchFoodCostStrip` above the Dish Recipes list (a tile doubles as
+    the branch filter). `test_branch_food_cost_api.py`.
   - **Gotcha**: point `INVENTORY_API_BASE_URL` at `127.0.0.1`, never
     `localhost` — on Windows the `::1` attempt stalls for seconds before the
     IPv4 fallback, turning a 0.3s proxy call into 4-13s.

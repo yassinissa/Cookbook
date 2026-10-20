@@ -96,6 +96,9 @@ export function useDigestSubscription() {
   })
 }
 
+export function useBranchFoodCost(enabled = true) {
+  return useQuery({ queryKey: qk.branchFoodCost, queryFn: api.fetchBranchFoodCost, enabled })
+}
 export function useDishRecipes(enabled = true) {
   return useQuery({ queryKey: qk.dishes, queryFn: api.fetchDishRecipes, enabled })
 }

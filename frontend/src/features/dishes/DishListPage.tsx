@@ -14,6 +14,7 @@ import { useDishRecipes, useReference } from '@/lib/queries'
 import { useAuth } from '@/auth/AuthProvider'
 import { kwd } from '@/lib/format'
 import { useI18n } from '@/i18n'
+import { BranchFoodCostStrip } from './BranchFoodCostStrip'
 import type { DishRecipeListItem } from '@/types/api'
 
 function foodCostPct(r: DishRecipeListItem): number | null {
@@ -30,6 +31,7 @@ export function DishListPage() {
   const { data: recipes, isLoading, isError, refetch } = useDishRecipes()
   const { data: ref } = useReference()
   const canEdit = can('dish.edit')
+  const canSeeCost = can('costing.view')
 
   const [q, setQ] = useState('')
   const [branch, setBranch] = useState('all')
@@ -131,6 +133,8 @@ export function DishListPage() {
       />
 
       {isError && <ErrorState body={t('state.retryHint')} onRetry={() => refetch()} />}
+
+      {canSeeCost && !isError && <BranchFoodCostStrip selected={branch} onSelect={setBranch} />}
 
       {(recipes || isLoading) && (
         <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">

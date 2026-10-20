@@ -21,6 +21,7 @@ import type {
   RecipeChangeFeed,
   RecipeChangeQuery,
   Branch,
+  BranchFoodCostPayload,
   Dashboard,
   DigestSubscription,
   DishRecipeDetail,
@@ -361,6 +362,38 @@ export async function fetchDashboard(): Promise<Dashboard> {
     return filterDashboard(seed.seedDashboard())
   }
   const { data } = await http.get('/cookbook/dashboard/')
+  return data
+}
+
+/** Per-branch total food cost (the strip above the Dish Recipes list). */
+export async function fetchBranchFoodCost(): Promise<BranchFoodCostPayload> {
+  if (USE_SEED) {
+    await delay(300)
+    const dishes = filterDishList(seed.seedDishList())
+    const branches = seed.seedReference().branches.slice().sort((a, b) => a.sort_order - b.sort_order)
+    return {
+      target_pct: '30',
+      branches: branches.flatMap((b) => {
+        const mine = dishes.filter((d) => d.branch_ref === b.id)
+        if (!mine.length) return []
+        let cost = 0, price = 0, priced = 0, unpriced = 0, uncosted = 0
+        for (const d of mine) {
+          const p = Number(d.selling_price) || 0
+          const c = Number(d.cost) || 0
+          if (p <= 0) unpriced++
+          else if (c <= 0) uncosted++
+          else { priced++; cost += c; price += p }
+        }
+        return [{
+          branch_id: b.id, name_en: b.name_en, name_ar: b.name_ar,
+          dishes: mine.length, priced, unpriced, uncosted,
+          total_cost: cost.toFixed(3), total_price: price.toFixed(3),
+          food_cost_pct: price > 0 ? ((cost / price) * 100).toFixed(2) : null,
+        }]
+      }),
+    }
+  }
+  const { data } = await http.get('/cookbook/branch-food-cost/')
   return data
 }
 

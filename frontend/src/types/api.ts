@@ -1050,6 +1050,25 @@ export interface DishModifierDetail {
 }
 
 /* ── dashboard ─────────────────────────────────────────────────────── */
+/** One row of GET /cookbook/branch-food-cost/ — weighted: total cost / total price. */
+export interface BranchFoodCost {
+  branch_id: ID
+  name_en: string
+  name_ar: string
+  dishes: number
+  priced: number
+  unpriced: number
+  uncosted: number
+  total_cost: string
+  total_price: string
+  food_cost_pct: string | null
+}
+
+export interface BranchFoodCostPayload {
+  target_pct: string
+  branches: BranchFoodCost[]
+}
+
 export interface Dashboard {
   target_pct: string
   totals: {

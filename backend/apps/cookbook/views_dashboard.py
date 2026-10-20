@@ -202,3 +202,63 @@ class DashboardView(APIView):
                 row['avg_food_cost_pct'] = row['total_cost'] = None
 
         return Response(payload)
+
+
+class BranchFoodCostView(APIView):
+    """
+    Per-branch total food cost for the Dish Recipes list.
+
+    Weighted, not averaged: sum(cost) / sum(selling price) over every current
+    dish of that branch that has both a price and a cost — i.e. "if we sold one
+    of everything on this branch's list, what share of the takings is food".
+    A dish with no price or a zero cost is left out of the sums and counted in
+    `unpriced` / `uncosted`, so a gap never silently drags the % down.
+    """
+    permission_classes = [capability_required(default='costing.view')]
+
+    def get(self, request):
+        access = access_for(request)
+        branch_scope = access.scope.branch_ids
+        dish_qs = DishRecipe.objects.filter(is_current=True, branch_ref__isnull=False)
+        branch_qs = Branch.objects.all()
+        if not access.is_superuser and branch_scope is not ALL:
+            ids = list(branch_scope)
+            dish_qs = dish_qs.filter(branch_ref_id__in=ids) if ids else dish_qs.none()
+            branch_qs = branch_qs.filter(id__in=ids) if ids else branch_qs.none()
+
+        by_branch = {}
+        for d in dish_qs.only('branch_ref_id', 'cost', 'selling_price'):
+            by_branch.setdefault(d.branch_ref_id, []).append(d)
+
+        rows = []
+        for b in branch_qs:
+            dishes = by_branch.get(b.id, [])
+            if not dishes:
+                continue
+            total_cost = total_price = Decimal('0')
+            priced = unpriced = uncosted = 0
+            for d in dishes:
+                price = _dec(d.selling_price)
+                cost = _dec(d.cost) or Decimal('0')
+                if not price or price <= 0:
+                    unpriced += 1
+                elif cost <= 0:
+                    uncosted += 1
+                else:
+                    priced += 1
+                    total_cost += cost
+                    total_price += price
+            rows.append({
+                'branch_id': str(b.id),
+                'name_en': b.name_en,
+                'name_ar': b.name_ar,
+                'dishes': len(dishes),
+                'priced': priced,
+                'unpriced': unpriced,
+                'uncosted': uncosted,
+                'total_cost': str(total_cost.quantize(Decimal('0.001'))),
+                'total_price': str(total_price.quantize(Decimal('0.001'))),
+                'food_cost_pct': (str((total_cost / total_price * 100).quantize(Decimal('0.01')))
+                                  if total_price > 0 else None),
+            })
+        return Response({'target_pct': str(TARGET_PCT), 'branches': rows})
