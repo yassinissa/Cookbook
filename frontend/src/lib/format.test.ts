@@ -8,6 +8,7 @@ import {
   shortDate,
   relativeTime,
   foodCostBand,
+  unitCost,
 } from './format'
 
 describe('kwd', () => {
@@ -26,6 +27,15 @@ describe('kwd', () => {
 
   it('honours a custom dash', () => {
     expect(kwd(null, 'n/a')).toBe('n/a')
+  })
+})
+
+describe('unitCost', () => {
+  it('keeps up to 6 decimals, never fewer than 3', () => {
+    expect(unitCost('0.000428')).toBe('0.000428')
+    expect(unitCost('2.812500')).toBe('2.8125')
+    expect(unitCost('1.5')).toBe('1.500')
+    expect(unitCost(null)).toBe('—')
   })
 })
 

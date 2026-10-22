@@ -24,6 +24,17 @@ export function kwd(value: unknown, dash = DASH): string {
   })
 }
 
+/** A unit price — at least 3dp, up to 6 when the price carries them
+ *  ("0.000428" per g). Inventory keeps 6 so recipe costs don't drift. */
+export function unitCost(value: unknown, dash = DASH): string {
+  const n = toNumber(value)
+  if (n === null) return dash
+  return n.toLocaleString('en-US', {
+    minimumFractionDigits: 3,
+    maximumFractionDigits: 6,
+  })
+}
+
 /** KWD with the currency label, for standalone display. */
 export function kwdLabelled(value: unknown, dash = DASH): string {
   const n = toNumber(value)

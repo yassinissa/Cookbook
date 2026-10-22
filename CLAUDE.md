@@ -170,7 +170,9 @@ before calling anything done — not just "the happy path returns 200."
     inventory's `unit_cost` first — the weighted average its receiving
     approval re-computes (`receiving/views.py` there) — so purchasing →
     receiving → recipe cost needs nothing entered in Cookbook (there is no
-    price screen here). The imported sheet cost on `ItemConversion`
+    price screen here). Inventory keeps `unit_cost` (item, stock WAC, supplier
+    prices) to **6 decimals** since 2026-10-22 (was 3, which shifted recipe
+    totals); Cookbook uses the value unrounded and shows it via `format.unitCost`. The imported sheet cost on `ItemConversion`
     (`order_cost`/`cost_per_base_unit`) is only a fallback for an item
     inventory has no price for yet; the live preview labels it so.
   - **Stored cost is a snapshot**, refreshed on save, the Recalculate button,

@@ -16,7 +16,7 @@ import {
   ItemNutritionSection,
   ItemStorageSection,
 } from './ItemSupplementPanels'
-import { kwd, number } from '@/lib/format'
+import { kwd, number, unitCost } from '@/lib/format'
 import { useI18n } from '@/i18n'
 import type { InventoryItem } from '@/types/api'
 
@@ -136,7 +136,7 @@ export function InventoryListPage() {
                         {i.unit_code || i.unit_name || '—'}
                       </td>
                       <td className="tnum px-5 py-2.5 text-end font-mono text-ink">
-                        {kwd(i.unit_cost)}
+                        {unitCost(i.unit_cost)}
                       </td>
                     </tr>
                   ))}
@@ -162,7 +162,7 @@ export function InventoryListPage() {
                       {i.category?.replace(/_/g, ' ') || '—'}
                       {(i.unit_code || i.unit_name) && ` · ${i.unit_code || i.unit_name}`}
                     </span>
-                    <span className="tnum font-mono text-ink">{kwd(i.unit_cost)}</span>
+                    <span className="tnum font-mono text-ink">{unitCost(i.unit_cost)}</span>
                   </div>
                 </button>
               </li>
@@ -270,7 +270,7 @@ function ItemDrawer({ id, onClose }: { id: string | null; onClose: () => void })
             />
             <Row
               label={t('inv.col.unitCost')}
-              value={data.unit_cost ? `${kwd(data.unit_cost)} KWD` : undefined}
+              value={data.unit_cost ? `${unitCost(data.unit_cost)} KWD` : undefined}
               mono
             />
             <Row
