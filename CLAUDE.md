@@ -351,6 +351,19 @@ before calling anything done — not just "the happy path returns 200."
     `kind`/`item_sku`/`pos_mods_string`). `PublicMenuPage` renders it as a
     "Choose one" / "Add" line; that page now keys its own UI strings off the
     customer's EN/AR toggle (a local `STR` map) instead of the app `t()`.
+    **Pick rules** (2026-10-28, `modifier_rules.py`, mirrored by
+    `features/pos/modifierRules.ts`): a group's min/max are *never* published —
+    Lavu enforces its own and nobody here can change the POS — so they only feed
+    the QR menu. The editor shows one **Customer picks** control (Exactly N /
+    One, optional / Up to N / Any number / Between) instead of selection + min +
+    max; `selection` is derived from max on write (single iff max = 1). The
+    limit counts across the whole group whatever each option's kind, so
+    `rule_issues` flags a max-1 group that mixes choices with add-ons /
+    instructions (`mixed_single_pick` — "one question per group") and a min
+    above the available options; the group read serializer returns
+    `pick_rule` / `suggested_rule` / `rule_issues`, and `modifier-readiness/`
+    lists offending groups (`rule_issues`) above the option worklist, which
+    also gained a "No POS text" filter. `test_modifier_rules.py`.
     **inventory-platform already has the deduction pipeline**
     (`apps/pos_integration/`: `POSImport` upload → classify BASE/TYPE/ADDON/
     INSTRUCTION → `POSItemMapping` / `POSAddonIngredient` → deduct stock).

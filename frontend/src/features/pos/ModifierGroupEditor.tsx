@@ -21,11 +21,13 @@ import { cn } from '@/lib/cn'
 import { useI18n, type TFunc } from '@/i18n'
 import type {
   DeductionStatus, InventoryItem, ModifierDeltaDirection, ModifierGroup, ModifierOption,
-  ModifierOptionKind, ModifierSelection,
+  ModifierOptionKind, PickRule,
 } from '@/types/api'
+import {
+  PICK_RULES, boundsFor, issueText, pickRule, ruleIssues, ruleSummary, selectionFor, suggestedRule,
+} from './modifierRules'
 
 const KINDS: ModifierOptionKind[] = ['choice', 'type', 'addon', 'instruction']
-const SELECTIONS: ModifierSelection[] = ['single', 'multi']
 
 const STATUS_TONE: Record<DeductionStatus, 'success' | 'warning' | 'neutral'> = {
   ready: 'success', needs_data: 'warning', no_impact: 'neutral',
@@ -51,6 +53,7 @@ interface DraftOption {
   pos_mods_string: string
   variant_recipe: string
   no_consumption_impact: boolean
+  is_available: boolean
   deltas: DraftDelta[]
   deduction_status?: DeductionStatus
 }
@@ -62,7 +65,8 @@ function blankDelta(direction: ModifierDeltaDirection = 'add'): DraftDelta {
 function blank(): DraftOption {
   return {
     key: localId(), name_en: '', name_ar: '', price_delta: '0', kind: 'choice',
-    pos_mods_string: '', variant_recipe: '', no_consumption_impact: false, deltas: [],
+    pos_mods_string: '', variant_recipe: '', no_consumption_impact: false, is_available: true,
+    deltas: [],
   }
 }
 
@@ -72,6 +76,7 @@ function fromOption(o: ModifierOption): DraftOption {
     name_en: o.name_en, name_ar: o.name_ar, price_delta: o.price_delta, kind: o.kind,
     pos_mods_string: o.pos_mods_string, variant_recipe: o.variant_recipe ?? '',
     no_consumption_impact: o.no_consumption_impact,
+    is_available: o.is_available ?? true,
     deduction_status: o.deduction_status,
     deltas: (o.deltas ?? []).map((d) => ({
       key: d.id ?? localId(), id: d.id, item_sku: d.item_sku,
@@ -102,9 +107,13 @@ export function ModifierGroupEditor({
 
   const [nameEn, setNameEn] = useState(group?.name_en ?? '')
   const [nameAr, setNameAr] = useState(group?.name_ar ?? '')
-  const [selection, setSelection] = useState<ModifierSelection>(group?.selection ?? 'single')
-  const [minSelect, setMinSelect] = useState(String(group?.min_select ?? (group ? 0 : 1)))
-  const [maxSelect, setMaxSelect] = useState(group?.max_select == null ? '' : String(group.max_select))
+  const initialRule: PickRule = group ? pickRule(group.min_select, group.max_select) : 'exactly'
+  const [rule, setRule] = useState<PickRule>(initialRule)
+  // the one number "Exactly N" / "Up to N" carries
+  const [count, setCount] = useState(String(
+    initialRule === 'exactly' ? group!.min_select : initialRule === 'up_to' ? group!.max_select : 1))
+  const [rangeMin, setRangeMin] = useState(String(group?.min_select ?? 1))
+  const [rangeMax, setRangeMax] = useState(group?.max_select == null ? '' : String(group.max_select))
   const [notes, setNotes] = useState(group?.notes ?? '')
   const [opts, setOpts] = useState<DraftOption[]>(group ? group.options.map(fromOption) : [])
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -145,6 +154,22 @@ export function ModifierGroupEditor({
     onError: (e) => toast.error(parseApiError(e).message || t('state.errorGeneric')),
   })
 
+  const bounds = boundsFor(rule, Math.max(1, Number(count) || 1), {
+    min: Number(rangeMin) || 0,
+    max: rangeMax === '' ? null : Number(rangeMax),
+  })
+  const kinds = opts.filter((o) => o.name_en.trim() && o.is_available).map((o) => o.kind)
+  const issues = ruleIssues(bounds.min, bounds.max, kinds)
+  const suggestion = suggestedRule(kinds)
+  const showSuggestion = !!suggestion
+    && (suggestion.min_select !== bounds.min || suggestion.max_select !== bounds.max)
+
+  function applyRule(r: PickRule, n = count) {
+    setRule(r)
+    setCount(n)
+    setErrors(({ max_select: _max, min_select: _min, ...rest }) => rest)
+  }
+
   function patchOpt(i: number, p: Partial<DraftOption>) {
     setOpts((all) => all.map((o, j) => (j === i ? { ...o, ...p } : o)))
   }
@@ -152,6 +177,8 @@ export function ModifierGroupEditor({
   function submit() {
     const errs: Record<string, string> = {}
     if (!nameEn.trim()) errs.name_en = t('form.required')
+    if ((rule === 'exactly' || rule === 'up_to') && !(Number(count) >= 1)) errs.max_select = t('mods.rule.countMin')
+    if (rule === 'range' && bounds.max != null && bounds.min > bounds.max) errs.max_select = t('mods.rule.rangeBad')
     opts.forEach((o, i) => {
       if (!o.name_en.trim()) errs[`opt${i}`] = t('form.required')
       const usable = o.deltas.filter((d) => d.item_sku.trim() && d.quantity)
@@ -164,9 +191,9 @@ export function ModifierGroupEditor({
     save.mutate({
       name_en: nameEn.trim(),
       name_ar: nameAr.trim(),
-      selection,
-      min_select: Number(minSelect) || 0,
-      max_select: maxSelect === '' ? null : Number(maxSelect),
+      selection: selectionFor(bounds.max),
+      min_select: bounds.min,
+      max_select: bounds.max,
       notes: notes.trim(),
       options: opts
         .filter((o) => o.name_en.trim())
@@ -228,22 +255,77 @@ export function ModifierGroupEditor({
             <Field label={`${t('mods.field.name')} · العربية`}>
               <Input value={nameAr} dir="rtl" onChange={(e) => setNameAr(e.target.value)} />
             </Field>
-            <Field label={t('mods.field.selection')}>
-              <Select value={selection} onChange={(e) => setSelection(e.target.value as ModifierSelection)}>
-                {SELECTIONS.map((s) => (
-                  <option key={s} value={s}>{t(`mods.selection.${s}`)}</option>
-                ))}
-              </Select>
-            </Field>
-            <div className="grid grid-cols-2 gap-2">
-              <Field label={t('mods.field.min')}>
-                <Input type="number" min={0} value={minSelect} onChange={(e) => setMinSelect(e.target.value)} />
-              </Field>
-              <Field label={t('mods.field.max')} help={t('mods.field.maxNone')}>
-                <Input type="number" min={0} value={maxSelect} placeholder="∞"
-                  onChange={(e) => setMaxSelect(e.target.value)} />
-              </Field>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <div className="flex flex-wrap items-end gap-2">
+                <Field label={t('mods.rule.label')} className="w-44">
+                  <Select value={rule} onChange={(e) => applyRule(e.target.value as PickRule)}>
+                    {PICK_RULES.map((r) => (
+                      <option key={r} value={r}>{t(`mods.rule.${r}`)}</option>
+                    ))}
+                  </Select>
+                </Field>
+                {(rule === 'exactly' || rule === 'up_to') && (
+                  <div className="w-20">
+                    <Input
+                      type="number"
+                      min={1}
+                      aria-label={t('mods.rule.count')}
+                      aria-invalid={errors.max_select ? true : undefined}
+                      value={count}
+                      onChange={(e) => setCount(e.target.value)}
+                    />
+                  </div>
+                )}
+                {rule === 'range' && (
+                  <div className="flex items-center gap-1.5 text-sm text-ink-muted">
+                    <div className="w-20">
+                      <Input type="number" min={0} aria-label={t('mods.field.min')}
+                        value={rangeMin} onChange={(e) => setRangeMin(e.target.value)} />
+                    </div>
+                    <span aria-hidden>–</span>
+                    <div className="w-20">
+                      <Input type="number" min={1} aria-label={t('mods.field.max')}
+                        aria-invalid={errors.max_select ? true : undefined}
+                        placeholder="∞" value={rangeMax} onChange={(e) => setRangeMax(e.target.value)} />
+                    </div>
+                  </div>
+                )}
+              </div>
+              {errors.max_select || errors.min_select ? (
+                <p role="alert" className="mt-1.5 text-xs font-medium text-danger-ink">
+                  {errors.max_select ?? errors.min_select}
+                </p>
+              ) : (
+                <p className="mt-1.5 text-xs text-ink-subtle">{t('mods.rule.help')}</p>
+              )}
             </div>
+
+            {issues.length > 0 && (
+              <div role="status" className="space-y-1.5 rounded-lg border border-warning-subtle bg-warning-subtle p-3 text-xs text-warning-ink">
+                {issues.map((iss) => (
+                  <p key={iss.code} className="flex gap-1.5">
+                    <Icon name="warning" size={14} className="mt-px flex-none" />
+                    <span>{issueText(iss, t)}</span>
+                  </p>
+                ))}
+              </div>
+            )}
+
+            {showSuggestion && suggestion && (
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
+                <span>{t('mods.rule.suggested', { rule: ruleSummary(suggestion.min_select, suggestion.max_select, t) })}</span>
+                <button
+                  type="button"
+                  onClick={() => applyRule(suggestion.rule, '1')}
+                  className="font-medium text-accent-ink hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
+                >
+                  {t('mods.rule.useSuggested')}
+                </button>
+              </p>
+            )}
           </div>
 
           <div className="space-y-2 border-t border-hairline pt-4">
@@ -471,3 +553,4 @@ function OptionRow({
     </li>
   )
 }
+

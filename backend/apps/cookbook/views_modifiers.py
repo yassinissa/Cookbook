@@ -18,6 +18,7 @@ from rest_framework.views import APIView
 from apps.accounts.permissions import ScopedQuerySetMixin, capability_required
 
 from .audit import AuditedViewSetMixin, num, record
+from .modifier_rules import group_rule_issues
 from .models import ActivityActionType, ActivityArea, DishRecipe, ModifierGroup, ModifierOption
 from .serializers.modifiers import (
     ModifierGroupSerializer, ModifierGroupWriteSerializer,
@@ -156,13 +157,26 @@ class ModifierReadinessView(APIView):
                 'unused': not used_by,
             })
 
+        # groups whose pick rule can't be right for the options in them
+        groups = []
+        for g in ModifierGroup.objects.prefetch_related('options', 'dish_uses').order_by('name_en'):
+            issues = group_rule_issues(g)
+            if issues:
+                groups.append({
+                    'group_id': str(g.id), 'group': g.name_en, 'group_ar': g.name_ar,
+                    'min_select': g.min_select, 'max_select': g.max_select,
+                    'dish_count': len(g.dish_uses.all()), 'issues': issues,
+                })
+
         return Response({
             'summary': {
                 **counts,
                 'total': len(rows),
+                'rule_issues': len(groups),
                 'needs_match_key': sum(
                     1 for r in rows
                     if r['status'] != 'no_impact' and not r['has_match_key'] and r['used_by']),
             },
             'options': rows,
+            'rule_issues': groups,
         })

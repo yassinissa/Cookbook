@@ -10,6 +10,7 @@ import { cn } from '@/lib/cn'
 import { useI18n } from '@/i18n'
 import type { ModifierGroup } from '@/types/api'
 import { ModifierGroupEditor } from './ModifierGroupEditor'
+import { ruleSummary } from './modifierRules'
 import { DishModifierDrawer } from './DishModifierDrawer'
 import { ReadinessTab } from './ReadinessTab'
 
@@ -20,7 +21,8 @@ export function ModifiersPage() {
   const { t } = useI18n()
   const [tab, setTab] = useState<Tab>('groups')
   const { data: groups } = useModifierGroups()
-  const needsData = (groups ?? []).reduce((n, g) => n + (g.needs_data_count ?? 0), 0)
+  const needsData = (groups ?? []).reduce(
+    (n, g) => n + (g.needs_data_count ?? 0) + (g.rule_issues?.length ? 1 : 0), 0)
 
   return (
     <Page stagger>
@@ -104,8 +106,12 @@ function GroupsTab() {
                       {g.name_ar && <span dir="rtl" className="ms-2 text-xs text-ink-subtle">{g.name_ar}</span>}
                     </td>
                     <td className="px-3 py-2.5 text-ink-muted">
-                      {t(g.selection === 'single' ? 'mods.selection.single' : 'mods.selection.multi')}
-                      {g.selection === 'multi' && g.max_select ? ` · ${g.min_select}–${g.max_select}` : ''}
+                      <span className="inline-flex flex-wrap items-center gap-1.5">
+                        <span className="tnum">{ruleSummary(g.min_select, g.max_select, t)}</span>
+                        {g.rule_issues.length > 0 && (
+                          <Pill tone="warning" icon="warning">{t('mods.issue.pill')}</Pill>
+                        )}
+                      </span>
                     </td>
                     <td className="tnum px-3 py-2.5 text-end text-ink-muted">{g.option_count}</td>
                     <td className="tnum px-3 py-2.5 text-end text-ink-muted">{g.dish_count}</td>

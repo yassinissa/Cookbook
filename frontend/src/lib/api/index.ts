@@ -1009,7 +1009,7 @@ export async function fetchDishModifiers(): Promise<DishModifierRow[]> {
 }
 
 export async function fetchModifierReadiness(): Promise<ModifierReadiness> {
-  if (USE_SEED) { await delay(150); return { summary: { ready: 0, needs_data: 0, no_impact: 0, total: 0, needs_match_key: 0 }, options: [] } }
+  if (USE_SEED) { await delay(150); return { summary: { ready: 0, needs_data: 0, no_impact: 0, total: 0, needs_match_key: 0, rule_issues: 0 }, options: [], rule_issues: [] } }
   const { data } = await http.get('/cookbook/modifier-readiness/')
   return data
 }

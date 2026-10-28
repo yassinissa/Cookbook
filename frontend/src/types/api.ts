@@ -937,6 +937,13 @@ export type ModifierOptionKind = 'choice' | 'type' | 'addon' | 'instruction'
 export type ModifierRole = 'forced' | 'optional'
 
 export type ModifierDeltaDirection = 'add' | 'remove'
+/** The question an option answers: which one / what extras / what to change. */
+export type ModifierFamily = 'pick' | 'extra' | 'instruction'
+/** "Customer picks" preset — see features/pos/modifierRules.ts */
+export type PickRule = 'exactly' | 'optional_one' | 'up_to' | 'any' | 'range'
+export type ModifierRuleIssue =
+  | { code: 'mixed_single_pick'; families: ModifierFamily[] }
+  | { code: 'min_over_options'; min_select: number; options: number }
 export type DeductionStatus = 'ready' | 'needs_data' | 'no_impact'
 
 export interface ModifierOptionIngredient {
@@ -977,6 +984,9 @@ export interface ModifierGroup {
   selection: ModifierSelection
   min_select: number
   max_select: number | null
+  pick_rule: PickRule
+  suggested_rule: { rule: PickRule; min_select: number; max_select: number | null } | null
+  rule_issues: ModifierRuleIssue[]
   notes: string
   option_count: number
   dish_count: number
@@ -1011,8 +1021,18 @@ export interface ModifierReadiness {
     no_impact: number
     total: number
     needs_match_key: number
+    rule_issues: number
   }
   options: ModifierReadinessRow[]
+  rule_issues: Array<{
+    group_id: ID
+    group: string
+    group_ar: string
+    min_select: number
+    max_select: number | null
+    dish_count: number
+    issues: ModifierRuleIssue[]
+  }>
 }
 export interface DishModifierRow {
   id: ID
