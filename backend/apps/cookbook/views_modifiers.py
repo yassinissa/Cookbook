@@ -7,19 +7,27 @@ POS modifier API.
                                        dish-standards
   /api/cookbook/modifier-readiness/    every option across every group with its
                                        consumption-effect status — the worklist
+  /api/cookbook/deduction-issues/      what went wrong deducting real POS sales
+                                       (inventory-platform's import issues),
+                                       each resolved to where it's fixed
 
 All gated `pos.manage`. Attaching a modifier never versions the recipe and
 never re-runs costing.
 """
+from django.core.cache import cache
+from django.utils import timezone
 from rest_framework import mixins, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.access import ALL, access_for
 from apps.accounts.permissions import ScopedQuerySetMixin, capability_required
+from apps.integrations.inventory_client import InventoryAPIError
 
 from .audit import AuditedViewSetMixin, num, record
-from .modifier_rules import group_rule_issues
-from .models import ActivityActionType, ActivityArea, DishRecipe, ModifierGroup, ModifierOption
+from .deduction_issues import collect_deduction_issues
+from .models import ActivityActionType, ActivityArea, Branch, DishRecipe, ModifierGroup, ModifierOption
+from .services import get_inventory_items_by_sku
 from .serializers.modifiers import (
     ModifierGroupSerializer, ModifierGroupWriteSerializer,
     DishModifierListSerializer, DishModifierDetailSerializer, DishModifierWriteSerializer,
@@ -157,26 +165,47 @@ class ModifierReadinessView(APIView):
                 'unused': not used_by,
             })
 
-        # groups whose pick rule can't be right for the options in them
-        groups = []
-        for g in ModifierGroup.objects.prefetch_related('options', 'dish_uses').order_by('name_en'):
-            issues = group_rule_issues(g)
-            if issues:
-                groups.append({
-                    'group_id': str(g.id), 'group': g.name_en, 'group_ar': g.name_ar,
-                    'min_select': g.min_select, 'max_select': g.max_select,
-                    'dish_count': len(g.dish_uses.all()), 'issues': issues,
-                })
-
         return Response({
             'summary': {
                 **counts,
                 'total': len(rows),
-                'rule_issues': len(groups),
                 'needs_match_key': sum(
                     1 for r in rows
                     if r['status'] != 'no_impact' and not r['has_match_key'] and r['used_by']),
             },
             'options': rows,
-            'rule_issues': groups,
         })
+
+
+class DeductionIssuesView(APIView):
+    """GET cookbook/deduction-issues/?days=14[&refresh=1] — inventory-platform's
+    POS deduction problems from the recent sales imports, one entry per root
+    cause, each resolved to where it's fixed (see `deduction_issues`). Scoped
+    to the caller's brands. Cached briefly: it walks inventory's import list."""
+    permission_classes = [capability_required(default='pos.manage')]
+    _CACHE_SECONDS = 120
+
+    def get(self, request):
+        try:
+            days = max(1, min(int(request.query_params.get('days', 14)), 90))
+        except ValueError:
+            return Response({'days': ['A number of days, 1–90.']}, status=400)
+
+        scope = access_for(request).scope
+        brands = None
+        if scope.branch_ids is not ALL:
+            brands = set(Branch.objects.filter(id__in=scope.branch_ids)
+                         .exclude(slug='').values_list('slug', flat=True))
+        key = f'cookbook:deduction-issues:{days}:{",".join(sorted(brands)) if brands is not None else "*"}'
+
+        data = None if request.query_params.get('refresh') else cache.get(key)
+        if data is None:
+            try:
+                data = collect_deduction_issues(days=days, brands=brands,
+                                                items_by_sku=get_inventory_items_by_sku())
+            except InventoryAPIError as exc:
+                return Response({'detail': f'Could not read sales imports from inventory-platform: {exc}'},
+                                status=502)
+            data['checked_at'] = timezone.now().isoformat()
+            cache.set(key, data, self._CACHE_SECONDS)
+        return Response(data)

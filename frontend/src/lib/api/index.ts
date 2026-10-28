@@ -52,6 +52,7 @@ import type {
   ModifierOption,
   ModifierOptionKind,
   ModifierReadiness,
+  DeductionIssues,
   ModifierRole,
   ModifierSelection,
   Paginated,
@@ -979,9 +980,9 @@ export async function fetchModifierGroups(): Promise<ModifierGroup[]> {
 export interface ModifierGroupWrite {
   name_en: string
   name_ar?: string
-  selection: ModifierSelection
-  min_select: number
-  max_select: number | null
+  selection?: ModifierSelection
+  min_select?: number
+  max_select?: number | null
   notes?: string
   options: Array<Partial<ModifierOption> & { name_en: string; kind: ModifierOptionKind }>
 }
@@ -1008,8 +1009,20 @@ export async function fetchDishModifiers(): Promise<DishModifierRow[]> {
   return listData<DishModifierRow>(data)
 }
 
+export async function fetchDeductionIssues(days: number, refresh = false): Promise<DeductionIssues> {
+  if (USE_SEED) {
+    await delay(150)
+    return { days, since: '', checked_at: new Date().toISOString(), imports_scanned: 0,
+      imports_with_issues: 0, summary: { cookbook: 0, inventory: 0, expected: 0 }, issues: [] }
+  }
+  const { data } = await http.get('/cookbook/deduction-issues/', {
+    params: { days, refresh: refresh ? 1 : undefined },
+  })
+  return data
+}
+
 export async function fetchModifierReadiness(): Promise<ModifierReadiness> {
-  if (USE_SEED) { await delay(150); return { summary: { ready: 0, needs_data: 0, no_impact: 0, total: 0, needs_match_key: 0, rule_issues: 0 }, options: [], rule_issues: [] } }
+  if (USE_SEED) { await delay(150); return { summary: { ready: 0, needs_data: 0, no_impact: 0, total: 0, needs_match_key: 0 }, options: [] } }
   const { data } = await http.get('/cookbook/modifier-readiness/')
   return data
 }

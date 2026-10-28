@@ -17,7 +17,6 @@ Every `ModifierOption` resolves to a consumption effect via its `deltas`
 """
 from rest_framework import serializers
 
-from apps.cookbook import modifier_rules
 from apps.cookbook.models import (
     DishRecipe, ModifierGroup, ModifierOption, ModifierOptionIngredient,
     ModifierOptionKind, ModifierDeltaDirection, ModifierRole, DishModifierGroup,
@@ -88,30 +87,17 @@ class ModifierGroupSerializer(serializers.ModelSerializer):
     option_count = serializers.IntegerField(source='options.count', read_only=True)
     dish_count   = serializers.IntegerField(source='dish_uses.count', read_only=True)
     needs_data_count = serializers.SerializerMethodField()
-    pick_rule      = serializers.SerializerMethodField()
-    suggested_rule = serializers.SerializerMethodField()
-    rule_issues    = serializers.SerializerMethodField()
 
     class Meta:
         model  = ModifierGroup
         fields = [
             'id', 'name_en', 'name_ar', 'selection', 'min_select', 'max_select',
-            'pick_rule', 'suggested_rule', 'rule_issues',
             'notes', 'option_count', 'dish_count', 'needs_data_count', 'options',
             'created_at', 'updated_at',
         ]
 
     def get_needs_data_count(self, obj):
         return sum(1 for o in obj.options.all() if o.deduction_status == 'needs_data')
-
-    def get_pick_rule(self, obj):
-        return modifier_rules.pick_rule(obj.min_select, obj.max_select)
-
-    def get_suggested_rule(self, obj):
-        return modifier_rules.suggested_rule([o.kind for o in obj.options.all() if o.is_available])
-
-    def get_rule_issues(self, obj):
-        return modifier_rules.group_rule_issues(obj)
 
 
 class ModifierGroupWriteSerializer(serializers.ModelSerializer):
@@ -126,12 +112,6 @@ class ModifierGroupWriteSerializer(serializers.ModelSerializer):
         hi = attrs.get('max_select', getattr(self.instance, 'max_select', None))
         if hi is not None and lo > hi:
             raise serializers.ValidationError({'max_select': 'Must be at least the minimum.'})
-        if hi == 0:
-            raise serializers.ValidationError({'max_select': 'Must allow at least one pick.'})
-        # "pick one" vs "pick several" follows from the maximum — never a
-        # separate choice that can disagree with it
-        if 'max_select' in attrs or 'selection' in attrs:
-            attrs['selection'] = modifier_rules.selection_for(hi)
         return attrs
 
     _OPT_FIELDS = ('name_en', 'name_ar', 'price_delta', 'kind', 'pos_mods_string',

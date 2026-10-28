@@ -38,6 +38,7 @@ router.register(r'dish-modifiers', views_modifiers.DishModifierViewSet, basename
 
 urlpatterns = [
     path('modifier-readiness/', views_modifiers.ModifierReadinessView.as_view(), name='modifier-readiness'),
+    path('deduction-issues/', views_modifiers.DeductionIssuesView.as_view(), name='deduction-issues'),
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('branch-food-cost/', BranchFoodCostView.as_view(), name='branch-food-cost'),
     path('cost-preview/', CostPreviewView.as_view(), name='cost-preview'),

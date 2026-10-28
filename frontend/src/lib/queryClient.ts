@@ -58,6 +58,7 @@ export const qk = {
   publicMenu: (slug: string) => ['public-menu', slug] as const,
   modifierGroups: ['modifier-groups'] as const,
   modifierReadiness: ['modifier-readiness'] as const,
+  deductionIssues: (days: number) => ['deduction-issues', days] as const,
   dishModifiers: ['dish-modifiers'] as const,
   dishModifier: (dishId: string) => ['dish-modifiers', dishId] as const,
 }

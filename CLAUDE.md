@@ -351,19 +351,28 @@ before calling anything done — not just "the happy path returns 200."
     `kind`/`item_sku`/`pos_mods_string`). `PublicMenuPage` renders it as a
     "Choose one" / "Add" line; that page now keys its own UI strings off the
     customer's EN/AR toggle (a local `STR` map) instead of the app `t()`.
-    **Pick rules** (2026-10-28, `modifier_rules.py`, mirrored by
-    `features/pos/modifierRules.ts`): a group's min/max are *never* published —
-    Lavu enforces its own and nobody here can change the POS — so they only feed
-    the QR menu. The editor shows one **Customer picks** control (Exactly N /
-    One, optional / Up to N / Any number / Between) instead of selection + min +
-    max; `selection` is derived from max on write (single iff max = 1). The
-    limit counts across the whole group whatever each option's kind, so
-    `rule_issues` flags a max-1 group that mixes choices with add-ons /
-    instructions (`mixed_single_pick` — "one question per group") and a min
-    above the available options; the group read serializer returns
-    `pick_rule` / `suggested_rule` / `rule_issues`, and `modifier-readiness/`
-    lists offending groups (`rule_issues`) above the option worklist, which
-    also gained a "No POS text" filter. `test_modifier_rules.py`.
+    **Pick rules are not edited here** (owner, 2026-10-28): a group's
+    selection / min / max are never published — Lavu enforces its own, nobody
+    here can change the POS, and the owner doesn't use the QR menu — so the
+    group editor no longer shows them (an existing group keeps its stored
+    values; a new one is saved as "any number"). The modifier screens show only
+    what affects deduction. Readiness has a "No POS text" filter.
+    **Sales deduction tab** (`/pos?tab=deduction`, `DeductionTab.tsx`):
+    `deduction_issues.py` reads inventory-platform's POS sales imports
+    (`InventoryClient.get_pos_reports` / `get_pos_report` / `get_branches` —
+    read-only; only `partial`/`failed` imports are opened) and groups every
+    `POSImportLine.issues` entry by root cause, then resolves it against
+    Cookbook data: `side` = `cookbook` (with a `target` link — dish, item
+    conversions via `/inventory?q=<sku>`, group editor via `/pos?group=<id>`,
+    dish modifiers via `/pos?tab=dishes&dish=<id>`) / `inventory` (short
+    stock, branch brand) / `expected` (option marked "no stock impact").
+    Dishes match inventory's way: brand = `Branch.slug`, normalised POS name
+    then `name_en`; options by normalised `pos_mods_string` (incl. compound
+    parts). `GET cookbook/deduction-issues/?days=` (`pos.manage`,
+    brand-scoped, cached 120s, `refresh=1` bypasses, 502 when inventory is
+    unreachable). Fixing in Cookbook doesn't touch past imports: unmatched /
+    no-stock lines need inventory's Re-apply; a skipped modifier's past sales
+    stay base-only. `test_deduction_issues.py`, `DeductionTab.test.tsx`.
     **inventory-platform already has the deduction pipeline**
     (`apps/pos_integration/`: `POSImport` upload → classify BASE/TYPE/ADDON/
     INSTRUCTION → `POSItemMapping` / `POSAddonIngredient` → deduct stock).

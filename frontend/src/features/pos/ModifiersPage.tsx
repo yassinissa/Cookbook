@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
@@ -10,19 +11,34 @@ import { cn } from '@/lib/cn'
 import { useI18n } from '@/i18n'
 import type { ModifierGroup } from '@/types/api'
 import { ModifierGroupEditor } from './ModifierGroupEditor'
-import { ruleSummary } from './modifierRules'
 import { DishModifierDrawer } from './DishModifierDrawer'
 import { ReadinessTab } from './ReadinessTab'
+import { DeductionTab } from './DeductionTab'
 
-const TABS = ['groups', 'dishes', 'readiness'] as const
+const TABS = ['groups', 'dishes', 'readiness', 'deduction'] as const
 type Tab = (typeof TABS)[number]
+
+/** `?tab=` / `?group=` / `?dish=` deep-link here — the Sales deduction tab's
+ *  "Open …" buttons land straight on the group editor or a dish's modifiers. */
+function useParam(name: string) {
+  const [params, setParams] = useSearchParams()
+  const set = (value: string | null) =>
+    setParams((p) => {
+      const next = new URLSearchParams(p)
+      if (value) next.set(name, value)
+      else next.delete(name)
+      return next
+    }, { replace: true })
+  return [params.get(name), set] as const
+}
 
 export function ModifiersPage() {
   const { t } = useI18n()
-  const [tab, setTab] = useState<Tab>('groups')
+  const [tabParam, setTabParam] = useParam('tab')
+  const tab: Tab = (TABS as readonly string[]).includes(tabParam ?? '') ? (tabParam as Tab) : 'groups'
+  const setTab = (key: Tab) => setTabParam(key === 'groups' ? null : key)
   const { data: groups } = useModifierGroups()
-  const needsData = (groups ?? []).reduce(
-    (n, g) => n + (g.needs_data_count ?? 0) + (g.rule_issues?.length ? 1 : 0), 0)
+  const needsData = (groups ?? []).reduce((n, g) => n + (g.needs_data_count ?? 0), 0)
 
   return (
     <Page stagger>
@@ -52,6 +68,7 @@ export function ModifiersPage() {
       {tab === 'groups' && <GroupsTab />}
       {tab === 'dishes' && <DishesTab />}
       {tab === 'readiness' && <ReadinessTab />}
+      {tab === 'deduction' && <DeductionTab />}
     </Page>
   )
 }
@@ -59,13 +76,15 @@ export function ModifiersPage() {
 function GroupsTab() {
   const { t } = useI18n()
   const { data, isLoading, isError, refetch } = useModifierGroups()
-  const [editing, setEditing] = useState<ModifierGroup | null>(null)
+  const [picked, setEditing] = useState<ModifierGroup | null>(null)
   const [creating, setCreating] = useState(false)
+  const [linked, setLinked] = useParam('group')
 
   if (isLoading) return <Skeleton className="h-72" />
   if (isError) return <ErrorState title={t('mods.title')} onRetry={() => refetch()} />
 
   const groups = data ?? []
+  const editing = picked ?? (linked ? groups.find((g) => g.id === linked) ?? null : null)
 
   return (
     <div className="space-y-4">
@@ -89,7 +108,6 @@ function GroupsTab() {
               <thead>
                 <tr className="text-2xs uppercase tracking-wide text-ink-subtle">
                   <th className="px-4 py-2 text-start font-medium">{t('mods.col.group')}</th>
-                  <th className="px-3 py-2 text-start font-medium">{t('mods.col.selection')}</th>
                   <th className="px-3 py-2 text-end font-medium">{t('mods.col.options')}</th>
                   <th className="px-3 py-2 text-end font-medium">{t('mods.col.dishes')}</th>
                 </tr>
@@ -104,14 +122,6 @@ function GroupsTab() {
                     <td className="px-4 py-2.5">
                       <span className="font-medium text-ink">{g.name_en}</span>
                       {g.name_ar && <span dir="rtl" className="ms-2 text-xs text-ink-subtle">{g.name_ar}</span>}
-                    </td>
-                    <td className="px-3 py-2.5 text-ink-muted">
-                      <span className="inline-flex flex-wrap items-center gap-1.5">
-                        <span className="tnum">{ruleSummary(g.min_select, g.max_select, t)}</span>
-                        {g.rule_issues.length > 0 && (
-                          <Pill tone="warning" icon="warning">{t('mods.issue.pill')}</Pill>
-                        )}
-                      </span>
                     </td>
                     <td className="tnum px-3 py-2.5 text-end text-ink-muted">{g.option_count}</td>
                     <td className="tnum px-3 py-2.5 text-end text-ink-muted">{g.dish_count}</td>
@@ -130,6 +140,7 @@ function GroupsTab() {
           onClose={() => {
             setCreating(false)
             setEditing(null)
+            if (linked) setLinked(null)
           }}
         />
       )}
@@ -140,7 +151,7 @@ function GroupsTab() {
 function DishesTab() {
   const { t } = useI18n()
   const { data, isLoading, isError, refetch } = useDishModifiers()
-  const [dishId, setDishId] = useState<string | null>(null)
+  const [dishId, setDishId] = useParam('dish')
 
   if (isLoading) return <Skeleton className="h-72" />
   if (isError) return <ErrorState title={t('mods.title')} onRetry={() => refetch()} />

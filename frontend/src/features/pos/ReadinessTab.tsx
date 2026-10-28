@@ -7,9 +7,7 @@ import { cn } from '@/lib/cn'
 import { useI18n } from '@/i18n'
 import { useModifierReadiness, useModifierGroups } from '@/lib/queries'
 import type { DeductionStatus, ModifierGroup, ModifierReadinessRow } from '@/types/api'
-import { Icon } from '@/components/Icon'
 import { ModifierGroupEditor } from './ModifierGroupEditor'
-import { issueText, ruleSummary } from './modifierRules'
 
 const STATUS_TONE: Record<DeductionStatus, 'success' | 'warning' | 'neutral'> = {
   ready: 'success',
@@ -40,7 +38,6 @@ export function ReadinessTab() {
   if (isError) return <ErrorState title={t('mods.readiness.title')} onRetry={() => refetch()} />
 
   const s = data!.summary
-  const ruleGroups = data!.rule_issues ?? []
   const openGroup = (id: string) => {
     const g = (groups ?? []).find((x) => x.id === id)
     if (g) setEditing(g)
@@ -50,38 +47,6 @@ export function ReadinessTab() {
     <div className="space-y-4">
       <p className="max-w-2xl text-sm text-ink-subtle">{t('mods.readiness.subtitle')}</p>
 
-      {ruleGroups.length > 0 && (
-        <Card className="border-warning-subtle p-4">
-          <div className="flex items-start gap-2">
-            <Icon name="warning" size={16} className="mt-0.5 flex-none text-warning-ink" />
-            <div>
-              <p className="text-sm font-semibold text-ink">
-                {t('mods.readiness.rulesTitle')} <span className="tnum text-ink-subtle">· {ruleGroups.length}</span>
-              </p>
-              <p className="text-xs text-ink-subtle">{t('mods.readiness.rulesHint')}</p>
-            </div>
-          </div>
-          <ul className="mt-3 divide-y divide-hairline">
-            {ruleGroups.map((g) => (
-              <li key={g.group_id}>
-                <button
-                  type="button"
-                  onClick={() => openGroup(g.group_id)}
-                  className="-mx-2 w-[calc(100%+1rem)] rounded-md px-2 py-2.5 text-start transition-colors hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
-                >
-                  <span className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="font-medium text-ink">{g.group}</span>
-                    <span className="tnum text-xs text-ink-subtle">{ruleSummary(g.min_select, g.max_select, t)}</span>
-                  </span>
-                  {g.issues.map((iss) => (
-                    <span key={iss.code} className="mt-0.5 block text-xs text-warning-ink">{issueText(iss, t)}</span>
-                  ))}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
 
       <div className="flex flex-wrap gap-1.5">
         {FILTERS.map((f) => {

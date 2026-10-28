@@ -260,6 +260,16 @@ export function useModifierGroups() {
 export function useDishModifiers() {
   return useQuery({ queryKey: qk.dishModifiers, queryFn: api.fetchDishModifiers })
 }
+/** inventory-platform reads are slow (one call per import) — keep a result a
+ *  couple of minutes; the tab's Refresh button forces a fresh read. */
+export function useDeductionIssues(days: number) {
+  return useQuery({
+    queryKey: qk.deductionIssues(days),
+    queryFn: () => api.fetchDeductionIssues(days),
+    staleTime: 120_000,
+    retry: false,
+  })
+}
 export function useModifierReadiness() {
   return useQuery({ queryKey: qk.modifierReadiness, queryFn: api.fetchModifierReadiness })
 }

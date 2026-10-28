@@ -174,6 +174,24 @@ class InventoryClient:
         each sent SKU's rows; returns {"updated": [...], "skipped": [...]}."""
         return self._request('POST', '/items/recipe-conversions/sync/', json={'items': items})
 
+    # ── read: POS sales imports (apps.cookbook.deduction_issues) ─────────
+    def get_branches(self):
+        """Physical branches — each carries `brand`, the Cookbook Branch.slug
+        its POS sales are matched against."""
+        return self._get_all_pages('/branches/')
+
+    def get_pos_reports(self, params=None):
+        """One page of POS sales imports, newest first — `{count, next,
+        results}`. Each row: branch, import_date, status, line counts."""
+        allowed = ('branch', 'page', 'page_size')
+        clean = {k: params[k] for k in allowed if params and params.get(k) not in (None, '')}
+        return self._request('GET', '/pos/reports/', params=clean)
+
+    def get_pos_report(self, report_id):
+        """One import with every line's `deduction_note` / `issues` /
+        `deductions` — inventory's debug channel for stock deduction."""
+        return self._request('GET', f'/pos/reports/{report_id}/')
+
     def get_stores(self, params=None):
         return self._get_all_pages('/stores/', params=params)
 
