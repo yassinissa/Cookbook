@@ -15,6 +15,7 @@ Every `ModifierOption` resolves to a consumption effect via its `deltas`
 (`+`/`-` ingredient rows) or, for `type`, a `variant_recipe`. `deduction_status`
 (`ready` / `needs_data` / `no_impact`) drives the readiness worklist.
 """
+from django.db import transaction
 from rest_framework import serializers
 
 from apps.cookbook.models import (
@@ -82,6 +83,38 @@ def _has_inline_addon(attrs, instance):
     return bool(attrs.get('item_sku') or getattr(instance, 'item_sku', ''))
 
 
+def _check_options(options):
+    """What the DB constraints would otherwise turn into a 500: option names
+    unique per group, one delta per SKU + direction, and every delta needs an
+    item and a quantity (PATCH is partial, so the nested `required` doesn't
+    apply). Raised as non-field errors so the editor's toast shows the text."""
+    if not options:
+        return
+    errors, names = [], set()
+    for opt in options:
+        name = (opt.get('name_en') or '').strip()
+        if name in names:
+            errors.append(f'Two options are called "{name}" — give each option its own name.')
+        names.add(name)
+        seen = set()
+        for d in opt.get('deltas') or []:
+            sku = (d.get('item_sku') or '').strip()
+            if not sku:
+                errors.append(f'"{name}" has an ingredient line with no item.')
+                continue
+            if d.get('quantity') is None:
+                errors.append(f'"{name}": {sku} has no quantity.')
+            elif d['quantity'] <= 0:
+                errors.append(f'"{name}": {sku} needs a quantity above 0.')
+            key = (sku, _dir(d))
+            if key in seen:
+                errors.append(f'"{name}" lists {sku} twice as {"a removal" if key[1] == ModifierDeltaDirection.REMOVE else "an addition"} — '
+                              'combine them into one line with the total quantity.')
+            seen.add(key)
+    if errors:
+        raise serializers.ValidationError(errors)
+
+
 class ModifierGroupSerializer(serializers.ModelSerializer):
     options      = ModifierOptionSerializer(many=True, read_only=True)
     option_count = serializers.IntegerField(source='options.count', read_only=True)
@@ -112,6 +145,7 @@ class ModifierGroupWriteSerializer(serializers.ModelSerializer):
         hi = attrs.get('max_select', getattr(self.instance, 'max_select', None))
         if hi is not None and lo > hi:
             raise serializers.ValidationError({'max_select': 'Must be at least the minimum.'})
+        _check_options(attrs.get('options'))
         return attrs
 
     _OPT_FIELDS = ('name_en', 'name_ar', 'price_delta', 'kind', 'pos_mods_string',
@@ -154,12 +188,14 @@ class ModifierGroupWriteSerializer(serializers.ModelSerializer):
                 opt = ModifierOption.objects.create(group=group, **fields)
             self._sync_deltas(opt, row.get('deltas'))
 
+    @transaction.atomic
     def create(self, validated_data):
         options = validated_data.pop('options', None)
         group = ModifierGroup.objects.create(**validated_data)
         self._sync_options(group, options)
         return group
 
+    @transaction.atomic
     def update(self, instance, validated_data):
         options = validated_data.pop('options', None)
         for k, v in validated_data.items():

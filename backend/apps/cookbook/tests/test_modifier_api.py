@@ -84,6 +84,42 @@ class ModifierGroupApiTests(APITestCase):
     def test_min_max_validation(self):
         self.assertEqual(self._create(min_select=3, max_select=2).status_code, 400)
 
+    def test_db_constraint_breaks_are_400_not_500(self):
+        # each of these used to reach the DB constraint and 500 the PATCH
+        gid = self._create(name_en='Bun').data['id']
+        chicken = ModifierOption.objects.get(group_id=gid, name_en='Chicken')
+
+        def patch(new_option):
+            return self.client.patch(f'/api/cookbook/modifier-groups/{gid}/', {'options': [
+                {'id': str(chicken.id), 'name_en': 'Chicken', 'price_delta': '9.999', 'kind': 'type'},
+                new_option,
+            ]}, format='json')
+
+        cases = {
+            'twice': {'name_en': 'Double', 'kind': 'addon', 'deltas': [
+                {'item_sku': 'P1', 'quantity': '60', 'direction': 'add'},
+                {'item_sku': 'P1', 'quantity': '60', 'direction': 'add'}]},
+            'called': {'name_en': 'Chicken', 'kind': 'addon', 'deltas': [
+                {'item_sku': 'P1', 'quantity': '60', 'direction': 'add'}]},
+            'no quantity': {'name_en': 'Double', 'kind': 'addon', 'deltas': [
+                {'item_sku': 'P1', 'direction': 'add'}]},
+        }
+        for needle, option in cases.items():
+            r = patch(option)
+            self.assertEqual(r.status_code, 400, (needle, r.data))
+            self.assertIn(needle, ' '.join(r.data['non_field_errors']))
+
+        # nothing from the rejected saves stuck — not even the edit to Chicken
+        chicken.refresh_from_db()
+        self.assertNotEqual(chicken.price_delta, Decimal('9.999'))
+        self.assertEqual(ModifierOption.objects.filter(group_id=gid).count(), 2)
+
+        # the same item once added and once removed is fine (a swap)
+        ok = patch({'name_en': 'Swap', 'kind': 'addon', 'deltas': [
+            {'item_sku': 'P1', 'quantity': '60', 'direction': 'add'},
+            {'item_sku': 'P1', 'quantity': '30', 'direction': 'remove'}]})
+        self.assertEqual(ok.status_code, 200, ok.data)
+
     def test_pos_manage_gate(self):
         cook = User.objects.create_user('cook', password='x')
         cook.profile.role = Role.objects.get(name='Restaurant Cook')   # no pos.manage
