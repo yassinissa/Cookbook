@@ -301,3 +301,11 @@ class InventoryClient:
                     and (r.get('pos_modifier') or '') == (pos_modifier or '')
                     and (r.get('brand') or '') == brand):
                 self._request('DELETE', f'/pos/modifier-ingredients/{r["id"]}/')
+
+    def delete_pos_modifier_ingredients_where(self, search, brand, should_delete):
+        """Drop every delta row of `brand` that `search` finds and the
+        `should_delete(row)` predicate picks."""
+        for r in self._get_all_pages('/pos/modifier-ingredients/',
+                                     params={'search': search, 'brand': brand}):
+            if (r.get('brand') or '') == brand and should_delete(r):
+                self._request('DELETE', f'/pos/modifier-ingredients/{r["id"]}/')

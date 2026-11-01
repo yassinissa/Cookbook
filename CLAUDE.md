@@ -373,6 +373,19 @@ before calling anything done — not just "the happy path returns 200."
     unreachable). Fixing in Cookbook doesn't touch past imports: unmatched /
     no-stock lines need inventory's Re-apply; a skipped modifier's past sales
     stay base-only. `test_deduction_issues.py`, `DeductionTab.test.tsx`.
+    **Renaming a published dish** (2026-11-01): inventory keys delta rows on the
+    exact text but matches a sale on the normalised text, so a row under an old
+    POS spelling would deduct on top of the new one.
+    `publishing._prune_superseded_deltas` drops those (and rows for a modifier
+    text no option has any more) on every publish. `publish_branch_dishes` now
+    only touches current versions (it used to pick up archived ones) and takes
+    `--include-stale` / `--exclude NAME`. `manage.py fix_sando_pos_data` is the
+    one-off that copied Lavu's spelling for Sando; each step checks the value
+    it expects and skips rather than overwrites a row that has moved on.
+    Two Lavu items can share an English name (Sando's two Mini Spinach): with no
+    POSItemMapping inventory falls to an exact match on the full text, so
+    each dish's POS name carries Lavu's whole string — attaching a modifier
+    group to one would publish a mapping and merge them again.
     **inventory-platform already has the deduction pipeline**
     (`apps/pos_integration/`: `POSImport` upload → classify BASE/TYPE/ADDON/
     INSTRUCTION → `POSItemMapping` / `POSAddonIngredient` → deduct stock).

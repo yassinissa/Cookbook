@@ -53,9 +53,11 @@ def norm(s):
 
 
 def _modifier_forms(mod):
-    """Whole modifier first, then each part of a compound ("Medium - No Onion")."""
+    """Whole modifier first, then each part of a compound ("Medium - No Onion").
+    Split before dropping the Arabic, the way inventory does: Lavu prints
+    "Mild/معتدل - Corn/ذرة", where only the first "/" ends a part's English."""
     whole = norm(mod)
-    parts = [norm(p) for p in re.split(r'\s+-\s+|,', str(mod or '').split('/')[0]) if norm(p)]
+    parts = [norm(p) for p in re.split(r'\s*[-,]\s*', str(mod or '')) if norm(p)]
     return [whole] + [p for p in parts if p != whole]
 
 
@@ -106,7 +108,8 @@ def _dish_target(d):
 def _publish_state(d):
     if not d.inventory_recipe_id:
         return 'unpublished'
-    if d.published_at and d.updated_at and d.published_at < d.updated_at:
+    # a > 1s gap is a real edit; sub-second is just the publish save itself
+    if d.published_at and d.updated_at and (d.updated_at - d.published_at).total_seconds() > 1:
         return 'stale'
     return 'published'
 

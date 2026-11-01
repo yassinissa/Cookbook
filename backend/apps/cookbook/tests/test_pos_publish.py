@@ -33,6 +33,8 @@ class FakeClient:
         self.mappings = []      # (pos_item_name, pos_modifier, dish_recipe_id)
         self.deltas = []        # (pos_item_name, pos_modifier, item, qty, unit, direction)
         self.pruned = []        # (pos_item_name, pos_modifier)
+        self.remote_rows = []   # delta rows already on inventory-platform
+        self.searched = []      # (search, brand)
 
     def get_items(self):
         return self._items
@@ -60,6 +62,10 @@ class FakeClient:
 
     def delete_pos_modifier_ingredients(self, pos_item_name, pos_modifier, brand):
         self.pruned.append((pos_item_name, pos_modifier or '', brand))
+
+    def delete_pos_modifier_ingredients_where(self, search, brand, should_delete):
+        self.searched.append((search, brand))
+        self.remote_rows = [r for r in self.remote_rows if not should_delete(r)]
 
 
 def _patch(fake):
@@ -100,6 +106,25 @@ class PosPublishTests(APITestCase):
 
     def _warnings(self, r):
         return r.data['_publish']['warnings']
+
+    def test_republish_drops_rows_under_an_old_pos_spelling_or_modifier_text(self):
+        """A renamed dish must not keep rows that would deduct on top of the new ones."""
+        DishRecipe.objects.filter(pk=self.dish.pk).update(pos_item_name='Meat Arayes/عرايس لحم')
+        fake = FakeClient()
+        fake.remote_rows = [
+            {'pos_item_name': 'Meat Arayes', 'pos_modifier': 'GARLIC SAUCE'},           # old spelling
+            {'pos_item_name': 'Meat Arayes/عرايس لحم', 'pos_modifier': 'GARLIC SAUCE'},  # current
+            {'pos_item_name': 'Meat Arayes/عرايس لحم', 'pos_modifier': 'OLD TEXT'},      # option gone
+            {'pos_item_name': 'Chicken Arayes', 'pos_modifier': 'GARLIC SAUCE'},         # another dish
+        ]
+        with _patch(fake):
+            r = self._publish()
+        self.assertEqual(r.status_code, 200, r.data)
+        self.assertEqual(fake.searched, [('Meat Arayes', 'dine')])
+        self.assertEqual(fake.remote_rows, [
+            {'pos_item_name': 'Meat Arayes/عرايس لحم', 'pos_modifier': 'GARLIC SAUCE'},
+            {'pos_item_name': 'Chicken Arayes', 'pos_modifier': 'GARLIC SAUCE'},
+        ])
 
     def test_base_mapping_variant_mapping_and_delta_are_pushed(self):
         fake = FakeClient()

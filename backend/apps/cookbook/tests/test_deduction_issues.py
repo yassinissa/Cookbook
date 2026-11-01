@@ -106,6 +106,21 @@ class DeductionIssueResolutionTests(APITestCase):
         g = self._only([_line('BURRITO', issues=[_issue('recipe_no_ingredients')])])
         self.assertEqual(g['status'], 'dish_stale')
 
+    def test_the_publish_save_itself_is_not_an_edit(self):
+        # published_at is stamped just before the save that bumps updated_at
+        published = timezone.now()
+        DishRecipe.objects.filter(pk=self.burrito.pk).update(
+            published_at=published, updated_at=published + timedelta(milliseconds=300))
+        g = self._only([_line('BURRITO', issues=[_issue('no_recipe')])])
+        self.assertEqual(g['status'], 'published_unmatched')
+
+    def test_compound_modifier_with_arabic_after_each_part(self):
+        # Lavu's own spelling: the English of every part, the Arabic in between
+        self.assertEqual(di._modifier_forms('Mild/معتدل - Corn/ذرة'), ['mild', 'corn'])
+        g = self._only([_line('BURRITO', 'Medium/متوسط - Spicy/حار',
+                              issues=[_issue('modifier_not_modelled', level='warning')])])
+        self.assertEqual((g['status'], g['side']), ('marked_no_impact', 'expected'))
+
     def test_unknown_brand_is_inventory_side(self):
         data, _ = self._run([_line('X', issues=[_issue('no_recipe')])], imports=[_imp('i1')])
         self.assertEqual(data['issues'][0]['status'], 'dish_missing')   # dine is known

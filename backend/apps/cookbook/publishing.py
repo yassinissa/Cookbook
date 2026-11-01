@@ -329,6 +329,7 @@ def _publish_pos_modifiers(recipe, client, cat, units, links, brand):
             warnings.append(f'POS mapping for {label} failed: {e}')
 
     _push_mapping('', recipe.inventory_recipe_id, 'the base dish')
+    _prune_superseded_deltas(client, pos_name, links, brand, warnings)
 
     seen_options = set()
     for link in links:
@@ -377,6 +378,28 @@ def _publish_pos_modifiers(recipe, client, cat, units, links, brand):
                 except InventoryAPIError as e:
                     warnings.append(f'POS modifier ingredient for {where} failed: {e}')
     return warnings
+
+
+def _prune_superseded_deltas(client, pos_name, links, brand, warnings):
+    """Delta rows left by an earlier publish of this dish. inventory-platform
+    keys rows on the exact text but matches a sale on the normalised text, so a
+    row under the dish's old POS spelling ("Burger" -> "Burger/برجر") would
+    deduct on top of the new one. Rows for a modifier text no option carries
+    any more can never match; they go too."""
+    from .deduction_issues import norm
+
+    dish = norm(pos_name)
+    current = {opt.pos_mods_string for link in links for opt in link.group.options.all()
+               if not opt.no_consumption_impact}
+
+    def superseded(row):
+        return norm(row.get('pos_item_name')) == dish and (
+            row.get('pos_item_name') != pos_name or row.get('pos_modifier') not in current)
+
+    try:
+        client.delete_pos_modifier_ingredients_where(pos_name.split('/')[0].strip(), brand, superseded)
+    except InventoryAPIError as e:
+        warnings.append(f'could not prune superseded POS deltas for {pos_name}: {e}')
 
 
 def _prune_deltas(client, pos_name, pos_modifier, brand, warnings, where):
