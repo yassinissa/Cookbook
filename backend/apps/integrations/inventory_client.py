@@ -231,6 +231,16 @@ class InventoryClient:
         return next((r for r in rows
                      if r.get('name_en') == name_en and r.get('is_current')), None)
 
+    def create_branch_prep_recipe(self, payload):
+        return self._request('POST', '/recipes/branch-prep/', json=payload)
+
+    def update_branch_prep_recipe(self, recipe_id, payload):
+        return self._request('PATCH', f'/recipes/branch-prep/{recipe_id}/', json=payload)
+
+    def find_branch_prep_recipe(self, name_en, brand):
+        rows = self._get_all_pages('/recipes/branch-prep/', params={'brand': brand, 'name': name_en})
+        return next((r for r in rows if r.get('name_en') == name_en and r.get('is_current')), None)
+
     def find_production_recipe(self, name_en, prep_kitchen_id):
         rows = self._get_all_pages('/recipes/production/')
         return next((r for r in rows

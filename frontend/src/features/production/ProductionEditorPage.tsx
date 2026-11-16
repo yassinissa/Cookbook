@@ -35,6 +35,8 @@ interface FormState {
   revision: string
   prep_kitchen: string
   prep_kitchen_ref: string
+  kind: 'prep_kitchen' | 'branch_prep'
+  branch_ref: string
   section: string
   output_item_sku: string
   output_qty: string
@@ -54,6 +56,8 @@ const BLANK: FormState = {
   revision: '',
   prep_kitchen: '',
   prep_kitchen_ref: '',
+  kind: 'prep_kitchen',
+  branch_ref: '',
   section: '',
   output_item_sku: '',
   output_qty: '',
@@ -105,6 +109,8 @@ export function ProductionEditorPage() {
       revision: r.revision,
       prep_kitchen: r.prep_kitchen,
       prep_kitchen_ref: r.prep_kitchen_ref ?? '',
+      kind: r.kind ?? 'prep_kitchen',
+      branch_ref: r.branch_ref ?? '',
       section: r.section?.id ?? '',
       output_item_sku: r.output_item_sku,
       output_qty: r.output_qty ?? '',
@@ -142,7 +148,9 @@ export function ProductionEditorPage() {
       recipe_code: form.recipe_code,
       revision: form.revision,
       prep_kitchen: form.prep_kitchen,
-      prep_kitchen_ref: form.prep_kitchen_ref || null,
+      prep_kitchen_ref: form.kind === 'branch_prep' ? null : form.prep_kitchen_ref || null,
+      kind: form.kind,
+      branch_ref: form.kind === 'branch_prep' ? form.branch_ref || null : null,
       section: form.section || null,
       output_item_sku: form.output_item_sku,
       output_qty: form.output_qty || null,
@@ -319,22 +327,55 @@ export function ProductionEditorPage() {
                   <Input value={form.revision || 'Rev.01'} readOnly className="font-mono text-ink-muted" />
                 </Field>
                 <Field
-                  label={t('production.field.kitchen')}
-                  help={t('production.help.kitchen')}
-                  error={err('prep_kitchen_ref')}
+                  label={t('production.field.kind')}
+                  help={t('production.help.kind')}
+                  error={err('kind')}
                 >
                   <Select
-                    value={form.prep_kitchen_ref}
-                    onChange={(e) => set('prep_kitchen_ref', e.target.value)}
+                    value={form.kind}
+                    onChange={(e) => set('kind', e.target.value as FormState['kind'])}
                   >
-                    <option value="">—</option>
-                    {ref.prepKitchens.map((k) => (
-                      <option key={k.id} value={k.id}>
-                        {k.name_en}
-                      </option>
-                    ))}
+                    <option value="prep_kitchen">{t('production.kind.prep_kitchen')}</option>
+                    <option value="branch_prep">{t('production.kind.branch_prep')}</option>
                   </Select>
                 </Field>
+                {form.kind === 'branch_prep' ? (
+                  <Field
+                    label={t('production.field.brand')}
+                    help={t('production.help.brand')}
+                    error={err('branch_ref')}
+                  >
+                    <Select
+                      value={form.branch_ref}
+                      onChange={(e) => set('branch_ref', e.target.value)}
+                    >
+                      <option value="">—</option>
+                      {ref.branches.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name_en}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                ) : (
+                  <Field
+                    label={t('production.field.kitchen')}
+                    help={t('production.help.kitchen')}
+                    error={err('prep_kitchen_ref')}
+                  >
+                    <Select
+                      value={form.prep_kitchen_ref}
+                      onChange={(e) => set('prep_kitchen_ref', e.target.value)}
+                    >
+                      <option value="">—</option>
+                      {ref.prepKitchens.map((k) => (
+                        <option key={k.id} value={k.id}>
+                          {k.name_en}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                )}
                 <Field
                   label={t('editor.field.station')}
                   error={err('section')}

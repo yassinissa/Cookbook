@@ -48,6 +48,7 @@ class ProductionRecipeActivityLogSerializer(serializers.ModelSerializer):
 class ProductionRecipeListSerializer(HidesCostingFields, serializers.ModelSerializer):
     section_name = serializers.CharField(source='section.name', read_only=True, default=None)
     prep_kitchen_name = serializers.CharField(source='prep_kitchen_ref.name_en', read_only=True, default=None)
+    branch_name = serializers.CharField(source='branch_ref.name_en', read_only=True, default=None)
     output_unit_code = serializers.CharField(source='output_unit.code', read_only=True, default=None)
     ingredient_count = serializers.IntegerField(source='ingredients.count', read_only=True)
     is_published = serializers.SerializerMethodField()
@@ -56,7 +57,7 @@ class ProductionRecipeListSerializer(HidesCostingFields, serializers.ModelSerial
         model  = ProductionRecipe
         fields = [
             'id', 'name_en', 'name_ar', 'recipe_code', 'prep_kitchen', 'prep_kitchen_ref',
-            'prep_kitchen_name', 'section', 'section_name',
+            'prep_kitchen_name', 'kind', 'branch_ref', 'branch_name', 'section', 'section_name',
             'output_item_sku', 'output_qty', 'output_unit', 'output_unit_code',
             'cost', 'version', 'is_current', 'is_published', 'ingredient_count', 'created_at',
         ]
@@ -81,7 +82,7 @@ class ProductionRecipeDetailSerializer(HidesCostingFields, serializers.ModelSeri
         model  = ProductionRecipe
         fields = [
             'id', 'name_en', 'name_ar', 'recipe_code', 'revision', 'revision_date',
-            'prep_kitchen', 'prep_kitchen_ref', 'section',
+            'prep_kitchen', 'prep_kitchen_ref', 'kind', 'branch_ref', 'section',
             'output_item_sku', 'output_qty', 'output_unit',
             'prep_time_minutes', 'expected_waste_pct', 'include_labor_cost',
             'labor_cost', 'cost', 'cost_breakdown', 'nutrition', 'cost_per_unit',
@@ -112,7 +113,7 @@ class ProductionRecipeWriteSerializer(serializers.ModelSerializer):
         model  = ProductionRecipe
         fields = [
             'name_en', 'name_ar', 'recipe_code', 'revision', 'revision_date',
-            'prep_kitchen', 'prep_kitchen_ref', 'section',
+            'prep_kitchen', 'prep_kitchen_ref', 'kind', 'branch_ref', 'section',
             'output_item_sku', 'output_qty', 'output_unit',
             'prep_time_minutes', 'expected_waste_pct', 'include_labor_cost',
             'approved_by', 'qa_approved_by', 'approved_at', 'notes',
@@ -123,6 +124,19 @@ class ProductionRecipeWriteSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         if 'ingredients' in attrs:
             attrs['ingredients'] = clean_ingredient_lines(attrs['ingredients'])
+        # Branch prep: made by a brand's restaurants, not a prep kitchen. It
+        # needs the brand and never carries a prep kitchen (so prep cooks,
+        # who are scoped by prep kitchen, never see it).
+        kind = attrs.get('kind', getattr(self.instance, 'kind', ProductionRecipe.KIND_PREP_KITCHEN))
+        if kind == ProductionRecipe.KIND_BRANCH_PREP:
+            brand = attrs.get('branch_ref', getattr(self.instance, 'branch_ref', None))
+            if brand is None:
+                raise serializers.ValidationError(
+                    {'branch_ref': 'Choose the brand whose restaurants make this.'})
+            attrs['prep_kitchen_ref'] = None
+            attrs['prep_kitchen'] = ''
+        elif 'kind' in attrs:
+            attrs['branch_ref'] = None
         request = self.context.get('request')
         if not request:
             return attrs

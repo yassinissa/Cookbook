@@ -411,6 +411,8 @@ def _prune_deltas(client, pos_name, pos_modifier, brand, warnings, where):
 
 def publish_production_recipe(recipe, *, client=None):
     client = client or InventoryClient()
+    if getattr(recipe, 'kind', 'prep_kitchen') == 'branch_prep':
+        return publish_branch_prep_recipe(recipe, client=client)
     cat = _Catalogue(client)
 
     output_id = cat.sku_to_id.get(recipe.output_item_sku)
@@ -531,3 +533,64 @@ def sync_item_conversions(skus=None, *, client=None, chunk=200, dry_run=False):
             out['updated'] += result.get('updated', [])
             out['skipped'] += result.get('skipped', [])
     return out
+
+
+def _method_text(recipe):
+    """Steps as plain lines, in order — the branch kitchen's prep guide."""
+    return '\n'.join(s.instruction.strip() for s in recipe.steps.all().order_by('step_number')
+                     if s.instruction.strip())
+
+
+def publish_branch_prep_recipe(recipe, *, client=None):
+    """A ProductionRecipe with kind='branch_prep': made by every restaurant of
+    `branch_ref`'s brand from raw materials they hold. Pushed to
+    inventory-platform's /api/recipes/branch-prep/ keyed by brand, where that
+    brand's kitchen heads and cooks see it and record what they made."""
+    client = client or InventoryClient()
+    cat = _Catalogue(client)
+
+    brand = getattr(recipe.branch_ref, 'slug', '') or ''
+    if not brand:
+        raise RecipePublishError(
+            'This branch prep recipe has no brand — choose which brand\'s restaurants make it.')
+    output_id = cat.sku_to_id.get(recipe.output_item_sku)
+    if output_id is None:
+        raise RecipePublishError(
+            f'The output item "{recipe.output_item_sku}" must exist on inventory-platform '
+            f'before this recipe can be published.')
+
+    units = _Units(cat, [i.item_sku for i in recipe.ingredients.all()])
+    lines, warnings, issues = _ingredient_lines(recipe, cat, units)
+    output_qty, output_note, output_issue = _output_qty(recipe, cat)
+    if output_issue:
+        issues.append(output_issue)
+    _raise_issues(issues)
+    if not lines:
+        raise RecipePublishError('Add at least one ingredient before publishing.')
+    if output_note:
+        warnings.append(output_note)
+    warnings += _sync_units(client, units)
+    payload = {
+        'name_en': recipe.name_en,
+        'name_ar': recipe.name_ar,
+        'brand': brand,
+        'output_item': output_id,
+        'output_qty': str(output_qty),
+        'method_en': _method_text(recipe),
+        'notes': recipe.notes,
+        'ingredients': [{k: v for k, v in line.items() if k in ('item', 'quantity', 'unit')}
+                        for line in lines],
+    }
+    try:
+        remote_id = _push(
+            recipe, payload,
+            create=client.create_branch_prep_recipe,
+            update=client.update_branch_prep_recipe,
+            relink=lambda: client.find_branch_prep_recipe(recipe.name_en, brand),
+        )
+    except InventoryAPIError as e:
+        _finish_error(recipe, e)
+        raise RecipePublishError(f'inventory-platform rejected the recipe: {e}')
+
+    _finish_ok(recipe, remote_id)
+    return _result(recipe, warnings)

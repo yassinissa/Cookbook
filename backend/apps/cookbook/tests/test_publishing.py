@@ -259,3 +259,63 @@ class ProductionPublishTests(APITestCase):
             r = self.client.post(f'/api/cookbook/production-recipes/{self.recipe.id}/publish/')
         self.assertEqual(r.status_code, 502)
         self.assertIn('prep kitchen', r.data['detail'].lower())
+
+
+class BranchPrepFakeClient(FakeClient):
+    def create_branch_prep_recipe(self, payload):  return self._record('create_branch_prep', payload)
+    def update_branch_prep_recipe(self, rid, p):   return self._record(f'update_branch_prep:{rid}', p)
+
+    def find_branch_prep_recipe(self, name_en, brand):
+        return {'id': 'bp-1', 'name_en': name_en, 'brand': brand, 'is_current': True}
+
+
+class BranchPrepPublishTests(APITestCase):
+    """kind='branch_prep': a restaurant makes it itself — published under the
+    brand to /recipes/branch-prep/, never to a prep kitchen."""
+    def setUp(self):
+        self.g = UnitScale.objects.create(code='g', description='g', dimension='mass', factor_to_canonical=1)
+        self.kg = UnitScale.objects.create(code='Kg', description='Kg', dimension='mass', factor_to_canonical=1000)
+        self.brand = Branch.objects.create(name_en='Test Brand WnR', slug='wnr-test')
+        self.recipe = ProductionRecipe.objects.create(
+            name_en='Guacamole', recipe_code='BP1', kind=ProductionRecipe.KIND_BRANCH_PREP,
+            branch_ref=self.brand, output_item_sku='PR-TOUM', output_qty=Decimal('1.000'),
+            output_unit=self.kg, cost=Decimal('0.5'))
+        ProductionRecipeIngredient.objects.create(recipe=self.recipe, order=1, item_sku='B41',
+                                                  item_name_snapshot='Avocado', quantity=Decimal('800'), unit=self.g)
+        self.recipe.steps.create(step_number=2, instruction='Add onion')
+        self.recipe.steps.create(step_number=1, instruction='Mash avocado')
+        self.admin = User.objects.create_superuser('boss', password='x')
+        self.client = APIClient(HTTP_ACCEPT='application/json')
+        self.client.force_authenticate(self.admin)
+
+    def test_publishes_to_branch_prep_under_brand_with_method(self):
+        fake = BranchPrepFakeClient()
+        with patch_client(fake):
+            r = self.client.post(f'/api/cookbook/production-recipes/{self.recipe.id}/publish/')
+        self.assertEqual(r.status_code, 200, r.data)
+        verb, payload = fake.calls[0]
+        self.assertEqual(verb, 'create_branch_prep')
+        self.assertEqual(payload['brand'], 'wnr-test')
+        self.assertEqual(payload['method_en'], 'Mash avocado\nAdd onion')
+        self.assertNotIn('prep_kitchen', payload)
+        self.assertEqual(payload['ingredients'][0]['item'], 'itm-1')
+        self.recipe.refresh_from_db()
+        self.assertEqual(self.recipe.inventory_recipe_id, 'bp-1')
+
+    def test_branch_prep_needs_a_brand(self):
+        r = self.client.patch(f'/api/cookbook/production-recipes/{self.recipe.id}/',
+                              {'kind': 'branch_prep', 'branch_ref': None}, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('branch_ref', r.data)
+
+    def test_switching_to_branch_prep_clears_prep_kitchen(self):
+        pk = PrepKitchen.objects.get(name_en='Sauce')
+        rec = ProductionRecipe.objects.create(
+            name_en='Pico', recipe_code='P9', prep_kitchen_ref=pk, output_item_sku='PR-TOUM',
+            output_qty=Decimal('1'), output_unit=self.kg)
+        r = self.client.patch(f'/api/cookbook/production-recipes/{rec.id}/',
+                              {'kind': 'branch_prep', 'branch_ref': str(self.brand.id)}, format='json')
+        self.assertEqual(r.status_code, 200, r.data)
+        rec.refresh_from_db()
+        self.assertEqual(rec.kind, 'branch_prep')
+        self.assertIsNone(rec.prep_kitchen_ref)

@@ -386,6 +386,9 @@ export interface ProductionRecipeListItem {
   prep_kitchen: string
   prep_kitchen_ref: ID | null
   prep_kitchen_name: string | null
+  kind?: 'prep_kitchen' | 'branch_prep'
+  branch_ref?: ID | null
+  branch_name?: string | null
   section: ID | null
   section_name: string | null
   output_item_sku: string
@@ -416,6 +419,8 @@ export interface ProductionRecipeDetail {
   revision_date: string | null
   prep_kitchen: string
   prep_kitchen_ref: ID | null
+  kind?: 'prep_kitchen' | 'branch_prep'
+  branch_ref?: ID | null
   section: Section | null
   output_item_sku: string
   output_qty: string

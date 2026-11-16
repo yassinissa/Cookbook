@@ -90,7 +90,7 @@ def edit_is_a_new_version(instance, validated_data, ingredient_data, step_data):
 # (dish-only vs production-only) are simply skipped.
 _STATE_FIELDS = [
     'name_en', 'name_ar', 'recipe_code', 'revision', 'revision_date',
-    'branch_ref', 'prep_kitchen_ref', 'prep_kitchen', 'category', 'section', 'service_style',
+    'kind', 'branch_ref', 'prep_kitchen_ref', 'prep_kitchen', 'category', 'section', 'service_style',
     'output_item_sku', 'output_qty', 'output_unit',
     'prep_time_minutes', 'expected_waste_pct', 'include_labor_cost',
     'selling_price', 'cost', 'labor_cost',

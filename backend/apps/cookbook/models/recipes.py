@@ -139,6 +139,20 @@ class ProductionRecipe(RecipeCardFields):
     prep_kitchen_ref = models.ForeignKey(PrepKitchen, on_delete=models.PROTECT, null=True, blank=True,
                         related_name='production_recipes',
                         help_text='Structured prep kitchen. Prep-cook access is scoped to this.')
+    # Who makes it. 'prep_kitchen' (default): a prep kitchen produces it and
+    # dispatches it — published to inventory-platform /recipes/production/.
+    # 'branch_prep': a restaurant makes it itself every morning from raw
+    # materials it holds (guacamole, pico de gallo...) — published to
+    # /recipes/branch-prep/ under branch_ref's brand, where that brand's
+    # kitchen heads and cooks see it as their prep guide.
+    KIND_PREP_KITCHEN = 'prep_kitchen'
+    KIND_BRANCH_PREP  = 'branch_prep'
+    KIND_CHOICES = [(KIND_PREP_KITCHEN, 'Prep kitchen'), (KIND_BRANCH_PREP, 'Branch (restaurant) prep')]
+    kind            = models.CharField(max_length=20, choices=KIND_CHOICES, default=KIND_PREP_KITCHEN,
+                        help_text='Prep kitchen recipe, or prep a restaurant makes itself.')
+    branch_ref      = models.ForeignKey(Branch, on_delete=models.PROTECT, null=True, blank=True,
+                        related_name='branch_prep_recipes',
+                        help_text='Brand whose restaurants make this (branch prep only).')
 
     def __str__(self):
         return f'{self.name_en} v{self.version}'
